@@ -1,0 +1,83 @@
+name: Deploy to VPS
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types:
+      - completed
+env:
+  SSH_USER: ${{ secrets.VPS_USER }}
+  SSH_HOST: ${{ secrets.VPS_HOST }}
+  PROJECT_DIR: ${{ secrets.VPS_PROJECT_DIR }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Deploy to VPS via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << EOF
+            set -e
+            cd $PROJECT_DIR
+            git fetch origin
+            git checkout main
+            git pull origin main
+
+            # Stop existing services
+            docker compose down --remove-orphans
+            docker rm -f tarot-backend tarot-frontend tarot-redis tarot-celery-worker tarot-celery-beat tarot-prometheus tarot-grafana tarot-cadvisor tarot-node-exporter || true
+            docker rmi vanloc1808/tarot-backend:latest vanloc1808/tarot-frontend:latest || true
+
+            # Pull latest images
+            docker compose pull
+
+            # Start services
+            docker compose up -d
+
+            # Wait for backend to be ready
+            echo "Waiting for backend to be ready..."
+            sleep 30
+
+            # Run database migrations if backend is running
+            if docker ps | grep -q tarot-backend; then
+              echo "Running database migrations..."
+              if docker exec tarot-backend python migrate.py; then
+                echo "Database migrations completed successfully"
+              else
+                echo "Warning: Database migrations failed, but continuing deployment"
+                echo "You may need to run migrations manually or check the backend logs"
+                echo "Checking backend logs for errors..."
+                docker logs tarot-backend --tail 50 || echo "Could not retrieve backend logs"
+              fi
+            else
+              echo "Backend not running, skipping migrations"
+              echo "Warning: Database migrations were not run. Check backend status."
+            fi
+
+            # Health check after deployment
+            echo "Performing health checks..."
+            echo "Service status:"
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+            # Check if services are responding
+            if docker ps | grep -q tarot-backend; then
+              echo "Backend container is running"
+              echo "Checking backend health endpoint..."
+              sleep 10  # Give backend time to fully start
+              if curl -f http://localhost:8000/health || echo "Health check failed"; then
+                echo "Backend health check passed"
+              else
+                echo "Warning: Backend health check failed"
+              fi
+            fi
+          EOF

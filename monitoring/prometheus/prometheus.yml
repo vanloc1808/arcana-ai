@@ -1,0 +1,44 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Tarot API Backend
+  - job_name: "tarot-backend"
+    static_configs:
+      - targets: ["tarot-backend:8000"]
+    metrics_path: "/metrics"
+    scrape_interval: 10s
+
+  # Node Exporter for system metrics
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["tarot-node-exporter:9100"]
+
+  # cAdvisor for container metrics
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["tarot-cadvisor:8080"]
+    metrics_path: "/metrics"
+
+  # Frontend monitoring (if metrics endpoint is added)
+  - job_name: "tarot-frontend"
+    static_configs:
+      - targets: ["tarot-frontend:3000"]
+    metrics_path: "/api/metrics"
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    honor_labels: true

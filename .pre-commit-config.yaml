@@ -1,0 +1,88 @@
+repos:
+  # Pre-commit hooks for general file cleanup
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^docs/
+      - id: end-of-file-fixer
+        exclude: ^docs/
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: debug-statements
+      - id: check-executables-have-shebangs
+
+  # Ruff linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^backend/
+      # Run the formatter
+      - id: ruff-format
+        files: ^backend/
+
+  # Run pytest
+  # - repo: local
+  #   hooks:
+  #     - id: pytest
+  #       name: pytest
+  #       entry: bash -c 'cd backend && ENV_FILE=tests/.env.test pytest'
+  #       language: system
+  #       pass_filenames: false
+  #       always_run: true
+  #       types: [python]
+  #       files: ^backend/tests/
+
+  # Type checking with mypy (optional - uncomment if you want type checking)
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.7.1
+  #   hooks:
+  #     - id: mypy
+  #       files: ^backend/
+  #       additional_dependencies: [types-all]
+
+  # Security checks with bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: ["-c", "backend/pyproject.toml"]
+        files: ^backend/
+        exclude: |
+          (?x)^(
+            backend/tests/|
+            backend/scripts/drop_all_tables\.py|
+            backend/scripts/reset_database\.py
+          )
+
+  # Check requirements.txt files
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: requirements-txt-fixer
+        files: ^backend/requirements.*\.txt$
+
+# Global configuration
+default_language_version:
+  python: python3.11
+
+# Exclude certain files/directories
+exclude: |
+  (?x)^(
+    \.git/|
+    \.pytest_cache/|
+    __pycache__/|
+    \.venv/|
+    venv/|
+    node_modules/|
+    \.DS_Store|
+    migrations/|
+    alembic/
+  )

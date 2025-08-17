@@ -1,0 +1,1418 @@
+{
+    "major_arcana": [
+        {
+            "name": "The Fool",
+            "number": 0,
+            "image_url": "/cards/major_arcana/00_fool.jpg",
+            "upright": [
+                "Freeing yourself from limitation",
+                "Expressing joy and youthful vigor",
+                "Being open-minded",
+                "Taking a leap of faith",
+                "Attuning yourself to your instincts",
+                "Being eager or curious",
+                "Exploring your potential",
+                "Embracing innovation and change"
+            ],
+            "reversed": [
+                "Being gullible and naive",
+                "Taking unnecessary risks",
+                "Failing to be serious when required",
+                "Being silly or distracted",
+                "Lacking experience",
+                "Failing to honor well-established traditions and limits",
+                "Behaving inappropriately"
+            ],
+            "fortune_telling": [
+                "Watch for new projects and new beginnings",
+                "Prepare to take something on faith",
+                "Something new comes your way; go for it"
+            ],
+            "keywords": [
+                "freedom",
+                "faith",
+                "inexperience",
+                "innocence"
+            ],
+            "elemental": "Air",
+            "questions_to_ask": [
+                "What would I do if I felt free to take a leap?",
+                "How willing am I to be vulnerable and open?",
+                "How might past experiences help in this new situation?"
+            ],
+            "description_short": "Beginnings, innocence, spontaneity, a free spirit"
+        },
+        {
+            "name": "The Magician",
+            "number": 1,
+            "image_url": "/cards/major_arcana/01_magician.jpg",
+            "upright": [
+                "Taking appropriate action",
+                "Receiving guidance from a higher power",
+                "Becoming a channel of divine will",
+                "Expressing masculine energy in appropriate and constructive ways",
+                "Being yourself in every way",
+                "Conveying information",
+                "Making something magical happen"
+            ],
+            "reversed": [
+                "Inflating your own importance",
+                "Manipulating or deceiving others",
+                "Being too aggressive",
+                "Using cheap illusions to dazzle others",
+                "Being a know-it-all",
+                "Failing to take appropriate action"
+            ],
+            "fortune_telling": [
+                "A powerful man may play a role in your day",
+                "Your current situation must be seen as one element of a much larger plan"
+            ],
+            "keywords": [
+                "capability",
+                "empowerment",
+                "activity"
+            ],
+            "elemental": "Air",
+            "questions_to_ask": [
+                "What am I empowered to do?",
+                "How might my abilities come into play?",
+                "To what extent am I making the most of my talents?"
+            ],
+            "description_short": "Manifestation, resourcefulness, power, inspired action"
+        },
+        {
+            "name": "The High Priestess",
+            "number": 2,
+            "image_url": "/cards/major_arcana/02_high_priestess.jpg",
+            "upright": [
+                "Listening to your inner voice",
+                "Keeping secrets",
+                "Learning the unspoken truth",
+                "Maintaining stillness",
+                "Exercising discretion",
+                "Observing without acting",
+                "Gaining awareness of spiritual dimensions"
+            ],
+            "reversed": [
+                "Being too secretive",
+                "Refusing to listen to your inner voice",
+                "Failing to seek guidance from spirit",
+                "Ignoring gut feelings",
+                "Being aloof",
+                "Cutting yourself off from spirit"
+            ],
+            "fortune_telling": [
+                "A mysterious woman arrives",
+                "A sexual secret may surface",
+                "Someone knows more than he or she will reveal"
+            ],
+            "keywords": [
+                "intuition",
+                "mystery",
+                "spirituality",
+                "hidden knowledge"
+            ],
+            "elemental": "Water",
+            "questions_to_ask": [
+                "What might be revealed by meditation?",
+                "What am I hesitant to learn more about?",
+                "What signal am I ignoring from my intuition?"
+            ],
+            "description_short": "Intuition, sacred knowledge, divine feminine, the subconscious mind"
+        },
+        {
+            "name": "The Empress",
+            "number": 3,
+            "image_url": "/cards/major_arcana/03_empress.jpg",
+            "upright": [
+                "Nurturing yourself and others",
+                "Bearing fruit",
+                "Celebrating your body",
+                "Bearing fruit",
+                "Enjoying luxury",
+                "Embracing romance",
+                "Getting things done",
+                "Using sensual appeal"
+            ],
+            "reversed": [
+                "Overindulging",
+                "Being greedy",
+                "Smothering someone with attention",
+                "Debilitating perfectionism",
+                "Insisting on getting your own way",
+                "Obsessing on someone or something"
+            ],
+            "fortune_telling": [
+                "Pregnancy is in the cards",
+                "An opportunity to be involved in luxurious sexuality is coming",
+                "Beware a tendency toward addiction"
+            ],
+            "keywords": [
+                "fertility",
+                "productivity",
+                "ripeness",
+                "nurturing"
+            ],
+            "elemental": "Earth",
+            "questions_to_ask": [
+                "What would a concerned and capable mother do?",
+                "What can I do that would emphasize growth?",
+                "How can I celebrate my own sensuality and sexuality?"
+            ],
+            "description_short": "Femininity, beauty, nature, nurturing, abundance"
+        },
+        {
+            "name": "The Emperor",
+            "number": 4,
+            "image_url": "/cards/major_arcana/04_emperor.jpg",
+            "upright": [
+                "Exercising authority",
+                "Defining limits",
+                "Directing the flow of work",
+                "Communicating clear guidelines",
+                "Being in control of yourself and others",
+                "Tempering aggressive masculinity with wisdom"
+            ],
+            "reversed": [
+                "Micromanaging",
+                "Crushing the creativity of others with rules",
+                "Abusing authority",
+                "Being rigid and unyielding",
+                "Making unnecessary rules",
+                "Refusing to consider new perspectives"
+            ],
+            "fortune_telling": [
+                "A father figure arrives",
+                "A new employer or authority figure will give you orders",
+                "Expect discipline or correction in the near future"
+            ],
+            "keywords": [
+                "authority",
+                "regulation",
+                "direction",
+                "structure"
+            ],
+            "elemental": "Fire",
+            "questions_to_ask": [
+                "How does the issue of control or regulation impact this situation?",
+                "What would a compassionate but strict father do?",
+                "What needs more control or structure?"
+            ],
+            "description_short": "Authority, establishment, structure, a father figure"
+        },
+        {
+            "name": "The Hierophant",
+            "number": 5,
+            "image_url": "/cards/major_arcana/05_hierophant.jpg",
+            "upright": [
+                "Teaching or guiding others",
+                "Searching for the truth",
+                "Offering or receiving guidance",
+                "Following traditional approaches",
+                "Sharing knowledge",
+                "Giving or receiving blessings",
+                "Taking the tried and true path"
+            ],
+            "reversed": [
+                "Being dogmatic or inflexible",
+                "Favoring tradition over what works",
+                "Going through the motions of empty rituals",
+                "Rejecting the counsel of experienced teachers",
+                "Breaking with tradition",
+                "Inappropriate or hypocritical teaching"
+            ],
+            "fortune_telling": [
+                "Expect to be caught in a misdeed and punished accordingly",
+                "Pray for forgiveness and confess wrongdoings",
+                "A more experienced man, spiritual leader, or father figure will come into your life"
+            ],
+            "keywords": [
+                "education",
+                "belief systems",
+                "ritual",
+                "conformity",
+                "tradition",
+                "initiation"
+            ],
+            "elemental": "Earth",
+            "questions_to_ask": [
+                "What role might tradition or religion play in this situation?",
+                "Who authored the rules? Who enforces them? Why?",
+                "How might an experienced teacher or guide view this situation?"
+            ],
+            "description_short": "Spiritual wisdom, religious beliefs, conformity, tradition, institutions"
+        },
+        {
+            "name": "The Lovers",
+            "number": 6,
+            "image_url": "/cards/major_arcana/06_lovers.jpg",
+            "upright": [
+                "Being in love",
+                "Showing your love to others",
+                "Making choices based on love and passion",
+                "Forming meaningful relationships and partnerships",
+                "Following your heart",
+                "Experiencing perfect unity",
+                "Making important life choices"
+            ],
+            "reversed": [
+                "Feeling disconnected from loved ones",
+                "Making wrong choices",
+                "Refusing to take responsibility for your actions",
+                "Breaking commitments",
+                "Letting temptation lead you astray",
+                "Struggling with addiction"
+            ],
+            "fortune_telling": [
+                "A new relationship or marriage is in the cards",
+                "Sexual opportunities abound",
+                "Relationships should be mutual and balanced"
+            ],
+            "keywords": [
+                "love",
+                "harmony",
+                "relationships",
+                "values alignment",
+                "choices",
+                "union"
+            ],
+            "elemental": "Air",
+            "questions_to_ask": [
+                "What key choice lies before me?",
+                "What values govern my decisions?",
+                "How does my decision affect others?",
+                "What role does love play in this situation?"
+            ],
+            "description_short": "Love, harmony, relationships, values alignment, choices"
+        },
+        {
+            "name": "The Chariot",
+            "number": 7,
+            "image_url": "/cards/major_arcana/07_chariot.jpg",
+            "upright": "Taking control, maintaining willpower, succeeding through determination, overcoming obstacles",
+            "reversed": "Lacking direction, losing control, being aggressive, letting obstacles defeat you",
+            "fortune_telling": [
+                "Victory is a certainty",
+                "Move ahead with all plans",
+                "Beware the jealousy of others"
+            ],
+            "keywords": [
+                "advancement",
+                "victory",
+                "triumph",
+                "success"
+            ],
+            "elemental": "Cancer",
+            "questions_to_ask": [
+                "To what extent have I arrived? What will my next challenge be?",
+                "How can I use past achievements to their best advantage?",
+                "What would the criteria for real and meaningful success be?"
+            ],
+            "description_short": "Control, willpower, victory, assertion, determination"
+        },
+        {
+            "name": "Strength",
+            "number": 8,
+            "image_url": "/cards/major_arcana/08_strength.jpg",
+            "upright": "Having inner strength, showing courage, practicing patience, gentle control, compassion",
+            "reversed": "Self-doubt, weakness, lack of self-discipline, raw emotion",
+            "fortune_telling": [
+                "Your self-control will be tested",
+                "A woman will seek to change her partner or lover",
+                "You are a strong, capable person"
+            ],
+            "keywords": [
+                "discipline",
+                "boldness",
+                "self-discipline",
+                "power",
+                "vitality"
+            ],
+            "elemental": "Leo",
+            "questions_to_ask": [
+                "How can I develop more self-discipline?",
+                "What behaviors tempt me? How can I resist?",
+                "What instincts do I need to control or channel?"
+            ],
+            "description_short": "Strength, courage, persuasion, influence, compassion"
+        },
+        {
+            "name": "The Hermit",
+            "number": 9,
+            "image_url": "/cards/major_arcana/09_hermit.jpg",
+            "upright": "Soul-searching, introspection, being alone, inner guidance, spiritual seeking",
+            "reversed": "Isolation, loneliness, withdrawal, rejecting help from others",
+            "fortune_telling": [
+                "A period of loneliness begins",
+                "One partner in a relationship departs",
+                "A search for love or money proves fruitless"
+            ],
+            "keywords": [
+                "solitude",
+                "experience",
+                "stillness",
+                "withdrawal"
+            ],
+            "elemental": "Virgo",
+            "questions_to_ask": [
+                "What would happen if I simply withdrew and took no action?",
+                "How can I get some perspective on the situation?",
+                "Who has walked this path before me? How can I enlist his or her help?"
+            ],
+            "description_short": "Soul-searching, introspection, inner guidance, solitude"
+        },
+        {
+            "name": "Wheel of Fortune",
+            "number": 10,
+            "image_url": "/cards/major_arcana/10_wheel_of_fortune.jpg",
+            "upright": "Good luck, karma, life cycles, destiny, a turning point, positive change",
+            "reversed": "Bad luck, negative external forces, out of control, resistance to change",
+            "fortune_telling": [
+                "Some events are in the hands of heaven",
+                "You've lived through this before",
+                "What happened then?"
+            ],
+            "keywords": [
+                "luck",
+                "randomness",
+                "cycles",
+                "karma",
+                "fate",
+                "revolution"
+            ],
+            "elemental": "Jupiter",
+            "questions_to_ask": [
+                "How does this challenge fit into a larger pattern?",
+                "What role does luck play in my circumstances?",
+                "What can I control? How should I know when to relinquish control?"
+            ],
+            "description_short": "Good luck, karma, life cycles, destiny, a turning point"
+        },
+        {
+            "name": "Justice",
+            "number": 11,
+            "image_url": "/cards/major_arcana/11_justice.jpg",
+            "upright": "Justice being served, fairness, truth, cause and effect, clarity",
+            "reversed": "Unfairness, lack of accountability, dishonesty, unbalanced scales",
+            "fortune_telling": [
+                "A legal verdict will be rendered soon",
+                "Someone is making a decision",
+                "You need to get the facts"
+            ],
+            "keywords": [
+                "balance",
+                "law",
+                "fairness",
+                "objectivity"
+            ],
+            "elemental": "Libra",
+            "questions_to_ask": [
+                "How can I enhance my self-discipline?",
+                "What behaviors tempt me? How can I resist?",
+                "What instincts do I continue to struggle with today?"
+            ],
+            "description_short": "Justice, fairness, truth, cause and effect, law"
+        },
+        {
+            "name": "The Hanged Man",
+            "number": 12,
+            "image_url": "/cards/major_arcana/12_hanged_man.jpg",
+            "upright": "Seeing from a new perspective, surrendering, letting go, sacrificing",
+            "reversed": "Stubbornness, refusing to see other perspectives, needless sacrifice",
+            "fortune_telling": [
+                "A traitor is revealed",
+                "One of your friends is working against you",
+                "Change your ways or suffer the consequences"
+            ],
+            "keywords": [
+                "enlightenment",
+                "sacrifice",
+                "perspective",
+                "suspension",
+                "reversals"
+            ],
+            "elemental": "Water",
+            "questions_to_ask": [
+                "How can I radically alter my perspective?",
+                "How might being stuck actually be a blessing in disguise?",
+                "How can I help myself see the glass as half full?"
+            ],
+            "description_short": "Pause, surrender, letting go, new perspectives"
+        },
+        {
+            "name": "Death",
+            "number": 13,
+            "image_url": "/cards/major_arcana/13_death.jpg",
+            "upright": "Endings leading to beginnings, transformation, transition, letting go",
+            "reversed": "Resistance to change, unable to move on, stagnation, decay",
+            "fortune_telling": [
+                "A relationship or illness ends suddenly",
+                "Limit travel and risk-taking",
+                "General gloom and doom"
+            ],
+            "keywords": [
+                "ending",
+                "conclusion",
+                "transition",
+                "passage",
+                "departure"
+            ],
+            "elemental": "Scorpio",
+            "questions_to_ask": [
+                "What needs to end?",
+                "How might an ending actually be a blessing in this situation?",
+                "What's next?"
+            ],
+            "description_short": "Endings, change, transformation, transition"
+        },
+        {
+            "name": "Temperance",
+            "number": 14,
+            "image_url": "/cards/major_arcana/14_temperance.jpg",
+            "upright": "Finding balance, practicing moderation, patience, finding meaning",
+            "reversed": "Imbalance, excess, lack of harmony, hastiness",
+            "fortune_telling": [
+                "Someone's using drugs or alcohol to excess",
+                "It's time to get back on that diet"
+            ],
+            "keywords": [
+                "blending",
+                "synthesis",
+                "mediation",
+                "combination",
+                "harmony"
+            ],
+            "elemental": "Sagittarius",
+            "questions_to_ask": [
+                "How can I avoid extremes?",
+                "What does everyone involved have in common?",
+                "How might combining familiar things help me create something new?"
+            ],
+            "description_short": "Balance, moderation, patience, purpose"
+        },
+        {
+            "name": "The Devil",
+            "number": 15,
+            "image_url": "/cards/major_arcana/15_devil.jpg",
+            "upright": "Facing your shadows, breaking unhealthy bonds, exploring dark thoughts",
+            "reversed": "Being trapped by addiction, giving in to temptation, feeling powerless",
+            "fortune_telling": [
+                "Adultery and unfaithfulness",
+                "A string of extremely bad luck is coming your way",
+                "Beware evil influences and wolves in sheep's clothing"
+            ],
+            "keywords": [
+                "shadow",
+                "materialism",
+                "bondage",
+                "delusion"
+            ],
+            "elemental": "Capricorn",
+            "questions_to_ask": [
+                "What enslaves me? How can I set myself free?",
+                "How can I re-evaluate the importance I assign to material things?",
+                "To what extent do my cravings define me?"
+            ],
+            "description_short": "Shadow self, attachment, addiction, restriction, sexuality"
+        },
+        {
+            "name": "The Tower",
+            "number": 16,
+            "image_url": "/cards/major_arcana/16_tower.jpg",
+            "upright": "Sudden change, upheaval, revelation, awakening through difficulty",
+            "reversed": "Disaster averted, delaying the inevitable, fear of change",
+            "fortune_telling": [
+                "Impending disaster",
+                "Cancel plans and reverse decisions",
+                "Someone wants to take you down a notch or two",
+                "Don't hold back; say what you really mean"
+            ],
+            "keywords": [
+                "demolition",
+                "upheaval",
+                "deconstruction",
+                "disaster",
+                "destruction"
+            ],
+            "elemental": "Mars",
+            "questions_to_ask": [
+                "How might the current situation dramatically alter my perspective?",
+                "How might this loss open the door for new growth?",
+                "What attitudes need to be struck down before I proceed?"
+            ],
+            "description_short": "Sudden upheaval, broken pride, disaster, revelation"
+        },
+        {
+            "name": "The Star",
+            "number": 17,
+            "image_url": "/cards/major_arcana/17_star.jpg",
+            "upright": "Hope, inspiration, serenity, renewal, spiritual connection",
+            "reversed": "Despair, lack of faith, disconnection from spirit, disillusionment",
+            "fortune_telling": [
+                "Get an astrology chart drawn up",
+                "Someone is a little too starstruck",
+                "What's happening now has long been fore-ordained"
+            ],
+            "keywords": [
+                "hope",
+                "optimism",
+                "openness",
+                "certainty",
+                "faith",
+                "longing",
+                "truth"
+            ],
+            "elemental": "Aquarius",
+            "questions_to_ask": [
+                "What gives me hope and inspiration?",
+                "How can I be more optimistic?",
+                "What do I truly believe in?"
+            ],
+            "description_short": "Hope, faith, purpose, renewal, spirituality"
+        },
+        {
+            "name": "The Moon",
+            "number": 18,
+            "image_url": "/cards/major_arcana/18_moon.jpg",
+            "upright": "Intuition, unconscious thoughts, mystery, dreams and illusions",
+            "reversed": "Confusion, fear, misinterpretation, anxiety overwhelming you",
+            "fortune_telling": [
+                "Watch for problems at the end of the month",
+                "Someone you know needs to howl at the moon more often",
+                "Someone is about to change his or her mind about an important decision"
+            ],
+            "keywords": [
+                "mystery",
+                "fantasy",
+                "imagination",
+                "dreams",
+                "uncertainty"
+            ],
+            "elemental": "Pisces",
+            "questions_to_ask": [
+                "How can I face my fears and move forward?",
+                "What helpers can serve me as guides through my personal darkness?",
+                "How can I deal with the unknown in healthy ways?"
+            ],
+            "description_short": "Illusion, fear, anxiety, subconscious, intuition"
+        },
+        {
+            "name": "The Sun",
+            "number": 19,
+            "image_url": "/cards/major_arcana/19_sun.jpg",
+            "upright": "Joy, success, celebration, positivity, enlightenment",
+            "reversed": "Temporary depression, lack of success, pessimism, sadness",
+            "fortune_telling": [
+                "Everything's coming up roses (or sunflowers, whatever the case may be)",
+                "Whatever's on your mind, go for it because you can't lose today"
+            ],
+            "keywords": [
+                "joy",
+                "brilliance",
+                "validation",
+                "attention",
+                "energy"
+            ],
+            "elemental": "Sun",
+            "questions_to_ask": [
+                "How can I take best advantage of the attention coming my way?",
+                "What are my highest spiritual goals?",
+                "How can I avoid being bedazzled by the energy swirling around me?"
+            ],
+            "description_short": "Positivity, fun, warmth, success, vitality"
+        },
+        {
+            "name": "Judgement",
+            "number": 20,
+            "image_url": "/cards/major_arcana/20_judgement.jpg",
+            "upright": "Rebirth, inner calling, absolution, reviewing life choices",
+            "reversed": "Self-doubt, refusing to learn lessons, lack of self-awareness",
+            "fortune_telling": [
+                "An old issue you thought was over will come up again today",
+                "Get ready for huge changes: break-ups, sudden calls from old friends, and unexpected setbacks",
+                "God's trying to get your attention"
+            ],
+            "keywords": [
+                "revival",
+                "renewal",
+                "resurrection",
+                "evaluation",
+                "invitation"
+            ],
+            "elemental": "Fire",
+            "questions_to_ask": [
+                "What is the main thing I need to realize about myself?",
+                "In what way might the universe be trying to get my attention?",
+                "If I were to reinvent myself, what would I become?"
+            ],
+            "description_short": "Judgement, rebirth, inner calling, absolution"
+        },
+        {
+            "name": "The World",
+            "number": 21,
+            "image_url": "/cards/major_arcana/21_world.jpg",
+            "upright": "Completion, integration, accomplishment, travel, wholeness",
+            "reversed": "Lack of completion, stagnation, inability to finish things",
+            "fortune_telling": [
+                "Winning the lottery",
+                "Getting your heart's desire",
+                "Having everything you ever imagined having"
+            ],
+            "keywords": [
+                "wholeness",
+                "integration",
+                "totality",
+                "completeness",
+                "fullness"
+            ],
+            "elemental": "Saturn",
+            "questions_to_ask": [
+                "How can I see the world in a more complete and inclusive way?",
+                "What keeps me from having it all?",
+                "How can I better appreciate the good things in my life?"
+            ],
+            "description_short": "Completion, integration, accomplishment, travel"
+        }
+    ],
+    "minor_arcana": {
+        "wands": [
+            {
+                "name": "Ace of Wands",
+                "number": 1,
+                "image_url": "/cards/wands/wands01.jpg",
+                "upright": "Inspiration, new opportunities, growth, potential, creative spark",
+                "reversed": "Lack of energy, delays, blocked creativity, false starts",
+                "fortune_telling": [
+                    "Creative energy arrives",
+                    "Time to start new projects",
+                    "Your imagination is firing on all cylinders"
+                ],
+                "keywords": [
+                    "inspiration",
+                    "creation",
+                    "potential",
+                    "beginning"
+                ],
+                "elemental": "Fire of Fire",
+                "questions_to_ask": [
+                    "What new opportunity calls to me?",
+                    "What creative project most excites me?",
+                    "How could I best use my energy and talents?"
+                ],
+                "description_short": "Inspiration, new opportunities, growth, potential"
+            },
+            {
+                "name": "Two of Wands",
+                "number": 2,
+                "image_url": "/cards/wands/wands02.jpg",
+                "upright": "Future planning, progress, decisions, discovery",
+                "reversed": "Fear of change, playing it safe, bad planning, lack of direction",
+                "fortune_telling": [
+                    "Beware false friends",
+                    "Don't be meek; be bold",
+                    "Your time for action has come"
+                ],
+                "keywords": [
+                    "planning",
+                    "discovery",
+                    "choice",
+                    "boldness"
+                ],
+                "elemental": "Mars in Aries",
+                "questions_to_ask": [
+                    "What would happen if I simply went for it?",
+                    "How can I move from planning to action?",
+                    "What bold steps could I take right now?"
+                ],
+                "description_short": "Future planning, progress, decisions, discovery"
+            },
+            {
+                "name": "Three of Wands",
+                "number": 3,
+                "image_url": "/cards/wands/wands03.jpg",
+                "upright": "Looking ahead, expansion, rapid growth, foresight",
+                "reversed": "Obstacles, delays, frustration with progress, lack of foresight",
+                "fortune_telling": [
+                    "You'll be planning a trip soon",
+                    "Be on the lookout: your ship is coming in",
+                    "Expect new opportunities to come from the past"
+                ],
+                "keywords": [
+                    "expansion",
+                    "foresight",
+                    "preparation",
+                    "planning"
+                ],
+                "elemental": "Sun in Aries",
+                "questions_to_ask": [
+                    "What preparations have I made for the future?",
+                    "What can I do to get ready for what's coming?",
+                    "How can I be more forward-thinking?"
+                ],
+                "description_short": "Preparation, foresight, enterprise, expansion"
+            },
+            {
+                "name": "Four of Wands",
+                "number": 4,
+                "image_url": "/cards/wands/wands04.jpg",
+                "upright": "Celebration, harmony, marriage, home, community",
+                "reversed": "Lack of support, transience, home conflicts, instability",
+                "fortune_telling": [
+                    "Someone is watching and evaluating your work",
+                    "You may get a wedding invitation soon",
+                    "A new home is in your future"
+                ],
+                "keywords": [
+                    "celebration",
+                    "community",
+                    "completion",
+                    "harmony"
+                ],
+                "elemental": "Venus in Aries",
+                "questions_to_ask": [
+                    "What achievements deserve celebration?",
+                    "How can I share my victories with others?",
+                    "What foundations have I laid for future success?"
+                ],
+                "description_short": "Celebration, joy, harmony, relaxation, homecoming"
+            },
+            {
+                "name": "Five of Wands",
+                "number": 5,
+                "image_url": "/cards/wands/wands05.jpg",
+                "upright": "Competition, conflict, rivalry, diversity, growth through challenge",
+                "reversed": "Avoiding conflict, respecting differences, end of competition",
+                "fortune_telling": [
+                    "Prepare for a fight with your best friend",
+                    "Remember: once you let words loose, you can't take them back"
+                ],
+                "keywords": [
+                    "conflict",
+                    "competition",
+                    "strife",
+                    "challenge"
+                ],
+                "elemental": "Saturn in Leo",
+                "questions_to_ask": [
+                    "How do I handle conflict?",
+                    "What's worth fighting for?",
+                    "How can I use competition to my advantage?"
+                ],
+                "description_short": "Conflict, disagreements, competition, tension, diversity"
+            },
+            {
+                "name": "Six of Wands",
+                "number": 6,
+                "image_url": "/cards/wands/wands06.jpg",
+                "upright": "Victory, success, public reward, progress, self-confidence",
+                "reversed": "Excess pride, lack of recognition, fall from grace",
+                "description_short": "Public recognition, victory, progress, self-confidence"
+            },
+            {
+                "name": "Seven of Wands",
+                "number": 7,
+                "image_url": "/cards/wands/wands07.jpg",
+                "upright": "Challenge, competition, protection, perseverance",
+                "reversed": "Giving up, overwhelmed, self-doubt, yielding",
+                "description_short": "Challenge, competition, perseverance, protective"
+            },
+            {
+                "name": "Eight of Wands",
+                "number": 8,
+                "image_url": "/cards/wands/wands08.jpg",
+                "upright": "Swift action, movement, quick decisions, progress",
+                "reversed": "Panic, waiting, slowdown, delayed actions",
+                "description_short": "Speed, action, air travel, movement, quick decisions"
+            },
+            {
+                "name": "Nine of Wands",
+                "number": 9,
+                "image_url": "/cards/wands/wands09.jpg",
+                "upright": "Resilience, courage, persistence, test of faith",
+                "reversed": "Exhaustion, giving up, overwhelmed, burned out",
+                "description_short": "Resilience, courage, persistence, test of faith, boundaries"
+            },
+            {
+                "name": "Ten of Wands",
+                "number": 10,
+                "image_url": "/cards/wands/wands10.jpg",
+                "upright": "Burden, extra responsibility, hard work, completion",
+                "reversed": "Failure to delegate, overstressed, burned out, collapse",
+                "description_short": "Burden, extra responsibility, hard work, stress, achievement"
+            },
+            {
+                "name": "Page of Wands",
+                "number": 11,
+                "image_url": "/cards/wands/wands11.jpg",
+                "upright": "Exploration, excitement, freedom, adventure, new ideas",
+                "reversed": "Lack of direction, procrastination, creating problems",
+                "description_short": "Inspiration, ideas, discovery, free spirit, enthusiasm"
+            },
+            {
+                "name": "Knight of Wands",
+                "number": 12,
+                "image_url": "/cards/wands/wands12.jpg",
+                "upright": "Energy, passion, inspired action, adventure, impulsiveness",
+                "reversed": "Anger, impulsiveness, recklessness, lack of direction",
+                "description_short": "Energy, passion, inspired action, adventure, impulsiveness"
+            },
+            {
+                "name": "Queen of Wands",
+                "number": 13,
+                "image_url": "/cards/wands/wands13.jpg",
+                "upright": "Courage, confidence, independence, social butterfly, determination",
+                "reversed": "Demanding, vengeful, entitled, jealous, temperamental",
+                "description_short": "Courage, confidence, independence, social butterfly, determination"
+            },
+            {
+                "name": "King of Wands",
+                "number": 14,
+                "image_url": "/cards/wands/wands14.jpg",
+                "upright": "Natural-born leader, vision, entrepreneur, honor",
+                "reversed": "Impulsive, overbearing, impossible expectations, tyrannical",
+                "description_short": "Natural-born leader, vision, entrepreneur, honour"
+            }
+        ],
+        "cups": [
+            {
+                "name": "Ace of Cups",
+                "number": 1,
+                "image_url": "/cards/cups/cups01.jpg",
+                "upright": "New feelings, spirituality, intuition, emotional flow",
+                "reversed": "Emotional loss, blocked feelings, emptiness",
+                "fortune_telling": [
+                    "Romance is in the cards",
+                    "A new relationship or emotional experience is coming",
+                    "Your heart's desire will be fulfilled"
+                ],
+                "keywords": [
+                    "love",
+                    "emotion",
+                    "intuition",
+                    "intimacy"
+                ],
+                "elemental": "Water of Water",
+                "questions_to_ask": [
+                    "What am I feeling right now?",
+                    "How do I deal with emotional situations?",
+                    "What relationships do I need to start, strengthen, or end?"
+                ],
+                "description_short": "Love, new relationships, compassion, creativity"
+            },
+            {
+                "name": "Two of Cups",
+                "number": 2,
+                "image_url": "/cards/cups/cups02.jpg",
+                "upright": "Unity, partnership, connection, attraction",
+                "reversed": "Broken relationships, disharmony, mistrust",
+                "fortune_telling": [
+                    "Someone has a secret crush on you",
+                    "Relationships should be mutual; get rid of a leech"
+                ],
+                "keywords": [
+                    "union",
+                    "attraction",
+                    "combination",
+                    "affection"
+                ],
+                "elemental": "Venus in Cancer",
+                "questions_to_ask": [
+                    "How can I create more intimacy in my relationships?",
+                    "What do I need to learn about healthy relationships?",
+                    "How can I better nurture the relationships I have?"
+                ],
+                "description_short": "Unified love, partnership, mutual attraction"
+            },
+            {
+                "name": "Three of Cups",
+                "number": 3,
+                "image_url": "/cards/cups/cups03.jpg",
+                "upright": "Celebration, friendship, creativity, collaborations",
+                "reversed": "Overindulgence, gossip, isolation",
+                "fortune_telling": [
+                    "Celebrations are in order",
+                    "Reunite with old friends",
+                    "Your wishes will be granted"
+                ],
+                "keywords": [
+                    "celebration",
+                    "friendship",
+                    "community",
+                    "joy"
+                ],
+                "elemental": "Mercury in Cancer",
+                "questions_to_ask": [
+                    "How can I celebrate my current successes?",
+                    "What role do my friends play in my life?",
+                    "How can I better participate in my community?"
+                ],
+                "description_short": "Celebration, friendship, creativity, collaborations"
+            },
+            {
+                "name": "Four of Cups",
+                "number": 4,
+                "image_url": "/cards/cups/cups04.jpg",
+                "upright": "Meditation, contemplation, apathy, reevaluation",
+                "reversed": "Depression, stagnation, acceptance of change",
+                "fortune_telling": [
+                    "A mysterious stranger will enter your life",
+                    "A new emotional connection or friendship will surface"
+                ],
+                "keywords": [
+                    "meditation",
+                    "contemplation",
+                    "discontent",
+                    "boredom"
+                ],
+                "elemental": "Moon in Cancer",
+                "questions_to_ask": [
+                    "What do I have that I'm not seeing?",
+                    "How might a change in attitude help?",
+                    "What opportunities am I failing to see?"
+                ],
+                "description_short": "Meditation, contemplation, apathy, re-evaluation"
+            },
+            {
+                "name": "Five of Cups",
+                "number": 5,
+                "image_url": "/cards/cups/cups05.jpg",
+                "upright": "Loss, grief, self-pity, disappointment",
+                "reversed": "Acceptance, moving on, finding peace",
+                "description_short": "Regret, failure, disappointment, pessimism"
+            },
+            {
+                "name": "Six of Cups",
+                "number": 6,
+                "image_url": "/cards/cups/cups06.jpg",
+                "upright": "Nostalgia, happy memories, reunion, childhood",
+                "reversed": "Living in the past, unrealistic memories",
+                "description_short": "Revisiting the past, childhood memories, innocence, joy"
+            },
+            {
+                "name": "Seven of Cups",
+                "number": 7,
+                "image_url": "/cards/cups/cups07.jpg",
+                "upright": "Opportunities, choices, wishful thinking, illusion",
+                "reversed": "Lack of purpose, disarray, confusion",
+                "description_short": "Opportunities, choices, wishful thinking, illusion"
+            },
+            {
+                "name": "Eight of Cups",
+                "number": 8,
+                "image_url": "/cards/cups/cups08.jpg",
+                "upright": "Walking away, disillusionment, leaving behind",
+                "reversed": "Fear of change, fear of loss, staying in bad situation",
+                "description_short": "Disappointment, abandonment, withdrawal, escapism"
+            },
+            {
+                "name": "Nine of Cups",
+                "number": 9,
+                "image_url": "/cards/cups/cups09.jpg",
+                "upright": "Contentment, satisfaction, wishes fulfilled",
+                "reversed": "Dissatisfaction, greed, materialism",
+                "description_short": "Contentment, satisfaction, gratitude, wish come true"
+            },
+            {
+                "name": "Ten of Cups",
+                "number": 10,
+                "image_url": "/cards/cups/cups10.jpg",
+                "upright": "Divine love, blissful relationships, harmony, alignment",
+                "reversed": "Broken relationships, disharmony, misalignment",
+                "description_short": "Divine love, blissful relationships, harmony, alignment"
+            },
+            {
+                "name": "Page of Cups",
+                "number": 11,
+                "image_url": "/cards/cups/cups11.jpg",
+                "upright": "Creative opportunities, intuitive messages, curiosity",
+                "reversed": "Emotional immaturity, insecurity, disappointment",
+                "description_short": "Creative opportunities, intuitive messages, curiosity, possibility"
+            },
+            {
+                "name": "Knight of Cups",
+                "number": 12,
+                "image_url": "/cards/cups/cups12.jpg",
+                "upright": "Romance, charm, imagination, beauty, following the heart",
+                "reversed": "Unrealistic, jealousy, moodiness, emotional manipulation",
+                "description_short": "Creativity, romance, charm, imagination, beauty"
+            },
+            {
+                "name": "Queen of Cups",
+                "number": 13,
+                "image_url": "/cards/cups/cups13.jpg",
+                "upright": "Compassion, calm, comfort, emotional security",
+                "reversed": "Martyrdom, insecurity, dependence, emotional manipulation",
+                "description_short": "Compassionate, caring, emotionally stable, intuitive, in flow"
+            },
+            {
+                "name": "King of Cups",
+                "number": 14,
+                "image_url": "/cards/cups/cups14.jpg",
+                "upright": "Emotional balance, calm power, generosity",
+                "reversed": "Coldness, moodiness, emotional manipulation",
+                "description_short": "Emotionally balanced, compassionate, diplomatic"
+            }
+        ],
+        "swords": [
+            {
+                "name": "Ace of Swords",
+                "number": 1,
+                "image_url": "/cards/swords/swords01.jpg",
+                "upright": "Breakthrough, clarity, sharp mind, new ideas",
+                "reversed": "Confusion, brutality, chaos, lack of clarity",
+                "fortune_telling": [
+                    "The time to make a choice is now",
+                    "Someone's going to cut through the confusion",
+                    "A new perspective will emerge"
+                ],
+                "keywords": [
+                    "clarity",
+                    "breakthrough",
+                    "truth",
+                    "justice"
+                ],
+                "elemental": "Air of Air",
+                "questions_to_ask": [
+                    "What would happen if I simply told the truth?",
+                    "What do I need to cut away or release?",
+                    "How can I be more objective?"
+                ],
+                "description_short": "Breakthroughs, new ideas, mental clarity, success"
+            },
+            {
+                "name": "Two of Swords",
+                "number": 2,
+                "image_url": "/cards/swords/swords02.jpg",
+                "upright": "Difficult choices, indecision, stalemate, blocked emotions",
+                "reversed": "Lesser of two evils, no right choice, confusion",
+                "fortune_telling": [
+                    "Sometimes, the only way to win is to refuse to fight",
+                    "You're stuck for now; let time pass before taking action"
+                ],
+                "keywords": [
+                    "denial",
+                    "stalemate",
+                    "blocked emotions",
+                    "avoidance"
+                ],
+                "elemental": "Moon in Libra",
+                "questions_to_ask": [
+                    "What information do I need to get off the fence?",
+                    "How can I better understand my own feelings?",
+                    "What would happen if I simply refused to choose?"
+                ],
+                "description_short": "Difficult decisions, weighing up options, an impasse, avoidance"
+            },
+            {
+                "name": "Three of Swords",
+                "number": 3,
+                "image_url": "/cards/swords/swords03.jpg",
+                "upright": "Heartbreak, emotional pain, sorrow, grief, hurt",
+                "reversed": "Recovery, forgiveness, moving on",
+                "fortune_telling": [
+                    "Breakups and infidelity abound",
+                    "What hurts now will turn out to be good for you later"
+                ],
+                "keywords": [
+                    "heartbreak",
+                    "sorrow",
+                    "pain",
+                    "separation"
+                ],
+                "elemental": "Saturn in Libra",
+                "questions_to_ask": [
+                    "How can I learn from this painful experience?",
+                    "What role did I play in this situation?",
+                    "How can I move past this?"
+                ],
+                "description_short": "Heartbreak, emotional pain, sorrow, grief, hurt"
+            },
+            {
+                "name": "Four of Swords",
+                "number": 4,
+                "image_url": "/cards/swords/swords04.jpg",
+                "upright": "Rest, restoration, contemplation, recuperation",
+                "reversed": "Restlessness, burnout, stress",
+                "fortune_telling": [
+                    "Don't make any decisions now",
+                    "Wait, and you'll be glad you did",
+                    "Time alone will help you solve the problem"
+                ],
+                "keywords": [
+                    "meditation",
+                    "contemplation",
+                    "rest",
+                    "relaxation"
+                ],
+                "elemental": "Jupiter in Libra",
+                "questions_to_ask": [
+                    "What would happen if I simply took no action?",
+                    "How can I achieve a more balanced perspective?",
+                    "What insights come when I quiet my mind?"
+                ],
+                "description_short": "Rest, relaxation, meditation, contemplation, recuperation"
+            },
+            {
+                "name": "Five of Swords",
+                "number": 5,
+                "image_url": "/cards/swords/swords05.jpg",
+                "upright": "Conflict, disagreements, competition, defeat, winning at all costs",
+                "reversed": "Reconciliation, making amends, forgiveness",
+                "description_short": "Conflict, disagreements, competition, defeat, winning at all costs"
+            },
+            {
+                "name": "Six of Swords",
+                "number": 6,
+                "image_url": "/cards/swords/swords06.jpg",
+                "upright": "Transition, leaving behind, moving on, gradual change",
+                "reversed": "Stuck, resistance to change, unfinished business",
+                "description_short": "Transition, change, rite of passage, releasing baggage"
+            },
+            {
+                "name": "Seven of Swords",
+                "number": 7,
+                "image_url": "/cards/swords/swords07.jpg",
+                "upright": "Deception, trickery, tactics and strategy",
+                "reversed": "Coming clean, rethinking approach, deception revealed",
+                "description_short": "Betrayal, deception, getting away with something, acting strategically"
+            },
+            {
+                "name": "Eight of Swords",
+                "number": 8,
+                "image_url": "/cards/swords/swords08.jpg",
+                "upright": "Imprisonment, self-imposed restriction, isolation",
+                "reversed": "Freedom, release, self-acceptance",
+                "description_short": "Negative thoughts, self-imposed restriction, imprisonment, victim mentality"
+            },
+            {
+                "name": "Nine of Swords",
+                "number": 9,
+                "image_url": "/cards/swords/swords09.jpg",
+                "upright": "Anxiety, worry, fear, depression, nightmares",
+                "reversed": "Hope, reaching out for help, despair ending",
+                "description_short": "Anxiety, worry, fear, depression, nightmares"
+            },
+            {
+                "name": "Ten of Swords",
+                "number": 10,
+                "image_url": "/cards/swords/swords10.jpg",
+                "upright": "Painful endings, deep wounds, betrayal, loss",
+                "reversed": "Recovery, regeneration, resisting an inevitable end",
+                "description_short": "Painful endings, deep wounds, betrayal, loss, crisis"
+            },
+            {
+                "name": "Page of Swords",
+                "number": 11,
+                "image_url": "/cards/swords/swords11.jpg",
+                "upright": "New ideas, curiosity, thirst for knowledge",
+                "reversed": "Deception, manipulation, all talk",
+                "description_short": "New ideas, curiosity, thirst for knowledge, new ways of communicating"
+            },
+            {
+                "name": "Knight of Swords",
+                "number": 12,
+                "image_url": "/cards/swords/swords12.jpg",
+                "upright": "Action, ambition, drive to succeed, fast thinking",
+                "reversed": "Impulsiveness, aggression, ruthlessness",
+                "description_short": "Ambitious, action-oriented, driven to succeed, fast-thinking"
+            },
+            {
+                "name": "Queen of Swords",
+                "number": 13,
+                "image_url": "/cards/swords/swords13.jpg",
+                "upright": "Independent, clear boundaries, direct communication",
+                "reversed": "Cold-hearted, bitter, cruel",
+                "description_short": "Independent, unbiased judgement, clear boundaries, direct communication"
+            },
+            {
+                "name": "King of Swords",
+                "number": 14,
+                "image_url": "/cards/swords/swords14.jpg",
+                "upright": "Clear thinking, intellectual power, authority, truth",
+                "reversed": "Manipulative, cruel, controlling",
+                "description_short": "Mental clarity, intellectual power, authority, truth"
+            }
+        ],
+        "pentacles": [
+            {
+                "name": "Ace of Pentacles",
+                "number": 1,
+                "image_url": "/cards/pentacles/pentacles01.jpg",
+                "upright": "New financial opportunity, prosperity, new venture",
+                "reversed": "Lost opportunity, lack of planning and foresight",
+                "fortune_telling": [
+                    "Your health will improve",
+                    "The check's in the mail",
+                    "A new job or promotion is coming your way"
+                ],
+                "keywords": [
+                    "prosperity",
+                    "abundance",
+                    "security",
+                    "grounding"
+                ],
+                "elemental": "Earth of Earth",
+                "questions_to_ask": [
+                    "What resources do I have at my disposal?",
+                    "What practical steps do I need to take?",
+                    "How can I make the best use of my resources?"
+                ],
+                "description_short": "New financial or career opportunity, manifestation, abundance"
+            },
+            {
+                "name": "Two of Pentacles",
+                "number": 2,
+                "image_url": "/cards/pentacles/pentacles02.jpg",
+                "upright": "Balance, adaptability, time management, prioritization",
+                "reversed": "Imbalance, disorganization, overwhelmed",
+                "fortune_telling": [
+                    "It's time to balance the budget",
+                    "Avoid gambling and games of chance",
+                    "A rainy day is coming\u2014be prepared"
+                ],
+                "keywords": [
+                    "juggling",
+                    "flexibility",
+                    "adaptability",
+                    "resilience"
+                ],
+                "elemental": "Jupiter in Capricorn",
+                "questions_to_ask": [
+                    "What adjustments do I need to make?",
+                    "How can I better manage my resources?",
+                    "What needs to be kept in balance?"
+                ],
+                "description_short": "Multiple priorities, time management, prioritisation, adaptability"
+            },
+            {
+                "name": "Three of Pentacles",
+                "number": 3,
+                "image_url": "/cards/pentacles/pentacles03.jpg",
+                "upright": "Teamwork, collaboration, building, learning",
+                "reversed": "Lack of teamwork, disorganized, group conflict",
+                "fortune_telling": [
+                    "A talented man will offer you needed help",
+                    "Get ready for huge changes: break-ups, sudden calls from old friends, and unexpected setbacks"
+                ],
+                "keywords": [
+                    "teamwork",
+                    "apprenticeship",
+                    "collaboration",
+                    "skill"
+                ],
+                "elemental": "Mars in Capricorn",
+                "questions_to_ask": [
+                    "How can I work more effectively with others?",
+                    "What can I learn from others?",
+                    "How can I be a better team player?"
+                ],
+                "description_short": "Teamwork, collaboration, learning, implementation"
+            },
+            {
+                "name": "Four of Pentacles",
+                "number": 4,
+                "image_url": "/cards/pentacles/pentacles04.jpg",
+                "upright": "Conservation, security, frugality, boundaries",
+                "reversed": "Greed, materialism, possessiveness",
+                "fortune_telling": [
+                    "A miserly person may enter your life",
+                    "Save your money for a rainy day",
+                    "Be prepared for a period of financial hardship"
+                ],
+                "keywords": [
+                    "protection",
+                    "conservation",
+                    "preservation",
+                    "safety"
+                ],
+                "elemental": "Sun in Capricorn",
+                "questions_to_ask": [
+                    "What am I holding onto? Why?",
+                    "How can I feel more secure?",
+                    "How can I build up my resources?"
+                ],
+                "description_short": "Saving money, security, conservatism, scarcity, control"
+            },
+            {
+                "name": "Five of Pentacles",
+                "number": 5,
+                "image_url": "/cards/pentacles/pentacles05.jpg",
+                "upright": "Hard times, financial loss, poverty, isolation",
+                "reversed": "Recovery, spiritual growth, asking for help",
+                "description_short": "Financial loss, poverty, lack mindset, isolation, worry"
+            },
+            {
+                "name": "Six of Pentacles",
+                "number": 6,
+                "image_url": "/cards/pentacles/pentacles06.jpg",
+                "upright": "Generosity, charity, sharing, giving and receiving",
+                "reversed": "Strings attached, stinginess, power and domination",
+                "description_short": "Giving, receiving, sharing wealth, generosity, charity"
+            },
+            {
+                "name": "Seven of Pentacles",
+                "number": 7,
+                "image_url": "/cards/pentacles/pentacles07.jpg",
+                "upright": "Hard work, perseverance, diligence, investment",
+                "reversed": "Work without results, distractions, lack of rewards",
+                "description_short": "Long-term view, sustainable results, perseverance, investment"
+            },
+            {
+                "name": "Eight of Pentacles",
+                "number": 8,
+                "image_url": "/cards/pentacles/pentacles08.jpg",
+                "upright": "Apprenticeship, repetitive tasks, mastery, skill development",
+                "reversed": "Perfectionism, no ambition, uninspired work",
+                "description_short": "Apprenticeship, repetitive tasks, mastery, skill development"
+            },
+            {
+                "name": "Nine of Pentacles",
+                "number": 9,
+                "image_url": "/cards/pentacles/pentacles09.jpg",
+                "upright": "Abundance, luxury, self-sufficiency, culmination",
+                "reversed": "Showing off, superficial success, material loss",
+                "description_short": "Abundance, luxury, self-sufficiency, financial independence"
+            },
+            {
+                "name": "Ten of Pentacles",
+                "number": 10,
+                "image_url": "/cards/pentacles/pentacles10.jpg",
+                "upright": "Wealth, family, long-term success, contribution",
+                "reversed": "Family problems, financial failure, loss of legacy",
+                "description_short": "Wealth, financial security, family, long-term success, contribution"
+            },
+            {
+                "name": "Page of Pentacles",
+                "number": 11,
+                "image_url": "/cards/pentacles/pentacles11.jpg",
+                "upright": "Manifestation, financial opportunity, skill development",
+                "reversed": "Lack of progress, procrastination, learn from failure",
+                "description_short": "Manifestation, financial opportunity, skill development"
+            },
+            {
+                "name": "Knight of Pentacles",
+                "number": 12,
+                "image_url": "/cards/pentacles/pentacles12.jpg",
+                "upright": "Hard work, productivity, routine, conservatism",
+                "reversed": "Stagnation, boredom, feeling stuck, perfectionism",
+                "description_short": "Hard work, productivity, routine, conservatism"
+            },
+            {
+                "name": "Queen of Pentacles",
+                "number": 13,
+                "image_url": "/cards/pentacles/pentacles13.jpg",
+                "upright": "Nurturing, practical, providing stability, down-to-earth",
+                "reversed": "Self-centered, jealous, smothering, materialistic",
+                "description_short": "Nurturing, practical, providing financially, a working parent"
+            },
+            {
+                "name": "King of Pentacles",
+                "number": 14,
+                "image_url": "/cards/pentacles/pentacles14.jpg",
+                "upright": "Abundance, prosperity, security, discipline, grounding",
+                "reversed": "Greed, materialism, poor financial decisions",
+                "description_short": "Wealth, business, leadership, security, discipline, abundance"
+            }
+        ]
+    }
+}

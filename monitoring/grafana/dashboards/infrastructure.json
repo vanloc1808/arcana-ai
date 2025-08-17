@@ -1,0 +1,229 @@
+{
+    "dashboard": {
+        "id": null,
+        "title": "Infrastructure Monitoring",
+        "tags": [
+            "infrastructure",
+            "containers",
+            "system"
+        ],
+        "style": "dark",
+        "timezone": "browser",
+        "refresh": "30s",
+        "time": {
+            "from": "now-1h",
+            "to": "now"
+        },
+        "panels": [
+            {
+                "id": 1,
+                "title": "CPU Usage by Container",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(container_cpu_usage_seconds_total{name=~\"tarot-.*\"}[5m]) * 100",
+                        "legendFormat": "{{name}}"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 0
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "percent",
+                        "max": 100
+                    }
+                }
+            },
+            {
+                "id": 2,
+                "title": "Memory Usage by Container",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "container_memory_usage_bytes{name=~\"tarot-.*\"} / 1024 / 1024",
+                        "legendFormat": "{{name}}"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 0
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "MiB"
+                    }
+                }
+            },
+            {
+                "id": 3,
+                "title": "Network I/O",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(container_network_receive_bytes_total{name=~\"tarot-.*\"}[5m])",
+                        "legendFormat": "{{name}} - RX"
+                    },
+                    {
+                        "expr": "rate(container_network_transmit_bytes_total{name=~\"tarot-.*\"}[5m])",
+                        "legendFormat": "{{name}} - TX"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 8
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "Bps"
+                    }
+                }
+            },
+            {
+                "id": 4,
+                "title": "Disk I/O",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(container_fs_reads_bytes_total{name=~\"tarot-.*\"}[5m])",
+                        "legendFormat": "{{name}} - Read"
+                    },
+                    {
+                        "expr": "rate(container_fs_writes_bytes_total{name=~\"tarot-.*\"}[5m])",
+                        "legendFormat": "{{name}} - Write"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 8
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "Bps"
+                    }
+                }
+            },
+            {
+                "id": 5,
+                "title": "System Load Average",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "node_load1",
+                        "legendFormat": "1m"
+                    },
+                    {
+                        "expr": "node_load5",
+                        "legendFormat": "5m"
+                    },
+                    {
+                        "expr": "node_load15",
+                        "legendFormat": "15m"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 8,
+                    "x": 0,
+                    "y": 16
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "short"
+                    }
+                }
+            },
+            {
+                "id": 6,
+                "title": "Disk Usage",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "(node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_avail_bytes{mountpoint=\"/\"}) / node_filesystem_size_bytes{mountpoint=\"/\"} * 100",
+                        "legendFormat": "Disk Usage %"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 8,
+                    "x": 8,
+                    "y": 16
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "percent",
+                        "color": {
+                            "mode": "thresholds"
+                        },
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "green",
+                                    "value": null
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 70
+                                },
+                                {
+                                    "color": "red",
+                                    "value": 90
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "id": 7,
+                "title": "Container Restart Count",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "increase(container_start_time_seconds{name=~\"tarot-.*\"}[1h])",
+                        "legendFormat": "{{name}}"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 8,
+                    "x": 16,
+                    "y": 16
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "short",
+                        "color": {
+                            "mode": "thresholds"
+                        },
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "green",
+                                    "value": null
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 1
+                                },
+                                {
+                                    "color": "red",
+                                    "value": 3
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}

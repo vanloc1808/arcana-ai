@@ -1,0 +1,2378 @@
+{
+  "rider_waite": {
+    "name": "Rider-Waite-Smith",
+    "description": "The classic and most widely used Tarot deck, created in 1909 by A.E. Waite and Pamela Colman Smith.",
+    "cards": [
+      {
+        "name": "The Fool",
+        "image_url": "https://i.ibb.co/Q71KBHMH/m00.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Magician",
+        "image_url": "https://i.ibb.co/mVH1HPfj/m01.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The High Priestess",
+        "image_url": "https://i.ibb.co/rK3xSJzn/m02.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Empress",
+        "image_url": "https://i.ibb.co/zdG9Gy4/m03.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Emperor",
+        "image_url": "https://i.ibb.co/BHr2gckR/m04.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Hierophant",
+        "image_url": "https://i.ibb.co/JWxKxZ13/m05.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Lovers",
+        "image_url": "https://i.ibb.co/xSxxcc5D/m06.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Chariot",
+        "image_url": "https://i.ibb.co/gk9vnyg/m07.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Strength",
+        "image_url": "https://i.ibb.co/yc0Zpvv6/m08.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Hermit",
+        "image_url": "https://i.ibb.co/ccpmBZ5V/m09.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Wheel of Fortune",
+        "image_url": "https://i.ibb.co/WvVvSqw0/m10.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Justice",
+        "image_url": "https://i.ibb.co/j9H9b0Hj/m11.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Hanged Man",
+        "image_url": "https://i.ibb.co/431z6mN/m12.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Death",
+        "image_url": "https://i.ibb.co/QFHPhvHk/m13.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Temperance",
+        "image_url": "https://i.ibb.co/pjr4YLwN/m14.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Devil",
+        "image_url": "https://i.ibb.co/Xf3s1Jsb/m15.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Tower",
+        "image_url": "https://i.ibb.co/bgbh1GD2/m16.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Star",
+        "image_url": "https://i.ibb.co/DNj36z0/m17.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Moon",
+        "image_url": "https://i.ibb.co/bR5Vf8WF/m18.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The Sun",
+        "image_url": "https://i.ibb.co/mmjPhr6/m19.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Judgement",
+        "image_url": "https://i.ibb.co/Df59WwHk/m20.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "The World",
+        "image_url": "https://i.ibb.co/X61MrLb/m21.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Ace of Cups",
+        "image_url": "https://i.ibb.co/r2tfMXDc/c01.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Two of Cups",
+        "image_url": "https://i.ibb.co/H3JQ5xk/c02.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Three of Cups",
+        "image_url": "https://i.ibb.co/Hfc2H668/c03.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Four of Cups",
+        "image_url": "https://i.ibb.co/x8SN35bH/c04.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Five of Cups",
+        "image_url": "https://i.ibb.co/PZKjYjW5/c05.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Six of Cups",
+        "image_url": "https://i.ibb.co/ks6p1r5p/c06.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Seven of Cups",
+        "image_url": "https://i.ibb.co/pBCtmDV8/c07.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Eight of Cups",
+        "image_url": "https://i.ibb.co/d0RjKXBK/c08.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Nine of Cups",
+        "image_url": "https://i.ibb.co/jZzNfsJW/c09.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Ten of Cups",
+        "image_url": "https://i.ibb.co/W4jK5rJ6/c10.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Page of Cups",
+        "image_url": "https://i.ibb.co/C3MBZKs7/c11.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Knight of Cups",
+        "image_url": "https://i.ibb.co/xKqbPtYK/c12.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Queen of Cups",
+        "image_url": "https://i.ibb.co/J8PWyx1/c13.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "King of Cups",
+        "image_url": "https://i.ibb.co/TxWLb6X4/c14.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Ace of Swords",
+        "image_url": "https://i.ibb.co/35qyPpcg/s01.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Two of Swords",
+        "image_url": "https://i.ibb.co/dwPfSfW7/s02.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Three of Swords",
+        "image_url": "https://i.ibb.co/zhHnSngB/s03.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Four of Swords",
+        "image_url": "https://i.ibb.co/C5y725Dv/s04.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Five of Swords",
+        "image_url": "https://i.ibb.co/rnbbqTZ/s05.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Six of Swords",
+        "image_url": "https://i.ibb.co/V0XgG5j3/s06.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Seven of Swords",
+        "image_url": "https://i.ibb.co/WN7Kcm81/s07.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Eight of Swords",
+        "image_url": "https://i.ibb.co/fVWnFy2K/s08.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Nine of Swords",
+        "image_url": "https://i.ibb.co/0Vq3ytDm/s09.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Ten of Swords",
+        "image_url": "https://i.ibb.co/bRGc2Gpm/s10.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Page of Swords",
+        "image_url": "https://i.ibb.co/Y7js4BVG/s11.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Knight of Swords",
+        "image_url": "https://i.ibb.co/TqF4TfMj/s12.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Queen of Swords",
+        "image_url": "https://i.ibb.co/jvm2zqN3/s13.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "King of Swords",
+        "image_url": "https://i.ibb.co/6cdkTrDf/s14.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Ace of Wands",
+        "image_url": "https://i.ibb.co/cSzjBy3V/w01.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Two of Wands",
+        "image_url": "https://i.ibb.co/Mxg5phMS/w02.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Three of Wands",
+        "image_url": "https://i.ibb.co/4rQBVMM/w03.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Four of Wands",
+        "image_url": "https://i.ibb.co/PZBCm9DX/w04.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Five of Wands",
+        "image_url": "https://i.ibb.co/LXVgZ4n9/w05.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Six of Wands",
+        "image_url": "https://i.ibb.co/s9Q2X5pd/w06.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Seven of Wands",
+        "image_url": "https://i.ibb.co/gc97jQw/w07.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Eight of Wands",
+        "image_url": "https://i.ibb.co/XrRMxc0R/w08.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Nine of Wands",
+        "image_url": "https://i.ibb.co/8gfBhkXS/w09.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Ten of Wands",
+        "image_url": "https://i.ibb.co/LX6fMdSj/w10.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Page of Wands",
+        "image_url": "https://i.ibb.co/vvzFrY8r/w11.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Knight of Wands",
+        "image_url": "https://i.ibb.co/Q3S9WWz1/w12.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Queen of Wands",
+        "image_url": "https://i.ibb.co/RkkRPtFX/w13.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "King of Wands",
+        "image_url": "https://i.ibb.co/Dg1twB4k/w14.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Ace of Pentacles",
+        "image_url": "https://i.ibb.co/M520Rc1Y/p01.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Two of Pentacles",
+        "image_url": "https://i.ibb.co/WZ2MLnW/p02.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Three of Pentacles",
+        "image_url": "https://i.ibb.co/dswtKN1K/p03.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Four of Pentacles",
+        "image_url": "https://i.ibb.co/nxdPZKp/p04.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Five of Pentacles",
+        "image_url": "https://i.ibb.co/217HnGNG/p05.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Six of Pentacles",
+        "image_url": "https://i.ibb.co/MDgcksj2/p06.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Seven of Pentacles",
+        "image_url": "https://i.ibb.co/9H7sRhtt/p07.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Eight of Pentacles",
+        "image_url": "https://i.ibb.co/7d8FZ4Ym/p08.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Nine of Pentacles",
+        "image_url": "https://i.ibb.co/JFBS5PmX/p09.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Ten of Pentacles",
+        "image_url": "https://i.ibb.co/n8M7QvbS/p10.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Page of Pentacles",
+        "image_url": "https://i.ibb.co/svVkSZ1B/p11.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Knight of Pentacles",
+        "image_url": "https://i.ibb.co/Nfyd7YF/p12.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "Queen of Pentacles",
+        "image_url": "https://i.ibb.co/B2TtYpxt/p13.jpg",
+        "deck": "rider_waite"
+      },
+      {
+        "name": "King of Pentacles",
+        "image_url": "https://i.ibb.co/20R0dWvs/p14.jpg",
+        "deck": "rider_waite"
+      }
+    ]
+  },
+  "thoth": {
+    "name": "Thoth",
+    "description": "Created by Aleister Crowley and Lady Frieda Harris, this deck incorporates deep esoteric symbolism and Egyptian mythology.",
+    "cards": [
+      {
+        "name": "The Fool",
+        "image_url": "https://i.ibb.co/Q71KBHMH/m00.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Magician",
+        "image_url": "https://i.ibb.co/mVH1HPfj/m01.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The High Priestess",
+        "image_url": "https://i.ibb.co/rK3xSJzn/m02.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Empress",
+        "image_url": "https://i.ibb.co/zdG9Gy4/m03.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Emperor",
+        "image_url": "https://i.ibb.co/BHr2gckR/m04.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Hierophant",
+        "image_url": "https://i.ibb.co/JWxKxZ13/m05.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Lovers",
+        "image_url": "https://i.ibb.co/xSxxcc5D/m06.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Chariot",
+        "image_url": "https://i.ibb.co/gk9vnyg/m07.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Strength",
+        "image_url": "https://i.ibb.co/yc0Zpvv6/m08.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Hermit",
+        "image_url": "https://i.ibb.co/ccpmBZ5V/m09.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Wheel of Fortune",
+        "image_url": "https://i.ibb.co/WvVvSqw0/m10.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Justice",
+        "image_url": "https://i.ibb.co/j9H9b0Hj/m11.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Hanged Man",
+        "image_url": "https://i.ibb.co/431z6mN/m12.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Death",
+        "image_url": "https://i.ibb.co/QFHPhvHk/m13.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Temperance",
+        "image_url": "https://i.ibb.co/pjr4YLwN/m14.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Devil",
+        "image_url": "https://i.ibb.co/Xf3s1Jsb/m15.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Tower",
+        "image_url": "https://i.ibb.co/bgbh1GD2/m16.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Star",
+        "image_url": "https://i.ibb.co/DNj36z0/m17.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Moon",
+        "image_url": "https://i.ibb.co/bR5Vf8WF/m18.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The Sun",
+        "image_url": "https://i.ibb.co/mmjPhr6/m19.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Judgement",
+        "image_url": "https://i.ibb.co/Df59WwHk/m20.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "The World",
+        "image_url": "https://i.ibb.co/X61MrLb/m21.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Ace of Cups",
+        "image_url": "https://i.ibb.co/r2tfMXDc/c01.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Two of Cups",
+        "image_url": "https://i.ibb.co/H3JQ5xk/c02.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Three of Cups",
+        "image_url": "https://i.ibb.co/Hfc2H668/c03.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Four of Cups",
+        "image_url": "https://i.ibb.co/x8SN35bH/c04.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Five of Cups",
+        "image_url": "https://i.ibb.co/PZKjYjW5/c05.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Six of Cups",
+        "image_url": "https://i.ibb.co/ks6p1r5p/c06.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Seven of Cups",
+        "image_url": "https://i.ibb.co/pBCtmDV8/c07.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Eight of Cups",
+        "image_url": "https://i.ibb.co/d0RjKXBK/c08.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Nine of Cups",
+        "image_url": "https://i.ibb.co/jZzNfsJW/c09.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Ten of Cups",
+        "image_url": "https://i.ibb.co/W4jK5rJ6/c10.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Page of Cups",
+        "image_url": "https://i.ibb.co/C3MBZKs7/c11.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Knight of Cups",
+        "image_url": "https://i.ibb.co/xKqbPtYK/c12.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Queen of Cups",
+        "image_url": "https://i.ibb.co/J8PWyx1/c13.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "King of Cups",
+        "image_url": "https://i.ibb.co/TxWLb6X4/c14.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Ace of Swords",
+        "image_url": "https://i.ibb.co/35qyPpcg/s01.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Two of Swords",
+        "image_url": "https://i.ibb.co/dwPfSfW7/s02.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Three of Swords",
+        "image_url": "https://i.ibb.co/zhHnSngB/s03.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Four of Swords",
+        "image_url": "https://i.ibb.co/C5y725Dv/s04.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Five of Swords",
+        "image_url": "https://i.ibb.co/rnbbqTZ/s05.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Six of Swords",
+        "image_url": "https://i.ibb.co/V0XgG5j3/s06.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Seven of Swords",
+        "image_url": "https://i.ibb.co/WN7Kcm81/s07.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Eight of Swords",
+        "image_url": "https://i.ibb.co/fVWnFy2K/s08.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Nine of Swords",
+        "image_url": "https://i.ibb.co/0Vq3ytDm/s09.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Ten of Swords",
+        "image_url": "https://i.ibb.co/bRGc2Gpm/s10.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Page of Swords",
+        "image_url": "https://i.ibb.co/Y7js4BVG/s11.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Knight of Swords",
+        "image_url": "https://i.ibb.co/TqF4TfMj/s12.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Queen of Swords",
+        "image_url": "https://i.ibb.co/jvm2zqN3/s13.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "King of Swords",
+        "image_url": "https://i.ibb.co/6cdkTrDf/s14.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Ace of Wands",
+        "image_url": "https://i.ibb.co/cSzjBy3V/w01.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Two of Wands",
+        "image_url": "https://i.ibb.co/Mxg5phMS/w02.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Three of Wands",
+        "image_url": "https://i.ibb.co/4rQBVMM/w03.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Four of Wands",
+        "image_url": "https://i.ibb.co/PZBCm9DX/w04.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Five of Wands",
+        "image_url": "https://i.ibb.co/LXVgZ4n9/w05.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Six of Wands",
+        "image_url": "https://i.ibb.co/s9Q2X5pd/w06.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Seven of Wands",
+        "image_url": "https://i.ibb.co/gc97jQw/w07.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Eight of Wands",
+        "image_url": "https://i.ibb.co/XrRMxc0R/w08.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Nine of Wands",
+        "image_url": "https://i.ibb.co/8gfBhkXS/w09.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Ten of Wands",
+        "image_url": "https://i.ibb.co/LX6fMdSj/w10.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Page of Wands",
+        "image_url": "https://i.ibb.co/vvzFrY8r/w11.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Knight of Wands",
+        "image_url": "https://i.ibb.co/Q3S9WWz1/w12.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Queen of Wands",
+        "image_url": "https://i.ibb.co/RkkRPtFX/w13.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "King of Wands",
+        "image_url": "https://i.ibb.co/Dg1twB4k/w14.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Ace of Pentacles",
+        "image_url": "https://i.ibb.co/M520Rc1Y/p01.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Two of Pentacles",
+        "image_url": "https://i.ibb.co/WZ2MLnW/p02.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Three of Pentacles",
+        "image_url": "https://i.ibb.co/dswtKN1K/p03.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Four of Pentacles",
+        "image_url": "https://i.ibb.co/nxdPZKp/p04.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Five of Pentacles",
+        "image_url": "https://i.ibb.co/217HnGNG/p05.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Six of Pentacles",
+        "image_url": "https://i.ibb.co/MDgcksj2/p06.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Seven of Pentacles",
+        "image_url": "https://i.ibb.co/9H7sRhtt/p07.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Eight of Pentacles",
+        "image_url": "https://i.ibb.co/7d8FZ4Ym/p08.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Nine of Pentacles",
+        "image_url": "https://i.ibb.co/JFBS5PmX/p09.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Ten of Pentacles",
+        "image_url": "https://i.ibb.co/n8M7QvbS/p10.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Page of Pentacles",
+        "image_url": "https://i.ibb.co/svVkSZ1B/p11.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Knight of Pentacles",
+        "image_url": "https://i.ibb.co/Nfyd7YF/p12.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "Queen of Pentacles",
+        "image_url": "https://i.ibb.co/B2TtYpxt/p13.jpg",
+        "deck": "thoth"
+      },
+      {
+        "name": "King of Pentacles",
+        "image_url": "https://i.ibb.co/20R0dWvs/p14.jpg",
+        "deck": "thoth"
+      }
+    ]
+  },
+  "marseille": {
+    "name": "Marseille",
+    "description": "One of the oldest Tarot decks, originating in France, known for its simple yet powerful imagery.",
+    "cards": [
+      {
+        "name": "The Fool",
+        "image_url": "https://i.ibb.co/Q71KBHMH/m00.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Magician",
+        "image_url": "https://i.ibb.co/mVH1HPfj/m01.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The High Priestess",
+        "image_url": "https://i.ibb.co/rK3xSJzn/m02.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Empress",
+        "image_url": "https://i.ibb.co/zdG9Gy4/m03.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Emperor",
+        "image_url": "https://i.ibb.co/BHr2gckR/m04.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Hierophant",
+        "image_url": "https://i.ibb.co/JWxKxZ13/m05.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Lovers",
+        "image_url": "https://i.ibb.co/xSxxcc5D/m06.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Chariot",
+        "image_url": "https://i.ibb.co/gk9vnyg/m07.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Strength",
+        "image_url": "https://i.ibb.co/yc0Zpvv6/m08.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Hermit",
+        "image_url": "https://i.ibb.co/ccpmBZ5V/m09.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Wheel of Fortune",
+        "image_url": "https://i.ibb.co/WvVvSqw0/m10.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Justice",
+        "image_url": "https://i.ibb.co/j9H9b0Hj/m11.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Hanged Man",
+        "image_url": "https://i.ibb.co/431z6mN/m12.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Death",
+        "image_url": "https://i.ibb.co/QFHPhvHk/m13.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Temperance",
+        "image_url": "https://i.ibb.co/pjr4YLwN/m14.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Devil",
+        "image_url": "https://i.ibb.co/Xf3s1Jsb/m15.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Tower",
+        "image_url": "https://i.ibb.co/bgbh1GD2/m16.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Star",
+        "image_url": "https://i.ibb.co/DNj36z0/m17.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Moon",
+        "image_url": "https://i.ibb.co/bR5Vf8WF/m18.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The Sun",
+        "image_url": "https://i.ibb.co/mmjPhr6/m19.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Judgement",
+        "image_url": "https://i.ibb.co/Df59WwHk/m20.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "The World",
+        "image_url": "https://i.ibb.co/X61MrLb/m21.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Ace of Cups",
+        "image_url": "https://i.ibb.co/r2tfMXDc/c01.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Two of Cups",
+        "image_url": "https://i.ibb.co/H3JQ5xk/c02.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Three of Cups",
+        "image_url": "https://i.ibb.co/Hfc2H668/c03.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Four of Cups",
+        "image_url": "https://i.ibb.co/x8SN35bH/c04.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Five of Cups",
+        "image_url": "https://i.ibb.co/PZKjYjW5/c05.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Six of Cups",
+        "image_url": "https://i.ibb.co/ks6p1r5p/c06.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Seven of Cups",
+        "image_url": "https://i.ibb.co/pBCtmDV8/c07.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Eight of Cups",
+        "image_url": "https://i.ibb.co/d0RjKXBK/c08.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Nine of Cups",
+        "image_url": "https://i.ibb.co/jZzNfsJW/c09.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Ten of Cups",
+        "image_url": "https://i.ibb.co/W4jK5rJ6/c10.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Page of Cups",
+        "image_url": "https://i.ibb.co/C3MBZKs7/c11.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Knight of Cups",
+        "image_url": "https://i.ibb.co/xKqbPtYK/c12.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Queen of Cups",
+        "image_url": "https://i.ibb.co/J8PWyx1/c13.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "King of Cups",
+        "image_url": "https://i.ibb.co/TxWLb6X4/c14.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Ace of Swords",
+        "image_url": "https://i.ibb.co/35qyPpcg/s01.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Two of Swords",
+        "image_url": "https://i.ibb.co/dwPfSfW7/s02.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Three of Swords",
+        "image_url": "https://i.ibb.co/zhHnSngB/s03.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Four of Swords",
+        "image_url": "https://i.ibb.co/C5y725Dv/s04.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Five of Swords",
+        "image_url": "https://i.ibb.co/rnbbqTZ/s05.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Six of Swords",
+        "image_url": "https://i.ibb.co/V0XgG5j3/s06.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Seven of Swords",
+        "image_url": "https://i.ibb.co/WN7Kcm81/s07.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Eight of Swords",
+        "image_url": "https://i.ibb.co/fVWnFy2K/s08.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Nine of Swords",
+        "image_url": "https://i.ibb.co/0Vq3ytDm/s09.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Ten of Swords",
+        "image_url": "https://i.ibb.co/bRGc2Gpm/s10.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Page of Swords",
+        "image_url": "https://i.ibb.co/Y7js4BVG/s11.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Knight of Swords",
+        "image_url": "https://i.ibb.co/TqF4TfMj/s12.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Queen of Swords",
+        "image_url": "https://i.ibb.co/jvm2zqN3/s13.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "King of Swords",
+        "image_url": "https://i.ibb.co/6cdkTrDf/s14.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Ace of Wands",
+        "image_url": "https://i.ibb.co/cSzjBy3V/w01.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Two of Wands",
+        "image_url": "https://i.ibb.co/Mxg5phMS/w02.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Three of Wands",
+        "image_url": "https://i.ibb.co/4rQBVMM/w03.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Four of Wands",
+        "image_url": "https://i.ibb.co/PZBCm9DX/w04.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Five of Wands",
+        "image_url": "https://i.ibb.co/LXVgZ4n9/w05.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Six of Wands",
+        "image_url": "https://i.ibb.co/s9Q2X5pd/w06.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Seven of Wands",
+        "image_url": "https://i.ibb.co/gc97jQw/w07.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Eight of Wands",
+        "image_url": "https://i.ibb.co/XrRMxc0R/w08.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Nine of Wands",
+        "image_url": "https://i.ibb.co/8gfBhkXS/w09.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Ten of Wands",
+        "image_url": "https://i.ibb.co/LX6fMdSj/w10.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Page of Wands",
+        "image_url": "https://i.ibb.co/vvzFrY8r/w11.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Knight of Wands",
+        "image_url": "https://i.ibb.co/Q3S9WWz1/w12.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Queen of Wands",
+        "image_url": "https://i.ibb.co/RkkRPtFX/w13.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "King of Wands",
+        "image_url": "https://i.ibb.co/Dg1twB4k/w14.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Ace of Pentacles",
+        "image_url": "https://i.ibb.co/M520Rc1Y/p01.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Two of Pentacles",
+        "image_url": "https://i.ibb.co/WZ2MLnW/p02.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Three of Pentacles",
+        "image_url": "https://i.ibb.co/dswtKN1K/p03.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Four of Pentacles",
+        "image_url": "https://i.ibb.co/nxdPZKp/p04.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Five of Pentacles",
+        "image_url": "https://i.ibb.co/217HnGNG/p05.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Six of Pentacles",
+        "image_url": "https://i.ibb.co/MDgcksj2/p06.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Seven of Pentacles",
+        "image_url": "https://i.ibb.co/9H7sRhtt/p07.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Eight of Pentacles",
+        "image_url": "https://i.ibb.co/7d8FZ4Ym/p08.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Nine of Pentacles",
+        "image_url": "https://i.ibb.co/JFBS5PmX/p09.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Ten of Pentacles",
+        "image_url": "https://i.ibb.co/n8M7QvbS/p10.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Page of Pentacles",
+        "image_url": "https://i.ibb.co/svVkSZ1B/p11.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Knight of Pentacles",
+        "image_url": "https://i.ibb.co/Nfyd7YF/p12.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "Queen of Pentacles",
+        "image_url": "https://i.ibb.co/B2TtYpxt/p13.jpg",
+        "deck": "marseille"
+      },
+      {
+        "name": "King of Pentacles",
+        "image_url": "https://i.ibb.co/20R0dWvs/p14.jpg",
+        "deck": "marseille"
+      }
+    ]
+  },
+  "golden_dawn": {
+    "name": "Golden Dawn",
+    "description": "Based on the teachings of the Hermetic Order of the Golden Dawn, featuring rich esoteric symbolism.",
+    "cards": [
+      {
+        "name": "The Fool",
+        "image_url": "https://i.ibb.co/Q71KBHMH/m00.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Magician",
+        "image_url": "https://i.ibb.co/mVH1HPfj/m01.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The High Priestess",
+        "image_url": "https://i.ibb.co/rK3xSJzn/m02.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Empress",
+        "image_url": "https://i.ibb.co/zdG9Gy4/m03.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Emperor",
+        "image_url": "https://i.ibb.co/BHr2gckR/m04.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Hierophant",
+        "image_url": "https://i.ibb.co/JWxKxZ13/m05.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Lovers",
+        "image_url": "https://i.ibb.co/xSxxcc5D/m06.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Chariot",
+        "image_url": "https://i.ibb.co/gk9vnyg/m07.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Strength",
+        "image_url": "https://i.ibb.co/yc0Zpvv6/m08.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Hermit",
+        "image_url": "https://i.ibb.co/ccpmBZ5V/m09.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Wheel of Fortune",
+        "image_url": "https://i.ibb.co/WvVvSqw0/m10.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Justice",
+        "image_url": "https://i.ibb.co/j9H9b0Hj/m11.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Hanged Man",
+        "image_url": "https://i.ibb.co/431z6mN/m12.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Death",
+        "image_url": "https://i.ibb.co/QFHPhvHk/m13.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Temperance",
+        "image_url": "https://i.ibb.co/pjr4YLwN/m14.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Devil",
+        "image_url": "https://i.ibb.co/Xf3s1Jsb/m15.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Tower",
+        "image_url": "https://i.ibb.co/bgbh1GD2/m16.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Star",
+        "image_url": "https://i.ibb.co/DNj36z0/m17.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Moon",
+        "image_url": "https://i.ibb.co/bR5Vf8WF/m18.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The Sun",
+        "image_url": "https://i.ibb.co/mmjPhr6/m19.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Judgement",
+        "image_url": "https://i.ibb.co/Df59WwHk/m20.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "The World",
+        "image_url": "https://i.ibb.co/X61MrLb/m21.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Ace of Cups",
+        "image_url": "https://i.ibb.co/r2tfMXDc/c01.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Two of Cups",
+        "image_url": "https://i.ibb.co/H3JQ5xk/c02.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Three of Cups",
+        "image_url": "https://i.ibb.co/Hfc2H668/c03.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Four of Cups",
+        "image_url": "https://i.ibb.co/x8SN35bH/c04.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Five of Cups",
+        "image_url": "https://i.ibb.co/PZKjYjW5/c05.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Six of Cups",
+        "image_url": "https://i.ibb.co/ks6p1r5p/c06.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Seven of Cups",
+        "image_url": "https://i.ibb.co/pBCtmDV8/c07.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Eight of Cups",
+        "image_url": "https://i.ibb.co/d0RjKXBK/c08.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Nine of Cups",
+        "image_url": "https://i.ibb.co/jZzNfsJW/c09.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Ten of Cups",
+        "image_url": "https://i.ibb.co/W4jK5rJ6/c10.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Page of Cups",
+        "image_url": "https://i.ibb.co/C3MBZKs7/c11.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Knight of Cups",
+        "image_url": "https://i.ibb.co/xKqbPtYK/c12.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Queen of Cups",
+        "image_url": "https://i.ibb.co/J8PWyx1/c13.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "King of Cups",
+        "image_url": "https://i.ibb.co/TxWLb6X4/c14.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Ace of Swords",
+        "image_url": "https://i.ibb.co/35qyPpcg/s01.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Two of Swords",
+        "image_url": "https://i.ibb.co/dwPfSfW7/s02.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Three of Swords",
+        "image_url": "https://i.ibb.co/zhHnSngB/s03.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Four of Swords",
+        "image_url": "https://i.ibb.co/C5y725Dv/s04.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Five of Swords",
+        "image_url": "https://i.ibb.co/rnbbqTZ/s05.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Six of Swords",
+        "image_url": "https://i.ibb.co/V0XgG5j3/s06.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Seven of Swords",
+        "image_url": "https://i.ibb.co/WN7Kcm81/s07.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Eight of Swords",
+        "image_url": "https://i.ibb.co/fVWnFy2K/s08.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Nine of Swords",
+        "image_url": "https://i.ibb.co/0Vq3ytDm/s09.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Ten of Swords",
+        "image_url": "https://i.ibb.co/bRGc2Gpm/s10.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Page of Swords",
+        "image_url": "https://i.ibb.co/Y7js4BVG/s11.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Knight of Swords",
+        "image_url": "https://i.ibb.co/TqF4TfMj/s12.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Queen of Swords",
+        "image_url": "https://i.ibb.co/jvm2zqN3/s13.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "King of Swords",
+        "image_url": "https://i.ibb.co/6cdkTrDf/s14.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Ace of Wands",
+        "image_url": "https://i.ibb.co/cSzjBy3V/w01.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Two of Wands",
+        "image_url": "https://i.ibb.co/Mxg5phMS/w02.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Three of Wands",
+        "image_url": "https://i.ibb.co/4rQBVMM/w03.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Four of Wands",
+        "image_url": "https://i.ibb.co/PZBCm9DX/w04.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Five of Wands",
+        "image_url": "https://i.ibb.co/LXVgZ4n9/w05.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Six of Wands",
+        "image_url": "https://i.ibb.co/s9Q2X5pd/w06.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Seven of Wands",
+        "image_url": "https://i.ibb.co/gc97jQw/w07.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Eight of Wands",
+        "image_url": "https://i.ibb.co/XrRMxc0R/w08.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Nine of Wands",
+        "image_url": "https://i.ibb.co/8gfBhkXS/w09.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Ten of Wands",
+        "image_url": "https://i.ibb.co/LX6fMdSj/w10.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Page of Wands",
+        "image_url": "https://i.ibb.co/vvzFrY8r/w11.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Knight of Wands",
+        "image_url": "https://i.ibb.co/Q3S9WWz1/w12.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Queen of Wands",
+        "image_url": "https://i.ibb.co/RkkRPtFX/w13.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "King of Wands",
+        "image_url": "https://i.ibb.co/Dg1twB4k/w14.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Ace of Pentacles",
+        "image_url": "https://i.ibb.co/M520Rc1Y/p01.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Two of Pentacles",
+        "image_url": "https://i.ibb.co/WZ2MLnW/p02.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Three of Pentacles",
+        "image_url": "https://i.ibb.co/dswtKN1K/p03.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Four of Pentacles",
+        "image_url": "https://i.ibb.co/nxdPZKp/p04.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Five of Pentacles",
+        "image_url": "https://i.ibb.co/217HnGNG/p05.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Six of Pentacles",
+        "image_url": "https://i.ibb.co/MDgcksj2/p06.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Seven of Pentacles",
+        "image_url": "https://i.ibb.co/9H7sRhtt/p07.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Eight of Pentacles",
+        "image_url": "https://i.ibb.co/7d8FZ4Ym/p08.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Nine of Pentacles",
+        "image_url": "https://i.ibb.co/JFBS5PmX/p09.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Ten of Pentacles",
+        "image_url": "https://i.ibb.co/n8M7QvbS/p10.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Page of Pentacles",
+        "image_url": "https://i.ibb.co/svVkSZ1B/p11.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Knight of Pentacles",
+        "image_url": "https://i.ibb.co/Nfyd7YF/p12.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "Queen of Pentacles",
+        "image_url": "https://i.ibb.co/B2TtYpxt/p13.jpg",
+        "deck": "golden_dawn"
+      },
+      {
+        "name": "King of Pentacles",
+        "image_url": "https://i.ibb.co/20R0dWvs/p14.jpg",
+        "deck": "golden_dawn"
+      }
+    ]
+  },
+  "visconti_sforza": {
+    "name": "Visconti-Sforza",
+    "description": "One of the oldest surviving Tarot decks, created in 15th century Italy for the Visconti and Sforza families.",
+    "cards": [
+      {
+        "name": "The Fool",
+        "image_url": "https://i.ibb.co/Q71KBHMH/m00.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Magician",
+        "image_url": "https://i.ibb.co/mVH1HPfj/m01.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The High Priestess",
+        "image_url": "https://i.ibb.co/rK3xSJzn/m02.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Empress",
+        "image_url": "https://i.ibb.co/zdG9Gy4/m03.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Emperor",
+        "image_url": "https://i.ibb.co/BHr2gckR/m04.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Hierophant",
+        "image_url": "https://i.ibb.co/JWxKxZ13/m05.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Lovers",
+        "image_url": "https://i.ibb.co/xSxxcc5D/m06.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Chariot",
+        "image_url": "https://i.ibb.co/gk9vnyg/m07.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Strength",
+        "image_url": "https://i.ibb.co/yc0Zpvv6/m08.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Hermit",
+        "image_url": "https://i.ibb.co/ccpmBZ5V/m09.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Wheel of Fortune",
+        "image_url": "https://i.ibb.co/WvVvSqw0/m10.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Justice",
+        "image_url": "https://i.ibb.co/j9H9b0Hj/m11.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Hanged Man",
+        "image_url": "https://i.ibb.co/431z6mN/m12.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Death",
+        "image_url": "https://i.ibb.co/QFHPhvHk/m13.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Temperance",
+        "image_url": "https://i.ibb.co/pjr4YLwN/m14.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Devil",
+        "image_url": "https://i.ibb.co/Xf3s1Jsb/m15.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Tower",
+        "image_url": "https://i.ibb.co/bgbh1GD2/m16.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Star",
+        "image_url": "https://i.ibb.co/DNj36z0/m17.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Moon",
+        "image_url": "https://i.ibb.co/bR5Vf8WF/m18.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The Sun",
+        "image_url": "https://i.ibb.co/mmjPhr6/m19.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Judgement",
+        "image_url": "https://i.ibb.co/Df59WwHk/m20.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "The World",
+        "image_url": "https://i.ibb.co/X61MrLb/m21.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Ace of Cups",
+        "image_url": "https://i.ibb.co/r2tfMXDc/c01.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Two of Cups",
+        "image_url": "https://i.ibb.co/H3JQ5xk/c02.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Three of Cups",
+        "image_url": "https://i.ibb.co/Hfc2H668/c03.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Four of Cups",
+        "image_url": "https://i.ibb.co/x8SN35bH/c04.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Five of Cups",
+        "image_url": "https://i.ibb.co/PZKjYjW5/c05.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Six of Cups",
+        "image_url": "https://i.ibb.co/ks6p1r5p/c06.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Seven of Cups",
+        "image_url": "https://i.ibb.co/pBCtmDV8/c07.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Eight of Cups",
+        "image_url": "https://i.ibb.co/d0RjKXBK/c08.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Nine of Cups",
+        "image_url": "https://i.ibb.co/jZzNfsJW/c09.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Ten of Cups",
+        "image_url": "https://i.ibb.co/W4jK5rJ6/c10.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Page of Cups",
+        "image_url": "https://i.ibb.co/C3MBZKs7/c11.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Knight of Cups",
+        "image_url": "https://i.ibb.co/xKqbPtYK/c12.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Queen of Cups",
+        "image_url": "https://i.ibb.co/J8PWyx1/c13.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "King of Cups",
+        "image_url": "https://i.ibb.co/TxWLb6X4/c14.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Ace of Swords",
+        "image_url": "https://i.ibb.co/35qyPpcg/s01.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Two of Swords",
+        "image_url": "https://i.ibb.co/dwPfSfW7/s02.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Three of Swords",
+        "image_url": "https://i.ibb.co/zhHnSngB/s03.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Four of Swords",
+        "image_url": "https://i.ibb.co/C5y725Dv/s04.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Five of Swords",
+        "image_url": "https://i.ibb.co/rnbbqTZ/s05.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Six of Swords",
+        "image_url": "https://i.ibb.co/V0XgG5j3/s06.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Seven of Swords",
+        "image_url": "https://i.ibb.co/WN7Kcm81/s07.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Eight of Swords",
+        "image_url": "https://i.ibb.co/fVWnFy2K/s08.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Nine of Swords",
+        "image_url": "https://i.ibb.co/0Vq3ytDm/s09.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Ten of Swords",
+        "image_url": "https://i.ibb.co/bRGc2Gpm/s10.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Page of Swords",
+        "image_url": "https://i.ibb.co/Y7js4BVG/s11.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Knight of Swords",
+        "image_url": "https://i.ibb.co/TqF4TfMj/s12.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Queen of Swords",
+        "image_url": "https://i.ibb.co/jvm2zqN3/s13.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "King of Swords",
+        "image_url": "https://i.ibb.co/6cdkTrDf/s14.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Ace of Wands",
+        "image_url": "https://i.ibb.co/cSzjBy3V/w01.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Two of Wands",
+        "image_url": "https://i.ibb.co/Mxg5phMS/w02.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Three of Wands",
+        "image_url": "https://i.ibb.co/4rQBVMM/w03.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Four of Wands",
+        "image_url": "https://i.ibb.co/PZBCm9DX/w04.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Five of Wands",
+        "image_url": "https://i.ibb.co/LXVgZ4n9/w05.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Six of Wands",
+        "image_url": "https://i.ibb.co/s9Q2X5pd/w06.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Seven of Wands",
+        "image_url": "https://i.ibb.co/gc97jQw/w07.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Eight of Wands",
+        "image_url": "https://i.ibb.co/XrRMxc0R/w08.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Nine of Wands",
+        "image_url": "https://i.ibb.co/8gfBhkXS/w09.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Ten of Wands",
+        "image_url": "https://i.ibb.co/LX6fMdSj/w10.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Page of Wands",
+        "image_url": "https://i.ibb.co/vvzFrY8r/w11.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Knight of Wands",
+        "image_url": "https://i.ibb.co/Q3S9WWz1/w12.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Queen of Wands",
+        "image_url": "https://i.ibb.co/RkkRPtFX/w13.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "King of Wands",
+        "image_url": "https://i.ibb.co/Dg1twB4k/w14.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Ace of Pentacles",
+        "image_url": "https://i.ibb.co/M520Rc1Y/p01.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Two of Pentacles",
+        "image_url": "https://i.ibb.co/WZ2MLnW/p02.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Three of Pentacles",
+        "image_url": "https://i.ibb.co/dswtKN1K/p03.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Four of Pentacles",
+        "image_url": "https://i.ibb.co/nxdPZKp/p04.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Five of Pentacles",
+        "image_url": "https://i.ibb.co/217HnGNG/p05.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Six of Pentacles",
+        "image_url": "https://i.ibb.co/MDgcksj2/p06.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Seven of Pentacles",
+        "image_url": "https://i.ibb.co/9H7sRhtt/p07.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Eight of Pentacles",
+        "image_url": "https://i.ibb.co/7d8FZ4Ym/p08.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Nine of Pentacles",
+        "image_url": "https://i.ibb.co/JFBS5PmX/p09.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Ten of Pentacles",
+        "image_url": "https://i.ibb.co/n8M7QvbS/p10.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Page of Pentacles",
+        "image_url": "https://i.ibb.co/svVkSZ1B/p11.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Knight of Pentacles",
+        "image_url": "https://i.ibb.co/Nfyd7YF/p12.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "Queen of Pentacles",
+        "image_url": "https://i.ibb.co/B2TtYpxt/p13.jpg",
+        "deck": "visconti_sforza"
+      },
+      {
+        "name": "King of Pentacles",
+        "image_url": "https://i.ibb.co/20R0dWvs/p14.jpg",
+        "deck": "visconti_sforza"
+      }
+    ]
+  },
+  "morgan_greer": {
+    "name": "Morgan-Greer",
+    "description": "A modern deck created in 1979, known for its vibrant colors and close-up imagery.",
+    "cards": [
+      {
+        "name": "The Fool",
+        "image_url": "https://i.ibb.co/Q71KBHMH/m00.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Magician",
+        "image_url": "https://i.ibb.co/mVH1HPfj/m01.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The High Priestess",
+        "image_url": "https://i.ibb.co/rK3xSJzn/m02.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Empress",
+        "image_url": "https://i.ibb.co/zdG9Gy4/m03.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Emperor",
+        "image_url": "https://i.ibb.co/BHr2gckR/m04.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Hierophant",
+        "image_url": "https://i.ibb.co/JWxKxZ13/m05.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Lovers",
+        "image_url": "https://i.ibb.co/xSxxcc5D/m06.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Chariot",
+        "image_url": "https://i.ibb.co/gk9vnyg/m07.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Strength",
+        "image_url": "https://i.ibb.co/yc0Zpvv6/m08.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Hermit",
+        "image_url": "https://i.ibb.co/ccpmBZ5V/m09.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Wheel of Fortune",
+        "image_url": "https://i.ibb.co/WvVvSqw0/m10.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Justice",
+        "image_url": "https://i.ibb.co/j9H9b0Hj/m11.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Hanged Man",
+        "image_url": "https://i.ibb.co/431z6mN/m12.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Death",
+        "image_url": "https://i.ibb.co/QFHPhvHk/m13.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Temperance",
+        "image_url": "https://i.ibb.co/pjr4YLwN/m14.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Devil",
+        "image_url": "https://i.ibb.co/Xf3s1Jsb/m15.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Tower",
+        "image_url": "https://i.ibb.co/bgbh1GD2/m16.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Star",
+        "image_url": "https://i.ibb.co/DNj36z0/m17.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Moon",
+        "image_url": "https://i.ibb.co/bR5Vf8WF/m18.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The Sun",
+        "image_url": "https://i.ibb.co/mmjPhr6/m19.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Judgement",
+        "image_url": "https://i.ibb.co/Df59WwHk/m20.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "The World",
+        "image_url": "https://i.ibb.co/X61MrLb/m21.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Ace of Cups",
+        "image_url": "https://i.ibb.co/r2tfMXDc/c01.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Two of Cups",
+        "image_url": "https://i.ibb.co/H3JQ5xk/c02.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Three of Cups",
+        "image_url": "https://i.ibb.co/Hfc2H668/c03.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Four of Cups",
+        "image_url": "https://i.ibb.co/x8SN35bH/c04.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Five of Cups",
+        "image_url": "https://i.ibb.co/PZKjYjW5/c05.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Six of Cups",
+        "image_url": "https://i.ibb.co/ks6p1r5p/c06.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Seven of Cups",
+        "image_url": "https://i.ibb.co/pBCtmDV8/c07.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Eight of Cups",
+        "image_url": "https://i.ibb.co/d0RjKXBK/c08.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Nine of Cups",
+        "image_url": "https://i.ibb.co/jZzNfsJW/c09.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Ten of Cups",
+        "image_url": "https://i.ibb.co/W4jK5rJ6/c10.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Page of Cups",
+        "image_url": "https://i.ibb.co/C3MBZKs7/c11.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Knight of Cups",
+        "image_url": "https://i.ibb.co/xKqbPtYK/c12.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Queen of Cups",
+        "image_url": "https://i.ibb.co/J8PWyx1/c13.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "King of Cups",
+        "image_url": "https://i.ibb.co/TxWLb6X4/c14.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Ace of Swords",
+        "image_url": "https://i.ibb.co/35qyPpcg/s01.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Two of Swords",
+        "image_url": "https://i.ibb.co/dwPfSfW7/s02.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Three of Swords",
+        "image_url": "https://i.ibb.co/zhHnSngB/s03.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Four of Swords",
+        "image_url": "https://i.ibb.co/C5y725Dv/s04.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Five of Swords",
+        "image_url": "https://i.ibb.co/rnbbqTZ/s05.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Six of Swords",
+        "image_url": "https://i.ibb.co/V0XgG5j3/s06.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Seven of Swords",
+        "image_url": "https://i.ibb.co/WN7Kcm81/s07.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Eight of Swords",
+        "image_url": "https://i.ibb.co/fVWnFy2K/s08.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Nine of Swords",
+        "image_url": "https://i.ibb.co/0Vq3ytDm/s09.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Ten of Swords",
+        "image_url": "https://i.ibb.co/bRGc2Gpm/s10.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Page of Swords",
+        "image_url": "https://i.ibb.co/Y7js4BVG/s11.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Knight of Swords",
+        "image_url": "https://i.ibb.co/TqF4TfMj/s12.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Queen of Swords",
+        "image_url": "https://i.ibb.co/jvm2zqN3/s13.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "King of Swords",
+        "image_url": "https://i.ibb.co/6cdkTrDf/s14.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Ace of Wands",
+        "image_url": "https://i.ibb.co/cSzjBy3V/w01.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Two of Wands",
+        "image_url": "https://i.ibb.co/Mxg5phMS/w02.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Three of Wands",
+        "image_url": "https://i.ibb.co/4rQBVMM/w03.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Four of Wands",
+        "image_url": "https://i.ibb.co/PZBCm9DX/w04.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Five of Wands",
+        "image_url": "https://i.ibb.co/LXVgZ4n9/w05.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Six of Wands",
+        "image_url": "https://i.ibb.co/s9Q2X5pd/w06.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Seven of Wands",
+        "image_url": "https://i.ibb.co/gc97jQw/w07.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Eight of Wands",
+        "image_url": "https://i.ibb.co/XrRMxc0R/w08.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Nine of Wands",
+        "image_url": "https://i.ibb.co/8gfBhkXS/w09.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Ten of Wands",
+        "image_url": "https://i.ibb.co/LX6fMdSj/w10.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Page of Wands",
+        "image_url": "https://i.ibb.co/vvzFrY8r/w11.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Knight of Wands",
+        "image_url": "https://i.ibb.co/Q3S9WWz1/w12.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Queen of Wands",
+        "image_url": "https://i.ibb.co/RkkRPtFX/w13.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "King of Wands",
+        "image_url": "https://i.ibb.co/Dg1twB4k/w14.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Ace of Pentacles",
+        "image_url": "https://i.ibb.co/M520Rc1Y/p01.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Two of Pentacles",
+        "image_url": "https://i.ibb.co/WZ2MLnW/p02.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Three of Pentacles",
+        "image_url": "https://i.ibb.co/dswtKN1K/p03.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Four of Pentacles",
+        "image_url": "https://i.ibb.co/nxdPZKp/p04.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Five of Pentacles",
+        "image_url": "https://i.ibb.co/217HnGNG/p05.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Six of Pentacles",
+        "image_url": "https://i.ibb.co/MDgcksj2/p06.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Seven of Pentacles",
+        "image_url": "https://i.ibb.co/9H7sRhtt/p07.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Eight of Pentacles",
+        "image_url": "https://i.ibb.co/7d8FZ4Ym/p08.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Nine of Pentacles",
+        "image_url": "https://i.ibb.co/JFBS5PmX/p09.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Ten of Pentacles",
+        "image_url": "https://i.ibb.co/n8M7QvbS/p10.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Page of Pentacles",
+        "image_url": "https://i.ibb.co/svVkSZ1B/p11.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Knight of Pentacles",
+        "image_url": "https://i.ibb.co/Nfyd7YF/p12.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "Queen of Pentacles",
+        "image_url": "https://i.ibb.co/B2TtYpxt/p13.jpg",
+        "deck": "morgan_greer"
+      },
+      {
+        "name": "King of Pentacles",
+        "image_url": "https://i.ibb.co/20R0dWvs/p14.jpg",
+        "deck": "morgan_greer"
+      }
+    ]
+  }
+}

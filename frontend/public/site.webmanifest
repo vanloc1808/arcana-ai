@@ -1,0 +1,16 @@
+{
+    "name": "ArcanaAI - Mystical Guidance",
+    "short_name": "ArcanaAI",
+    "description": "AI-powered tarot readings with mystical wisdom",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1e1b4b",
+    "theme_color": "#7c3aed",
+    "icons": [
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}

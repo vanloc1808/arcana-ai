@@ -1,0 +1,96 @@
+services:
+  backend:
+    image: vanloc1808/tarot-backend:latest
+    container_name: tarot-backend
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./user-avatars:/avatar
+    depends_on:
+      - redis
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tarot-backend.rule=Host(`backend-tarotreader.nguyenvanloc.com`) || Host(`backend-arcanaai.nguyenvanloc.com`)"
+      - "traefik.http.routers.tarot-backend.entrypoints=websecure"
+      - "traefik.http.routers.tarot-backend.tls=true"
+      - "traefik.http.services.tarot-backend.loadbalancer.server.port=8000"
+    networks:
+      - localnet
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://backend-arcanaai.nguyenvanloc.com
+    image: vanloc1808/tarot-frontend:latest
+    container_name: tarot-frontend
+    restart: always
+    env_file:
+      - ./frontend/.env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tarot-frontend.rule=Host(`tarot-reader.nguyenvanloc.com`) || Host(`arcanaai.nguyenvanloc.com`)"
+      - "traefik.http.routers.tarot-frontend.entrypoints=websecure"
+      - "traefik.http.routers.tarot-frontend.tls=true"
+      - "traefik.http.services.tarot-frontend.loadbalancer.server.port=3000"
+    networks:
+      - localnet
+
+  redis:
+    image: redis:7-alpine
+    container_name: tarot-redis
+    volumes:
+      - redis_data:/data
+    restart: always
+    command: redis-server --appendonly yes
+    networks:
+      - localnet
+
+  celery-worker:
+    build: ./backend
+    container_name: tarot-celery-worker
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./user-avatars:/avatar
+    depends_on:
+      - redis
+      - backend
+    restart: always
+    command: >
+      bash -c "source .venv/bin/activate &&
+               /app/wait-for-it.sh tarot-redis:6379 --timeout=60 --strict -- echo 'Redis is up' &&
+               cd /app &&
+               PYTHONPATH=/app celery -A celery_app worker --loglevel=info --queues=email,notifications,celery"
+    networks:
+      - localnet
+
+  celery-beat:
+    build: ./backend
+    container_name: tarot-celery-beat
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./user-avatars:/avatar
+      - celery_beat_data:/app/celerybeat-schedule
+    depends_on:
+      - redis
+      - backend
+    restart: always
+    command: >
+      bash -c "source .venv/bin/activate &&
+              /app/wait-for-it.sh tarot-redis:6379 --timeout=60 --strict -- echo 'Redis is up' &&
+              cd /app &&
+              PYTHONPATH=/app celery -A celery_app beat --loglevel=info --schedule=/app/celerybeat-schedule"
+    networks:
+      - localnet
+
+volumes:
+  redis_data:
+  celery_beat_data:
+
+networks:
+  localnet:
+    external: true

@@ -1,0 +1,17 @@
+# This Docker Compose file runs only the Redis service for local development or testing.
+# Use this file if you need a standalone Redis instance without starting the full application stack.
+# Example: docker compose -f redis-docker-compose.yaml up
+version: '3.8'
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: tarot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    command: redis-server --appendonly yes
+
+volumes:
+  redis_data:

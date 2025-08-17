@@ -1,0 +1,90 @@
+groups:
+  - name: tarot_application_alerts
+    rules:
+      # High error rate alert
+      - alert: TarotHighErrorRate
+        expr: (rate(tarot_requests_total{status=~"5.."}[5m]) / rate(tarot_requests_total[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: tarot-api
+        annotations:
+          summary: "High error rate detected in Tarot API"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+
+      # High response time alert
+      - alert: TarotHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="tarot-backend"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: tarot-api
+        annotations:
+          summary: "High response time in Tarot API"
+          description: "95th percentile response time is {{ $value }}s"
+
+      # Application down alert
+      - alert: TarotApplicationDown
+        expr: up{job="tarot-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: tarot-api
+        annotations:
+          summary: "Tarot API is down"
+          description: "Tarot API has been down for more than 1 minute"
+
+      # Database connection issues
+      - alert: TarotDatabaseErrors
+        expr: rate(tarot_database_queries_total{status="error"}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: tarot-database
+        annotations:
+          summary: "Database errors detected"
+          description: "Database error rate: {{ $value }} errors/second"
+
+      # OpenAI API errors
+      - alert: TarotOpenAIErrors
+        expr: rate(tarot_openai_requests_total{status!="success"}[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          service: tarot-ai
+        annotations:
+          summary: "OpenAI API errors detected"
+          description: "OpenAI error rate: {{ $value }} errors/second"
+
+      # High memory usage
+      - alert: TarotHighMemoryUsage
+        expr: (container_memory_usage_bytes{name="tarot-backend"} / container_spec_memory_limit_bytes{name="tarot-backend"}) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: tarot-api
+        annotations:
+          summary: "High memory usage in Tarot backend"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      # High CPU usage
+      - alert: TarotHighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{name="tarot-backend"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: tarot-api
+        annotations:
+          summary: "High CPU usage in Tarot backend"
+          description: "CPU usage is {{ $value | humanizePercentage }}"
+
+      # Disk space alert
+      - alert: TarotLowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: tarot-infrastructure
+        annotations:
+          summary: "Low disk space"
+          description: "Available disk space is {{ $value | humanizePercentage }}"

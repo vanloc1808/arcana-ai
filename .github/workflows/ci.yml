@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set environment variables
+        run: |
+          echo "MAIL_FROM=your-email@example.com" >> $GITHUB_ENV
+          # Add other required environment variables here
+          echo "OPENAI_API_KEY=sk-proj-1234567890" >> $GITHUB_ENV
+          echo "FASTAPI_ENV=local" >> $GITHUB_ENV
+          echo "SQLALCHEMY_DATABASE_URL=sqlite:///./tarot.db" >> $GITHUB_ENV
+          echo "CI=true" >> $GITHUB_ENV
+          # Create ./user-avatars directory
+          mkdir -p ./backend/user-avatars
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv sync
+          uv pip install pytest pytest-asyncio pytest-cov black isort mypy
+
+      - name: Show environment and prepare for database setup
+        run: |
+          source .venv/bin/activate
+          echo "Current working directory: $(pwd)"
+          echo "Current directory contents:"
+          ls -la
+          echo "Python version: $(python --version)"
+          echo "Environment variables:"
+          echo "FASTAPI_ENV: $FASTAPI_ENV"
+          echo "SQLALCHEMY_DATABASE_URL: $SQLALCHEMY_DATABASE_URL"
+          echo "CI: $CI"
+          echo "Migrations directory contents:"
+          ls -la migrations/versions/ || echo "Migrations directory not found or empty"
+
+      - name: Create test database and run migrations
+        run: |
+          source .venv/bin/activate
+          echo "Setting up test database..."
+          # Create tarot.db file if it doesn't exist
+          touch tarot.db
+          echo "Database file created: $(ls -la tarot.db)"
+          # Verify file is writable
+          echo "Testing database file write access..."
+          python -c "import sqlite3; conn = sqlite3.connect('tarot.db'); conn.execute('CREATE TABLE IF NOT EXISTS test (id INTEGER)'); conn.close(); print('Database file is writable')"
+
+          # Reset database to ensure clean state for migrations
+          echo "Resetting database to ensure clean migration state..."
+          rm -f tarot.db
+          touch tarot.db
+
+          # Run database migrations
+          echo "Running database migrations..."
+          python migrate.py
+          echo "Migrations completed successfully"
+
+          # Verify database was created and migrations ran
+          echo "Final database file status:"
+          ls -la tarot.db
+          # Verify database schema
+          echo "Verifying database schema..."
+          python -c "import sqlite3; conn = sqlite3.connect('tarot.db'); cursor = conn.cursor(); cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\"'); tables = cursor.fetchall(); print(f'Found {len(tables)} tables: {[t[0] for t in tables]}'); conn.close()"
+          # Show final database details
+          echo "Final database details:"
+          du -h tarot.db
+          echo "Database file permissions:"
+          ls -la tarot.db
+
+      - name: Verify test environment
+        run: |
+          source .venv/bin/activate
+          echo "Verifying test environment..."
+          echo "Python path:"
+          python -c "import sys; print('\\n'.join(sys.path))"
+          echo "Available modules:"
+          python -c "import models; print('Models module imported successfully')"
+          python -c "import database; print('Database module imported successfully')"
+          echo "Test environment ready!"
+
+      - name: Verify database isolation
+        run: |
+          source .venv/bin/activate
+          echo "Verifying database isolation..."
+          echo "Current working directory: $(pwd)"
+          echo "Database file location: $(realpath tarot.db)"
+          echo "Database file size: $(du -h tarot.db)"
+          echo "Database file permissions: $(ls -la tarot.db)"
+          echo "Database isolation verified!"
+
+      - name: Run tests
+        run: |
+          source .venv/bin/activate
+          pytest --cov=./ --cov-report=xml
+
+      - name: Cleanup test database
+        run: |
+          source .venv/bin/activate
+          echo "Cleaning up test database..."
+          if [ -f tarot.db ]; then
+            echo "Removing test database file..."
+            rm -f tarot.db
+            echo "Test database cleanup completed"
+          else
+            echo "No test database file found to clean up"
+          fi
+          echo "Cleanup verification:"
+          ls -la *.db 2>/dev/null || echo "No database files remaining"
+
+      # - name: Run linters
+      #   run: |
+      #     source .venv/bin/activate
+      #     black . --check
+      #     isort . --check-only
+      #     mypy .
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Check for lock file
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "Error: package-lock.json not found. Please commit the lock file." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:ci
+
+      - name: Run linters
+        run: |
+          npm run lint
+          npm run type-check
+
+  build:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: vanloc1808
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: vanloc1808/tarot-backend:latest
+          cache-from: type=registry,ref=vanloc1808/tarot-backend:buildcache
+          cache-to: type=registry,ref=vanloc1808/tarot-backend:buildcache,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: vanloc1808/tarot-frontend:latest
+          cache-from: type=registry,ref=vanloc1808/tarot-frontend:buildcache
+          cache-to: type=registry,ref=vanloc1808/tarot-frontend:buildcache,mode=max

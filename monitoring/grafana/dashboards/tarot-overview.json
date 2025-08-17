@@ -1,0 +1,285 @@
+{
+    "dashboard": {
+        "id": null,
+        "title": "Tarot Application Overview",
+        "tags": [
+            "tarot",
+            "overview"
+        ],
+        "style": "dark",
+        "timezone": "browser",
+        "refresh": "30s",
+        "time": {
+            "from": "now-1h",
+            "to": "now"
+        },
+        "panels": [
+            {
+                "id": 1,
+                "title": "Request Rate",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "rate(http_requests_total{job=\"tarot-backend\"}[5m])",
+                        "legendFormat": "Requests/sec"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 0,
+                    "y": 0
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "reqps",
+                        "color": {
+                            "mode": "thresholds"
+                        },
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "green",
+                                    "value": null
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 10
+                                },
+                                {
+                                    "color": "red",
+                                    "value": 50
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "id": 2,
+                "title": "Error Rate",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "rate(http_requests_total{job=\"tarot-backend\",status=~\"5..\"}[5m]) / rate(http_requests_total{job=\"tarot-backend\"}[5m]) * 100",
+                        "legendFormat": "Error %"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 6,
+                    "y": 0
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "percent",
+                        "color": {
+                            "mode": "thresholds"
+                        },
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "green",
+                                    "value": null
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 1
+                                },
+                                {
+                                    "color": "red",
+                                    "value": 5
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "id": 3,
+                "title": "Response Time (95th percentile)",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"tarot-backend\"}[5m]))",
+                        "legendFormat": "95th percentile"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 12,
+                    "y": 0
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "s",
+                        "color": {
+                            "mode": "thresholds"
+                        },
+                        "thresholds": {
+                            "steps": [
+                                {
+                                    "color": "green",
+                                    "value": null
+                                },
+                                {
+                                    "color": "yellow",
+                                    "value": 1
+                                },
+                                {
+                                    "color": "red",
+                                    "value": 3
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "id": 4,
+                "title": "Active Users",
+                "type": "stat",
+                "targets": [
+                    {
+                        "expr": "tarot_active_users",
+                        "legendFormat": "Active Users"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 6,
+                    "x": 18,
+                    "y": 0
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "short",
+                        "color": {
+                            "mode": "palette-classic"
+                        }
+                    }
+                }
+            },
+            {
+                "id": 5,
+                "title": "Request Rate Over Time",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(http_requests_total{job=\"tarot-backend\"}[5m])",
+                        "legendFormat": "{{method}} {{handler}}"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 0,
+                    "y": 8
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "reqps"
+                    }
+                }
+            },
+            {
+                "id": 6,
+                "title": "Response Times",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"tarot-backend\"}[5m]))",
+                        "legendFormat": "50th percentile"
+                    },
+                    {
+                        "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"tarot-backend\"}[5m]))",
+                        "legendFormat": "95th percentile"
+                    },
+                    {
+                        "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"tarot-backend\"}[5m]))",
+                        "legendFormat": "99th percentile"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 12,
+                    "x": 12,
+                    "y": 8
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "s"
+                    }
+                }
+            },
+            {
+                "id": 7,
+                "title": "Tarot Readings",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(tarot_readings_total[5m])",
+                        "legendFormat": "{{reading_type}}"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 8,
+                    "x": 0,
+                    "y": 16
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "ops"
+                    }
+                }
+            },
+            {
+                "id": 8,
+                "title": "OpenAI Token Usage",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(tarot_openai_tokens_used_total[5m])",
+                        "legendFormat": "{{type}} tokens"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 8,
+                    "x": 8,
+                    "y": 16
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "short"
+                    }
+                }
+            },
+            {
+                "id": 9,
+                "title": "Database Query Performance",
+                "type": "timeseries",
+                "targets": [
+                    {
+                        "expr": "rate(tarot_database_queries_total[5m])",
+                        "legendFormat": "{{operation}} on {{table}}"
+                    }
+                ],
+                "gridPos": {
+                    "h": 8,
+                    "w": 8,
+                    "x": 16,
+                    "y": 16
+                },
+                "fieldConfig": {
+                    "defaults": {
+                        "unit": "ops"
+                    }
+                }
+            }
+        ]
+    }
+}

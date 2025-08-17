@@ -1,0 +1,280 @@
+{
+    "id": null,
+    "uid": "simple-test-dashboard",
+    "title": "Tarot Application Overview",
+    "tags": [
+        "tarot",
+        "monitoring"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+        {
+            "type": "text",
+            "title": "Application Overview",
+            "gridPos": {
+                "x": 0,
+                "y": 0,
+                "w": 24,
+                "h": 2
+            },
+            "options": {
+                "content": "## Tarot Application Monitoring Dashboard\nThis dashboard provides real-time insights into the Tarot application's performance, usage, and health.",
+                "mode": "markdown"
+            },
+            "id": 1
+        },
+        {
+            "type": "stat",
+            "title": "Active Users",
+            "gridPos": {
+                "x": 0,
+                "y": 2,
+                "w": 6,
+                "h": 4
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "tarot_active_users",
+                    "refId": "A"
+                }
+            ],
+            "id": 2
+        },
+        {
+            "type": "stat",
+            "title": "Total Tarot Readings",
+            "gridPos": {
+                "x": 6,
+                "y": 2,
+                "w": 6,
+                "h": 4
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "sum(tarot_readings_total)",
+                    "refId": "A"
+                }
+            ],
+            "id": 3
+        },
+        {
+            "type": "stat",
+            "title": "Active Chat Conversations",
+            "gridPos": {
+                "x": 12,
+                "y": 2,
+                "w": 6,
+                "h": 4
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "tarot_chat_conversations_active",
+                    "refId": "A"
+                }
+            ],
+            "id": 4
+        },
+        {
+            "type": "stat",
+            "title": "OpenAI Tokens Used",
+            "gridPos": {
+                "x": 18,
+                "y": 2,
+                "w": 6,
+                "h": 4
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "sum(tarot_openai_tokens_used_total)",
+                    "refId": "A"
+                }
+            ],
+            "id": 5
+        },
+        {
+            "type": "timeseries",
+            "title": "Request Rate & Errors",
+            "gridPos": {
+                "x": 0,
+                "y": 6,
+                "w": 12,
+                "h": 8
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_requests_total[5m])) by (status)",
+                    "legendFormat": "{{status}}",
+                    "refId": "A"
+                }
+            ],
+            "id": 6
+        },
+        {
+            "type": "timeseries",
+            "title": "Request Duration",
+            "gridPos": {
+                "x": 12,
+                "y": 6,
+                "w": 12,
+                "h": 8
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "rate(http_request_duration_highr_seconds_sum[5m]) / rate(http_request_duration_highr_seconds_count[5m])",
+                    "legendFormat": "Average Duration",
+                    "refId": "A"
+                }
+            ],
+            "id": 7
+        },
+        {
+            "type": "timeseries",
+            "title": "Request Performance by Endpoint",
+            "gridPos": {
+                "x": 0,
+                "y": 14,
+                "w": 12,
+                "h": 8
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])",
+                    "legendFormat": "Request Duration",
+                    "refId": "A"
+                },
+                {
+                    "expr": "sum(rate(http_requests_total[5m])) by (handler)",
+                    "legendFormat": "{{handler}}",
+                    "refId": "B"
+                }
+            ],
+            "id": 8
+        },
+        {
+            "type": "timeseries",
+            "title": "HTTP Methods & Response Times",
+            "gridPos": {
+                "x": 12,
+                "y": 14,
+                "w": 12,
+                "h": 8
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_requests_total[5m])) by (method)",
+                    "legendFormat": "{{method}}",
+                    "refId": "A"
+                },
+                {
+                    "expr": "histogram_quantile(0.95, rate(http_request_duration_highr_seconds_bucket[5m]))",
+                    "legendFormat": "95th percentile",
+                    "refId": "B"
+                }
+            ],
+            "id": 9
+        }
+    ]
+}
