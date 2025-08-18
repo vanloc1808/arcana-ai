@@ -9,9 +9,9 @@ export default function TestImagesPage() {
 
     // Test image URLs from the API response
     const testImageUrls = [
-        "https://cdn.yourdomain.com/kaggle_tarot_images/cards/s06.jpg",
-        "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m11.jpg",
-        "https://cdn.yourdomain.com/kaggle_tarot_images/cards/c06.jpg"
+        "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/s06.jpg",
+        "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m11.jpg",
+        "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/c06.jpg"
     ];
 
     return (

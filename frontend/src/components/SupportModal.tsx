@@ -194,7 +194,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
             });
 
             const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend.yourdomain.com'}/support/`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-arcanaai.nguyenvanloc.com'}/support/`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,

@@ -20,7 +20,7 @@ const getDailyCard = () => {
   const featuredCards = [
     {
       name: "The Fool",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m00.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m00.jpg",
       description_upright: "New beginnings, innocence, spontaneity, a leap of faith",
       meaning: "Today brings fresh opportunities and new adventures. Trust your instincts and embrace the unknown with an open heart.",
       element: "Air",
@@ -28,7 +28,7 @@ const getDailyCard = () => {
     },
     {
       name: "The Magician",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m01.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m01.jpg",
       description_upright: "Manifestation, resourcefulness, power, inspired action",
       meaning: "You have all the tools you need to manifest your desires. Focus your energy and take inspired action today.",
       element: "Air",
@@ -36,7 +36,7 @@ const getDailyCard = () => {
     },
     {
       name: "The High Priestess",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m02.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m02.jpg",
       description_upright: "Intuition, sacred knowledge, divine feminine, subconscious mind",
       meaning: "Listen to your inner wisdom today. The answers you seek lie within your intuitive knowing.",
       element: "Water",
@@ -44,7 +44,7 @@ const getDailyCard = () => {
     },
     {
       name: "The Empress",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m03.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m03.jpg",
       description_upright: "Femininity, beauty, nature, nurturing, abundance",
       meaning: "Embrace your creative and nurturing side. Abundance flows naturally when you align with love.",
       element: "Earth",
@@ -52,7 +52,7 @@ const getDailyCard = () => {
     },
     {
       name: "The Emperor",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m04.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m04.jpg",
       description_upright: "Authority, establishment, structure, father figure",
       meaning: "Take charge of your situation with confidence and structure. Leadership comes naturally to you today.",
       element: "Fire",
@@ -60,7 +60,7 @@ const getDailyCard = () => {
     },
     {
       name: "The Hierophant",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m05.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m05.jpg",
       description_upright: "Spiritual wisdom, religious beliefs, conformity, tradition",
       meaning: "Seek guidance from trusted mentors or spiritual practices. Traditional wisdom offers valuable insights.",
       element: "Earth",
@@ -68,7 +68,7 @@ const getDailyCard = () => {
     },
     {
       name: "The Lovers",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m06.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m06.jpg",
       description_upright: "Love, harmony, relationships, values alignment",
       meaning: "Important choices in love and relationships await. Follow your heart while honoring your values.",
       element: "Air",
@@ -76,7 +76,7 @@ const getDailyCard = () => {
     },
     {
       name: "The Chariot",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m07.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m07.jpg",
       description_upright: "Control, willpower, success, determination",
       meaning: "Victory is within reach through focused determination. Stay in control and move forward with purpose.",
       element: "Water",
@@ -84,7 +84,7 @@ const getDailyCard = () => {
     },
     {
       name: "Strength",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m08.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m08.jpg",
       description_upright: "Strength, courage, persuasion, influence, compassion",
       meaning: "True strength comes from compassion and inner courage. Face challenges with a gentle but firm heart.",
       element: "Fire",
@@ -92,7 +92,7 @@ const getDailyCard = () => {
     },
     {
       name: "The Hermit",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m09.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m09.jpg",
       description_upright: "Soul searching, introspection, inner guidance",
       meaning: "Turn inward for the answers you seek. Solitude and reflection will illuminate your path forward.",
       element: "Earth",
@@ -100,7 +100,7 @@ const getDailyCard = () => {
     },
     {
       name: "Wheel of Fortune",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m10.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m10.jpg",
       description_upright: "Good luck, karma, life cycles, destiny, a turning point",
       meaning: "A fortunate turn of events is approaching. Trust in the natural cycles and embrace positive change.",
       element: "Fire",
@@ -108,7 +108,7 @@ const getDailyCard = () => {
     },
     {
       name: "The Star",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m17.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m17.jpg",
       description_upright: "Hope, faith, purpose, renewal, spirituality",
       meaning: "Hope and inspiration illuminate your path. Trust in the universe's plan and follow your dreams.",
       element: "Air",
@@ -165,19 +165,19 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
   const featuredCards = [
     {
       name: "The Sun",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m19.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m19.jpg",
       description_upright: "Joy, success, celebration, positivity",
       element: "Fire"
     },
     {
       name: "The Moon",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m18.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m18.jpg",
       description_upright: "Intuition, dreams, subconscious, mystery",
       element: "Water"
     },
     {
       name: "The World",
-      image_url: "https://cdn.yourdomain.com/kaggle_tarot_images/cards/m21.jpg",
+      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m21.jpg",
       description_upright: "Completion, accomplishment, travel, fulfillment",
       element: "Earth"
     }

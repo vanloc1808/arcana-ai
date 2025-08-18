@@ -34,7 +34,7 @@ export function setGlobalLogoutCallback(logoutCallback: () => void) {
 }
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "https://backend.yourdomain.com",
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "https://backend-arcanaai.nguyenvanloc.com",
     headers: {
         "Content-Type": "application/json",
     },
@@ -162,7 +162,7 @@ export const auth = {
         formData.append('username', username);
         formData.append('password', password);
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend.yourdomain.com'}/auth/token`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-arcanaai.nguyenvanloc.com'}/auth/token`, {
             method: 'POST',
             body: formData,
         });
@@ -179,7 +179,7 @@ export const auth = {
     },
 
     refreshToken: async (refreshToken: string) => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend.yourdomain.com'}/auth/refresh`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-arcanaai.nguyenvanloc.com'}/auth/refresh`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

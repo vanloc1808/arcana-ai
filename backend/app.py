@@ -90,8 +90,10 @@ app.add_middleware(
         "http://localhost:3000",  # Local development
         "http://localhost:3001",  # Alternative local port
         "http://127.0.0.1:3000",  # Alternative localhost
-        "https://yourdomain.com",  # Production domain
-        "https://www.yourdomain.com",  # Production www domain
+        "https://arcanaai.nguyenvanloc.com",  # Production domain
+        "https://www.arcanaai.nguyenvanloc.com",  # Production www domain
+        "https://tarot-reader.nguyenvanloc.com",  # Tarot reader domain
+        "https://www.tarot-reader.nguyenvanloc.com",  # Tarot reader www domain
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],

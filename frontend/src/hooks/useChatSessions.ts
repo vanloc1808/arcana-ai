@@ -161,7 +161,7 @@ export const useChatSessions = () => {
             }
 
             // Make streaming request using fetch API
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend.yourdomain.com'}/chat/sessions/${sessionId}/messages/`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-arcanaai.nguyenvanloc.com'}/chat/sessions/${sessionId}/messages/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
