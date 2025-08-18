@@ -2,6 +2,12 @@
 
 A comprehensive, AI-powered tarot reading service built with FastAPI, Next.js, and modern web technologies. This application provides interactive tarot readings, subscription management, user authentication, and a beautiful, responsive interface.
 
+## 🌐 Live Demo
+
+**🚀 [Try ArcanaAI Now](https://arcanaai.nguyenvanloc.com/)**
+
+Experience the full application with live tarot readings, user authentication, and all premium features.
+
 ## 🌟 Features
 
 - **AI-Powered Tarot Readings**: Get personalized tarot interpretations using OpenAI's GPT models
