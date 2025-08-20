@@ -157,7 +157,7 @@ def test_register_username_with_unicode(client):
     )
     assert response.status_code == 422
     data = response.json()
-    assert "letters, numbers, and underscores" in str(data)
+    assert "letters, numbers, underscores, and dots" in str(data)
 
 
 def test_register_username_with_numbers(client):
@@ -202,7 +202,7 @@ def test_register_username_with_special_chars(client):
     )
     assert response.status_code == 422
     data = response.json()
-    assert "letters, numbers, and underscores" in str(data)
+    assert "letters, numbers, underscores, and dots" in str(data)
 
 
 def test_register_valid_ascii_username(client):
@@ -221,18 +221,18 @@ def test_register_valid_ascii_username(client):
 
 
 def test_register_valid_mixed_username(client):
-    """Test registration with valid mixed username (letters, numbers, underscores) succeeds"""
+    """Test registration with valid mixed username (letters, numbers, underscores, dots) succeeds"""
     response = client.post(
         "/auth/register",
         json={
-            "username": "user123_test",
+            "username": "user.123_test",
             "email": "test5@example.com",
             "password": "password123",
         },
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["username"] == "user123_test"
+    assert data["username"] == "user.123_test"
 
 
 def test_register_short_password(client):
