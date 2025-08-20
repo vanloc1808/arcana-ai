@@ -89,7 +89,7 @@ def _sanitize_string(value: str, field: str, min_length=1, max_length=200, allow
 
 
 def _validate_username(value: str):
-    """Validate username to contain only letters, numbers, and underscores.
+    """Validate username to contain only letters, numbers, underscores, and dots.
 
     Args:
         value (str): The username to validate.
@@ -104,9 +104,9 @@ def _validate_username(value: str):
     # First do basic sanitization
     value = _sanitize_string(value, "Username", min_length=3, max_length=32)
 
-    # Check that username contains only letters, numbers, and underscores
-    if not re.match(r"^[a-zA-Z0-9_]+$", value):
-        raise ValueError("Username must contain only letters, numbers, and underscores.")
+    # Check that username contains only letters, numbers, underscores, and dots
+    if not re.match(r"^[a-zA-Z0-9._]+$", value):
+        raise ValueError("Username must contain only letters, numbers, underscores, and dots.")
 
     return value
 

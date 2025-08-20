@@ -72,9 +72,9 @@ export function isValidUsername(username: string): { isValid: boolean; error?: s
         return { isValid: false, error: "Username must be at most 32 characters long." };
     }
 
-    // Check that username contains only letters, numbers, and underscores
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-        return { isValid: false, error: "Username must contain only letters, numbers, and underscores." };
+    // Check that username contains only letters, numbers, underscores, and dots
+    if (!/^[a-zA-Z0-9._]+$/.test(username)) {
+        return { isValid: false, error: "Username must contain only letters, numbers, underscores, and dots." };
     }
 
     return { isValid: true };
