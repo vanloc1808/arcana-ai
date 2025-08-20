@@ -61,6 +61,25 @@ export function isValidEmail(email: string): boolean {
     return emailRegex.test(email);
 }
 
+export function isValidUsername(username: string): { isValid: boolean; error?: string } {
+    // Check minimum length
+    if (username.length < 3) {
+        return { isValid: false, error: "Username must be at least 3 characters long." };
+    }
+
+    // Check maximum length
+    if (username.length > 32) {
+        return { isValid: false, error: "Username must be at most 32 characters long." };
+    }
+
+    // Check that username contains only letters, numbers, and underscores
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return { isValid: false, error: "Username must contain only letters, numbers, and underscores." };
+    }
+
+    return { isValid: true };
+}
+
 export function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
     return String(error);

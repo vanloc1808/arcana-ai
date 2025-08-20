@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { Edit, Menu, X } from "lucide-react";
 import { Avatar } from "@/components/AvatarUpload";
+import { isValidUsername } from "@/lib/utils";
 
 interface AdminUser {
     id: number;
@@ -44,6 +45,7 @@ export default function AdminUsersPage() {
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [validationError, setValidationError] = useState<string>('');
 
     useEffect(() => {
         if (isAuthLoading) return;
@@ -149,11 +151,10 @@ export default function AdminUsersPage() {
                                         <a
                                             href={item.href}
                                             onClick={closeMobileMenu}
-                                            className={`block px-3 py-3 rounded-md transition-colors touch-manipulation ${
-                                                item.active
-                                                    ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
-                                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                                            }`}
+                                            className={`block px-3 py-3 rounded-md transition-colors touch-manipulation ${item.active
+                                                ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
+                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                                }`}
                                         >
                                             <span className="text-base">{item.label}</span>
                                         </a>
@@ -177,11 +178,10 @@ export default function AdminUsersPage() {
                                 <li key={item.href}>
                                     <a
                                         href={item.href}
-                                        className={`flex items-center px-3 py-2 rounded-md transition-colors ${
-                                            item.active
-                                                ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
-                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                                        }`}
+                                        className={`flex items-center px-3 py-2 rounded-md transition-colors ${item.active
+                                            ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
+                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                            }`}
                                     >
                                         <span>{item.label}</span>
                                     </a>
@@ -285,7 +285,7 @@ export default function AdminUsersPage() {
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="flex gap-1 sm:gap-2">
-                                                                <Dialog>
+                                                                <Dialog onOpenChange={() => setValidationError('')}>
                                                                     <DialogTrigger asChild>
                                                                         <Button size="sm" variant="outline" className="touch-manipulation">
                                                                             <Edit className="w-4 h-4 sm:mr-1" />
@@ -303,9 +303,19 @@ export default function AdminUsersPage() {
                                                                             onSubmit={async (e) => {
                                                                                 e.preventDefault();
                                                                                 const formData = new FormData(e.currentTarget);
+
+                                                                                // Validate username
+                                                                                const username = formData.get('username') as string;
+                                                                                const usernameValidation = isValidUsername(username);
+                                                                                if (!usernameValidation.isValid) {
+                                                                                    setValidationError(usernameValidation.error || 'Username validation failed');
+                                                                                    return;
+                                                                                }
+                                                                                setValidationError('');
+
                                                                                 try {
                                                                                     await api.put(`/admin/users/${u.id}`, {
-                                                                                        username: formData.get('username'),
+                                                                                        username: username,
                                                                                         email: formData.get('email'),
                                                                                         full_name: formData.get('full_name'),
                                                                                         is_active: formData.get('is_active') === 'on',
@@ -319,6 +329,11 @@ export default function AdminUsersPage() {
                                                                             }}
                                                                             className="space-y-4 sm:space-y-6"
                                                                         >
+                                                                            {validationError && (
+                                                                                <div className="p-3 text-sm text-red-500 font-medium bg-red-900/30 border border-red-700/50 rounded-md">
+                                                                                    {validationError}
+                                                                                </div>
+                                                                            )}
                                                                             <div className="space-y-2">
                                                                                 <Label htmlFor="username" className="text-sm font-medium">Username</Label>
                                                                                 <Input
@@ -326,6 +341,7 @@ export default function AdminUsersPage() {
                                                                                     name="username"
                                                                                     defaultValue={u.username}
                                                                                     required
+                                                                                    placeholder="Username (letters, numbers, underscore)"
                                                                                     className="touch-manipulation"
                                                                                 />
                                                                             </div>

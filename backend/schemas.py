@@ -88,6 +88,29 @@ def _sanitize_string(value: str, field: str, min_length=1, max_length=200, allow
     return value
 
 
+def _validate_username(value: str):
+    """Validate username to contain only letters, numbers, and underscores.
+
+    Args:
+        value (str): The username to validate.
+    Returns:
+        str: The validated username.
+    Raises:
+        ValueError: If username contains invalid characters.
+    """
+    if not isinstance(value, str):
+        raise ValueError("Username must be a string.")
+
+    # First do basic sanitization
+    value = _sanitize_string(value, "Username", min_length=3, max_length=32)
+
+    # Check that username contains only letters, numbers, and underscores
+    if not re.match(r"^[a-zA-Z0-9_]+$", value):
+        raise ValueError("Username must contain only letters, numbers, and underscores.")
+
+    return value
+
+
 # Deck Model Schemas
 class DeckBase(BaseModel):
     """Base schema for a tarot deck.
@@ -323,9 +346,9 @@ class UserCreate(UserBase):
         Args:
             v (str): The username to validate.
         Returns:
-            str: The sanitized username.
+            str: The validated username.
         """
-        return _sanitize_string(v, "Username", min_length=3, max_length=32)
+        return _validate_username(v)
 
     @field_validator("password")
     def validate_password(cls, v):
@@ -700,7 +723,7 @@ class AdminUserUpdate(BaseModel):
     @field_validator("username")
     def validate_username(cls, v):
         if v is not None:
-            return _sanitize_string(v, "Username", min_length=3, max_length=32)
+            return _validate_username(v)
         return v
 
     @field_validator("full_name")
