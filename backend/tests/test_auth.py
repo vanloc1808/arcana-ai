@@ -145,6 +145,96 @@ def test_register_username_with_html(client):
     assert "forbidden content" in str(data) or "cannot be empty" in str(data)
 
 
+def test_register_username_with_unicode(client):
+    """Test registration with Unicode characters in username returns 422"""
+    response = client.post(
+        "/auth/register",
+        json={
+            "username": "VănLộc",
+            "email": "test@example.com",
+            "password": "password123",
+        },
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert "letters, numbers, and underscores" in str(data)
+
+
+def test_register_username_with_numbers(client):
+    """Test registration with numbers in username succeeds"""
+    response = client.post(
+        "/auth/register",
+        json={
+            "username": "John123",
+            "email": "test@example.com",
+            "password": "password123",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "John123"
+
+
+def test_register_username_with_underscores(client):
+    """Test registration with underscores in username succeeds"""
+    response = client.post(
+        "/auth/register",
+        json={
+            "username": "john_doe",
+            "email": "test2@example.com",
+            "password": "password123",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "john_doe"
+
+
+def test_register_username_with_special_chars(client):
+    """Test registration with special characters (not allowed) returns 422"""
+    response = client.post(
+        "/auth/register",
+        json={
+            "username": "john@doe",
+            "email": "test3@example.com",
+            "password": "password123",
+        },
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert "letters, numbers, and underscores" in str(data)
+
+
+def test_register_valid_ascii_username(client):
+    """Test registration with valid letters only username succeeds"""
+    response = client.post(
+        "/auth/register",
+        json={
+            "username": "JohnDoe",
+            "email": "test4@example.com",
+            "password": "password123",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "JohnDoe"
+
+
+def test_register_valid_mixed_username(client):
+    """Test registration with valid mixed username (letters, numbers, underscores) succeeds"""
+    response = client.post(
+        "/auth/register",
+        json={
+            "username": "user123_test",
+            "email": "test5@example.com",
+            "password": "password123",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "user123_test"
+
+
 def test_register_short_password(client):
     """Test registration with short password returns 422"""
     response = client.post(

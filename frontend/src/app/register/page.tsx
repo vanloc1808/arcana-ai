@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { FiLoader } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/api';
+import { isValidUsername } from '@/lib/utils';
 
 interface FieldErrors {
     username?: string;
@@ -29,11 +30,32 @@ export default function Register() {
         console.log('Register state changed:', { username, email, password, confirmPassword, error, fieldErrors, loading });
     }, [username, email, password, confirmPassword, error, fieldErrors, loading]);
 
+    // Real-time username validation
+    useEffect(() => {
+        if (username && username.length > 0) {
+            const usernameValidation = isValidUsername(username);
+            if (!usernameValidation.isValid) {
+                setFieldErrors(prev => ({ ...prev, username: usernameValidation.error }));
+            } else {
+                setFieldErrors(prev => ({ ...prev, username: undefined }));
+            }
+        } else {
+            setFieldErrors(prev => ({ ...prev, username: undefined }));
+        }
+    }, [username]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Register form submitted', { username, email, password, confirmPassword });
         setError('');
         setFieldErrors({});
+
+        // Validate username
+        const usernameValidation = isValidUsername(username);
+        if (!usernameValidation.isValid) {
+            setFieldErrors({ username: usernameValidation.error });
+            return;
+        }
 
         if (password !== confirmPassword) {
             console.log('Password mismatch detected');
@@ -146,10 +168,10 @@ export default function Register() {
                                 : 'border-purple-600/50 focus:border-purple-500'
                                 }`}
                             required
-                            placeholder="Enter your username"
+                            placeholder="Enter your username (letters, numbers, underscore)"
                         />
                         {fieldErrors.username && (
-                            <p className="mt-1 text-sm text-red-400">{fieldErrors.username}</p>
+                            <p className="mt-1 text-sm text-red-500 font-medium">{fieldErrors.username}</p>
                         )}
                     </div>
 
@@ -170,7 +192,7 @@ export default function Register() {
                             placeholder="Enter your email address"
                         />
                         {fieldErrors.email && (
-                            <p className="mt-1 text-sm text-red-400">{fieldErrors.email}</p>
+                            <p className="mt-1 text-sm text-red-500 font-medium">{fieldErrors.email}</p>
                         )}
                     </div>
 
@@ -191,7 +213,7 @@ export default function Register() {
                             placeholder="Enter your password"
                         />
                         {fieldErrors.password && (
-                            <p className="mt-1 text-sm text-red-400">{fieldErrors.password}</p>
+                            <p className="mt-1 text-sm text-red-500 font-medium">{fieldErrors.password}</p>
                         )}
                     </div>
 
