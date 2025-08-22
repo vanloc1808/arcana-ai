@@ -35,6 +35,9 @@ RUN uv sync
 # Create avatar directory
 RUN mkdir -p /avatar && chmod 755 /avatar
 
+# Make wait-for-it script executable
+RUN chmod +x /app/wait-for-it.sh
+
 # Create startup script
 RUN echo '#!/bin/bash\n\
     source .venv/bin/activate\n\
