@@ -175,7 +175,11 @@ export default function ChangelogPage({ searchParams }: ChangelogPageProps) {
 
             <div className="space-y-6">
                 {Object.entries(version.changes).map(([type, changes]) =>
-                    changes && changes.length > 0 ? renderChangeList(changes, type) : null
+                    changes && changes.length > 0 ? (
+                        <div key={type}>
+                            {renderChangeList(changes, type)}
+                        </div>
+                    ) : null
                 )}
             </div>
         </motion.div>
