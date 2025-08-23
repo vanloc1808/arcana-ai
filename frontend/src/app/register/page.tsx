@@ -12,6 +12,7 @@ interface FieldErrors {
     username?: string;
     email?: string;
     password?: string;
+    termsAccepted?: string;
 }
 
 export default function Register() {
@@ -19,6 +20,7 @@ export default function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
     const [error, setError] = useState('');
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [loading, setLoading] = useState(false);
@@ -27,8 +29,8 @@ export default function Register() {
 
     // Debug: Monitor state changes
     useEffect(() => {
-        console.log('Register state changed:', { username, email, password, confirmPassword, error, fieldErrors, loading });
-    }, [username, email, password, confirmPassword, error, fieldErrors, loading]);
+        console.log('Register state changed:', { username, email, password, confirmPassword, termsAccepted, error, fieldErrors, loading });
+    }, [username, email, password, confirmPassword, termsAccepted, error, fieldErrors, loading]);
 
     // Real-time username validation
     useEffect(() => {
@@ -46,7 +48,7 @@ export default function Register() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Register form submitted', { username, email, password, confirmPassword });
+        console.log('Register form submitted', { username, email, password, confirmPassword, termsAccepted });
         setError('');
         setFieldErrors({});
 
@@ -60,6 +62,11 @@ export default function Register() {
         if (password !== confirmPassword) {
             console.log('Password mismatch detected');
             setError('Passwords do not match');
+            return;
+        }
+
+        if (!termsAccepted) {
+            setFieldErrors({ termsAccepted: 'Please agree to the Terms of Service and Privacy Policy' });
             return;
         }
 
@@ -232,12 +239,48 @@ export default function Register() {
                         />
                     </div>
 
+                    {fieldErrors.termsAccepted && (
+                        <p className="text-sm text-red-300 font-bold mb-2 bg-red-900/20 p-2 rounded border border-red-600/50">{fieldErrors.termsAccepted}</p>
+                    )}
+
+                    <div className="flex items-start space-x-3">
+                        <div className="relative">
+                            <input
+                                id="termsAccepted"
+                                type="checkbox"
+                                checked={termsAccepted}
+                                onChange={(e) => setTermsAccepted(e.target.checked)}
+                                className="peer sr-only"
+                            />
+                            <div className={`w-5 h-5 border-2 rounded transition-all duration-200 flex items-center justify-center ${termsAccepted
+                                ? 'border-purple-500 bg-purple-600'
+                                : 'border-purple-600/50 hover:border-purple-500/70'
+                                } bg-gray-900/50`}>
+                                {termsAccepted && (
+                                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                )}
+                            </div>
+                        </div>
+                        <label htmlFor="termsAccepted" className="text-sm text-gray-300 leading-relaxed cursor-pointer select-none">
+                            I agree to the{' '}
+                            <Link href="/terms-of-service" className="text-purple-400 hover:text-purple-300 transition-colors underline">
+                                Terms of Service
+                            </Link>{' '}
+                            and{' '}
+                            <Link href="/privacy-policy" className="text-purple-400 hover:text-purple-300 transition-colors underline">
+                                Privacy Policy
+                            </Link>
+                        </label>
+                    </div>
+
                     <button
                         type="submit"
                         disabled={loading}
                         className="w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded hover:from-purple-700 hover:to-purple-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
                         onClick={() => {
-                            console.log('Register button clicked', { loading, username, email, password, confirmPassword });
+                            console.log('Register button clicked', { loading, username, email, password, confirmPassword, termsAccepted });
                         }}
                     >
                         {loading ? <FiLoader className="animate-spin" /> : 'Register'}
@@ -269,9 +312,6 @@ export default function Register() {
                             Privacy Policy
                         </Link>
                     </div>
-                    <p className="text-center text-xs text-gray-500 mt-2 leading-relaxed">
-                        By creating an account, you agree to our Terms of Service and Privacy Policy
-                    </p>
                 </div>
             </div>
         </div>
