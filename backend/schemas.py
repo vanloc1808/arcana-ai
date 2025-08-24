@@ -515,7 +515,7 @@ class ReadingRequest(BaseModel):
         Returns:
             str: The sanitized concern.
         """
-        return _sanitize_string(v, "Concern", min_length=2, max_length=500)
+        return _sanitize_string(v, "Concern", min_length=2, max_length=2000)
 
 
 class CardResponse(BaseModel):
@@ -640,7 +640,7 @@ class SharedReadingCreate(BaseModel):
         Returns:
             str: The sanitized concern.
         """
-        return _sanitize_string(v, "Concern", min_length=2, max_length=500)
+        return _sanitize_string(v, "Concern", min_length=2, max_length=2000)
 
 
 class SharedReadingResponse(BaseModel):
@@ -1346,7 +1346,7 @@ class JournalEntryCreate(BaseModel):
         mood_after (Optional[int]): Mood rating after reading (1-10).
         outcome_rating (Optional[int]): Outcome satisfaction rating (1-5).
         follow_up_date (Optional[datetime]): Optional follow-up reminder date.
-        tags (Optional[List[str]]): Array of user-defined tags.
+        tags (Optional[List[str]): Array of user-defined tags.
         is_favorite (bool): Whether entry is marked as favorite.
     """
 

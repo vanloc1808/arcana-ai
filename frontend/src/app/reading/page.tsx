@@ -164,15 +164,28 @@ export default function ReadingPage() {
                                 <label htmlFor="concern" className="block text-sm sm:text-base text-mystical-accent text-accent-gradient mb-2">
                                     Your Question or Concern *
                                 </label>
-                                <textarea
-                                    id="concern"
-                                    value={concern}
-                                    onChange={(e) => setConcern(e.target.value)}
-                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 chat-input bg-gray-800 border-2 border-purple-600 rounded-xl focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 placeholder-purple-500 resize-none text-sm sm:text-base"
-                                    rows={3}
-                                    placeholder="What mystical question seeks an answer? Share your heart's inquiry..."
-                                    required
-                                />
+                                <div className="relative">
+                                    <textarea
+                                        id="concern"
+                                        value={concern}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            if (value.length <= 2000) {
+                                                setConcern(value);
+                                            }
+                                        }}
+                                        maxLength={2000}
+                                        className="w-full px-3 sm:px-4 py-2 sm:py-3 chat-input bg-gray-800 border-2 border-purple-600 rounded-xl focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 placeholder-purple-500 resize-none text-sm sm:text-base"
+                                        rows={3}
+                                        placeholder="What mystical question seeks an answer? Share your heart's inquiry..."
+                                        required
+                                    />
+                                    {concern.length > 1700 && (
+                                        <div className="absolute bottom-2 right-3 text-xs text-gray-400">
+                                            {concern.length}/2000
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
