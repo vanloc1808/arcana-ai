@@ -423,7 +423,6 @@ function HomeContent() {
     messages,
     loading,
     error,
-    currentCards,
     streamingContent,
     setCurrentSession,
     createSession,
@@ -431,7 +430,6 @@ function HomeContent() {
     fetchMessages,
     sendMessage,
     renameSession,
-    clearCurrentCards,
   } = useChatSessions();
 
   const [input, setInput] = useState('');
@@ -490,13 +488,12 @@ function HomeContent() {
     if (session) {
       setCurrentSession(session);
       await fetchMessages(sessionId);
-      clearCurrentCards();
       // Auto-collapse sidebar on mobile after selection
       if (window.innerWidth < 768) {
         setSidebarCollapsed(true);
       }
     }
-  }, [sessions, setCurrentSession, fetchMessages, clearCurrentCards]);
+  }, [sessions, setCurrentSession, fetchMessages]);
 
   // Handle reading history URL parameter
   useEffect(() => {
@@ -773,21 +770,7 @@ function HomeContent() {
                     </div>
                   ))}
 
-                  {/* Display current cards - Mobile-first grid */}
-                  {currentCards.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 my-6 md:my-8">
-                      {currentCards.map((card, index) => (
-                        <div key={index} className="card-mystical tarot-card perspective-1000 mx-auto">
-                          <TarotCard
-                            card={card}
-                            size="large"
-                            showDetails={true}
-                            className="max-w-[240px] md:max-w-[280px] w-full"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+
 
                   {/* Display streaming content */}
                   {streamingContent && (
