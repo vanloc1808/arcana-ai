@@ -349,14 +349,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🚨 Recent Updates
 
-### v2.0.0 - Major Migration & CI/CD Improvements
-- ✅ **Fixed Migration Chain**: Resolved multiple heads issue with merge migration
-- ✅ **SQLite Compatibility**: Full SQLite support for development and CI
-- ✅ **CI/CD Pipeline**: Automated testing with database setup
-- ✅ **Test Isolation**: Fixed database cleanup between tests
-- ✅ **Payment Integration**: Lemon Squeezy (coming soon) + MetaMask support
-- ✅ **Image Management**: Cloudflare R2 integration
-- ✅ **Admin Features**: Comprehensive user and content management
+### v2.1.0 - User Experience & Security Improvements
+- ✅ **Terms Agreement**: Added required checkbox for Terms of Service and Privacy Policy on registration
+- ✅ **Enhanced Validation**: Improved form validation with custom error messages
+- ✅ **Better UX**: Custom checkbox styling that matches the dark theme
+- ✅ **Security**: Ensures users explicitly agree to terms before account creation
 
 ---
 

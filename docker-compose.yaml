@@ -1,5 +1,6 @@
 services:
   backend:
+    build: ./backend
     image: vanloc1808/tarot-backend:latest
     container_name: tarot-backend
     env_file:
