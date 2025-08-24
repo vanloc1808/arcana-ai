@@ -820,11 +820,22 @@ function HomeContent() {
                       ref={inputRef}
                       type="text"
                       value={input}
-                      onChange={(e) => setInput(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 2000) {
+                          setInput(value);
+                        }
+                      }}
                       placeholder="Ask your mystical question..."
+                      maxLength={2000}
                       className="w-full px-4 md:px-6 py-4 md:py-5 pr-4 md:pr-6 chat-input bg-gray-800 border-2 border-purple-600 rounded-2xl focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 placeholder-purple-500 text-base md:text-lg touch-manipulation"
                       disabled={loading}
                     />
+                    {input.length > 1700 && (
+                      <div className="absolute bottom-2 right-3 text-xs text-gray-400">
+                        {input.length}/2000
+                      </div>
+                    )}
                   </div>
                   <button
                     type="submit"
