@@ -640,7 +640,7 @@ class SharedReadingCreate(BaseModel):
         Returns:
             str: The sanitized concern.
         """
-        return _sanitize_string(v, "Concern", min_length=2, max_length=500)
+        return _sanitize_string(v, "Concern", min_length=2, max_length=2000)
 
 
 class SharedReadingResponse(BaseModel):

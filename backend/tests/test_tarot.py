@@ -155,12 +155,12 @@ def test_tarot_reading_long_concern(client, auth_headers, test_cards, mock_tarot
     """Test tarot reading with too long concern returns 422"""
     response = client.post(
         "/tarot/reading",
-        json={"concern": "a" * 501, "num_cards": 3},
+        json={"concern": "a" * 2001, "num_cards": 3},
         headers=auth_headers
     )
     assert response.status_code == 422
     data = response.json()
-    assert "at most 500 characters" in str(data)
+    assert "at most 2000 characters" in str(data)
 
 
 def test_tarot_reading_concern_with_html(client, auth_headers, test_cards, mock_tarot_reader):
