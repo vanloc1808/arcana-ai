@@ -865,6 +865,12 @@ function HomeContent() {
           <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-700/50 rounded-lg p-3 shadow-lg">
             <div className="flex flex-col space-y-1">
               <Link
+                href="/changelog"
+                className="text-xs text-gray-400 hover:text-purple-400 transition-colors"
+              >
+                Changelog
+              </Link>
+              <Link
                 href="/terms-of-service"
                 className="text-xs text-gray-400 hover:text-purple-400 transition-colors"
               >

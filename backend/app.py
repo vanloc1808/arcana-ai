@@ -39,7 +39,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from config import settings
 from database import Base, engine
-from routers import admin, auth, chat, health, journal, sharing, subscription, support, tarot, tasks
+from routers import admin, auth, changelog, chat, health, journal, sharing, subscription, support, tarot, tasks
 from utils.error_handlers import (
     TarotAPIException,
     general_exception_handler,
@@ -139,6 +139,7 @@ app.include_router(sharing.router)  # Reading sharing functionality
 app.include_router(subscription.router)  # Subscription and payment management
 app.include_router(journal.router)  # Advanced tarot journal and personal growth
 app.include_router(support.router)  # Support ticket system with file uploads
+app.include_router(changelog.router)  # Changelog and version information
 
 
 @app.get("/")
