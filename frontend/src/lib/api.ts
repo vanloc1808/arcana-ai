@@ -1,6 +1,7 @@
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { logDebug, logWarn } from '@/lib/logger';
+import { API_URL } from '@/config';
 import {
     Card,
     TurnsResponse,
@@ -34,7 +35,7 @@ export function setGlobalLogoutCallback(logoutCallback: () => void) {
 }
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "https://backend-arcanaai.nguyenvanloc.com",
+    baseURL: API_URL,
     headers: {
         "Content-Type": "application/json",
     },
@@ -162,7 +163,7 @@ export const auth = {
         formData.append('username', username);
         formData.append('password', password);
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-arcanaai.nguyenvanloc.com'}/auth/token`, {
+        const response = await fetch(`${API_URL}/auth/token`, {
             method: 'POST',
             body: formData,
         });
@@ -179,7 +180,7 @@ export const auth = {
     },
 
     refreshToken: async (refreshToken: string) => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-arcanaai.nguyenvanloc.com'}/auth/refresh`, {
+        const response = await fetch(`${API_URL}/auth/refresh`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -4,6 +4,7 @@ import { chat } from '@/lib/api';
 import { useSubscription } from '@/hooks/useSubscription';
 import { logDebug, logError, logHookError } from '@/lib/logger';
 import { toast } from 'react-hot-toast';
+import { API_URL } from '@/config';
 
 export interface ChatSession {
     id: number;
@@ -161,7 +162,7 @@ export const useChatSessions = () => {
             }
 
             // Make streaming request using fetch API
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-arcanaai.nguyenvanloc.com'}/chat/sessions/${sessionId}/messages/`, {
+            const response = await fetch(`${API_URL}/chat/sessions/${sessionId}/messages/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

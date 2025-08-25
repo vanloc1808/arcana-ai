@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils';
+import { API_URL } from '@/config';
 
 interface SupportModalProps {
     isOpen: boolean;
@@ -194,7 +195,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
             });
 
             const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-arcanaai.nguyenvanloc.com'}/support/`, {
+            const response = await fetch(`${API_URL}/support/`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
