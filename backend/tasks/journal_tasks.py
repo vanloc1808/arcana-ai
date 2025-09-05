@@ -25,7 +25,8 @@ def send_reminder_email(reminder):
     Mock function for sending reminder emails.
     In production, this would integrate with an actual email service.
     """
-    print(f"Sending reminder email for reminder {reminder.id}")
+    reminder_id = reminder.id if reminder else "None"
+    print(f"Sending reminder email for reminder {reminder_id}")
     # Mock email sending logic
     return True
 
