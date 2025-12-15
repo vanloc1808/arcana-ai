@@ -1,0 +1,25 @@
+diff --git a/node_modules/test-exclude/index.js b/node_modules/test-exclude/index.js
+index aecb72d..e59fb21 100644
+--- a/node_modules/test-exclude/index.js
++++ b/node_modules/test-exclude/index.js
+@@ -2,7 +2,8 @@
+ 
+ const path = require('path');
+ const { promisify } = require('util');
+-const glob = promisify(require('glob'));
++const globModule = require('glob');
++const glob = promisify(globModule.glob);
+ const minimatch = require('minimatch');
+ const { defaults } = require('@istanbuljs/schema');
+ const isOutsideDir = require('./is-outside-dir');
+@@ -112,8 +113,8 @@ class TestExclude {
+             globOptions.ignore = this.exclude;
+         }
+ 
+-        return glob
+-            .sync(globPatterns, globOptions)
++        return globModule
++            .globSync(globPatterns, globOptions)
+             .filter(file => this.shouldInstrument(path.resolve(cwd, file)));
+     }
+ 
