@@ -1,7 +1,8 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+COPY patches ./patches
+RUN npm ci && npx patch-package
 
 # Build the application
 FROM node:20-alpine AS builder
@@ -12,7 +13,11 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+COPY patches ./patches
 COPY . .
+# Patches should already be applied from deps stage, but verify
+RUN test -d patches && npx patch-package || echo "No patches to apply"
 RUN npm run build
 
 # Serve using Next.js built-in server
