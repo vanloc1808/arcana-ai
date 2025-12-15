@@ -26,14 +26,9 @@ jobs:
 
       - name: Deploy to VPS via SSH
         run: |
-          # -------------------------------------------------------------------------
-          # FIXES APPLIED HERE:
-          # 1. Using ${{ env.VAR }} syntax for safety.
-          # 2. Using the -A flag for agent forwarding, ensuring the loaded key is used.
-          # -------------------------------------------------------------------------
-          ssh -A -o StrictHostKeyChecking=no ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << EOF
+          ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << EOF
             set -e
-            cd ${{ env.PROJECT_DIR }}
+            cd $PROJECT_DIR
             git fetch origin
             git checkout main
             git pull origin main
@@ -56,7 +51,6 @@ jobs:
             # Run database migrations if backend is running
             if docker ps | grep -q tarot-backend; then
               echo "Running database migrations..."
-              # IMPORTANT: Ensure the 'migrate.py' script is executable and works correctly
               if docker exec tarot-backend python migrate.py; then
                 echo "Database migrations completed successfully"
               else
@@ -80,8 +74,6 @@ jobs:
               echo "Backend container is running"
               echo "Checking backend health endpoint..."
               sleep 10  # Give backend time to fully start
-              # Using '|| true' to prevent the entire script from failing on a curl error,
-              # but it's often better to let it fail if the check is critical.
               if curl -f http://localhost:8000/health || echo "Health check failed"; then
                 echo "Backend health check passed"
               else
