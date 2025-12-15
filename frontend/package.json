@@ -6,12 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "node scripts/lint.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --coverageReporters='text-summary' --coverageReporters='html'",
     "test:ci": "jest --ci --coverage --coverageReporters='text-summary' --coverageReporters='html'",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -30,7 +31,7 @@
     "framer-motion": "^12.23.25",
     "jose": "^6.1.3",
     "lucide-react": "^0.556.0",
-    "next": "16.0.7",
+    "next": "^16.0.9",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-hot-toast": "^2.6.0",
@@ -54,13 +55,17 @@
     "@types/react-dom": "^19",
     "babel-plugin-module-resolver": "^5.0.2",
     "eslint": "^9",
-    "eslint-config-next": "16.0.7",
+    "eslint-config-next": "^16.0.9",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "msw": "^2.12.4",
+    "patch-package": "^8.0.1",
     "react-toastify": "^11.0.5",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "glob": "^10.5.0"
   }
 }
