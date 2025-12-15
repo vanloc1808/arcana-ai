@@ -10,6 +10,7 @@ env:
   SSH_USER: ${{ secrets.VPS_USER }}
   SSH_HOST: ${{ secrets.VPS_HOST }}
   PROJECT_DIR: ${{ secrets.VPS_PROJECT_DIR }}
+  SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
 
 jobs:
   deploy:
@@ -22,13 +23,13 @@ jobs:
       - name: Set up SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+          ssh-private-key: s
 
       - name: Deploy to VPS via SSH
         run: |
-          ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << EOF
+          ssh -o StrictHostKeyChecking=no ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << EOF
             set -e
-            cd $PROJECT_DIR
+            cd ${{ env.PROJECT_DIR }}
             git fetch origin
             git checkout main
             git pull origin main
