@@ -4,7 +4,7 @@ A modern, high-performance FastAPI backend for AI-powered tarot reading services
 
 ## 🚀 Features
 
-- **AI-Powered Tarot Readings**: OpenAI GPT integration for personalized interpretations
+- **AI-Powered Tarot Readings**: Google Gemini integration for personalized interpretations
 - **User Authentication**: JWT-based authentication with email verification
 - **Subscription Management**: Turn-based system with premium features
 - **Real-time Chat**: WebSocket support for interactive tarot sessions
@@ -23,7 +23,7 @@ A modern, high-performance FastAPI backend for AI-powered tarot reading services
 - **Redis**: Caching and message broker
 - **Celery**: Asynchronous task processing
 - **JWT**: Authentication and authorization
-- **OpenAI API**: AI-powered tarot interpretations
+- **Gemini API**: AI-powered tarot interpretations
 - **Alembic**: Database migration management
 - **uv**: Fast Python package manager
 - **Pydantic**: Data validation and settings management
@@ -33,7 +33,7 @@ A modern, high-performance FastAPI backend for AI-powered tarot reading services
 - Python 3.11+
 - Redis
 - PostgreSQL (optional, SQLite supported for development/CI)
-- OpenAI API key
+- Gemini API key (Google AI Studio)
 - Cloudflare R2 account (for image storage)
 - uv (Python package manager)
 
@@ -74,8 +74,8 @@ nano .env
 DATABASE_URL=sqlite:///./tarot.db  # For development/CI
 # DATABASE_URL=postgresql://user:password@localhost/tarot_db  # For production
 
-# OpenAI
-OPENAI_API_KEY=your-openai-api-key
+# Gemini (or set GOOGLE_API_KEY)
+GEMINI_API_KEY=your-gemini-api-key
 
 # JWT
 JWT_SECRET_KEY=your-secret-key
@@ -416,7 +416,7 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 - **FastAPI**: For the excellent web framework
 - **SQLAlchemy**: For the powerful ORM
 - **Alembic**: For database migration management
-- **OpenAI**: For AI capabilities
+- **Google Gemini**: For AI capabilities
 - **Open Source Community**: For amazing tools and libraries
 
 ---
