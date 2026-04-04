@@ -121,7 +121,7 @@
         },
         {
             "type": "stat",
-            "title": "OpenAI Tokens Used",
+            "title": "Gemini Tokens Used",
             "gridPos": {
                 "x": 18,
                 "y": 2,
@@ -144,7 +144,7 @@
             },
             "targets": [
                 {
-                    "expr": "sum(tarot_openai_tokens_used_total)",
+                    "expr": "sum(tarot_gemini_tokens_used_total)",
                     "refId": "A"
                 }
             ],

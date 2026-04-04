@@ -10,7 +10,7 @@ Experience the full application with live tarot readings, user authentication, a
 
 ## 🌟 Features
 
-- **AI-Powered Tarot Readings**: Get personalized tarot interpretations using OpenAI's GPT models
+- **AI-Powered Tarot Readings**: Get personalized tarot interpretations using Google Gemini
 - **Multiple Tarot Decks**: Support for various tarot deck styles and interpretations
 - **User Authentication**: JWT-based authentication with email verification
 - **Subscription Management**: Turn-based system with premium features
@@ -32,7 +32,7 @@ Experience the full application with live tarot readings, user authentication, a
 - **Redis**: Caching and message broker
 - **Celery**: Asynchronous task processing
 - **JWT**: Authentication and authorization
-- **OpenAI API**: AI-powered tarot interpretations
+- **Gemini API**: AI-powered tarot interpretations
 - **Alembic**: Database migration management
 - **uv**: Fast Python package manager
 
@@ -58,7 +58,7 @@ Experience the full application with live tarot readings, user authentication, a
 - Docker and Docker Compose
 - Redis
 - PostgreSQL (optional, SQLite supported for development/CI)
-- OpenAI API key
+- Gemini API key (Google AI Studio)
 - Cloudflare R2 account (for image storage)
 - uv (Python package manager)
 
@@ -138,8 +138,8 @@ Create `.env` files in both `backend/` and `frontend/` directories:
 DATABASE_URL=postgresql://user:password@localhost/tarot_db
 # or for SQLite: DATABASE_URL=sqlite:///./tarot.db
 
-# OpenAI
-OPENAI_API_KEY=your-openai-api-key
+# Gemini (or set GOOGLE_API_KEY)
+GEMINI_API_KEY=your-gemini-api-key
 
 # JWT
 JWT_SECRET_KEY=your-secret-key
@@ -214,7 +214,7 @@ The project includes a comprehensive GitHub Actions workflow:
 ### Tarot Readings
 - **Daily Cards**: Get a new tarot card interpretation each day
 - **Custom Spreads**: Choose from various tarot spreads
-- **AI Interpretations**: Personalized readings using OpenAI
+- **AI Interpretations**: Personalized readings using Gemini
 - **Card Meanings**: Comprehensive upright and reversed interpretations
 - **Multiple Decks**: Support for various tarot deck styles
 
@@ -319,7 +319,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **OpenAI**: For providing the AI capabilities
+- **Google Gemini**: For providing the AI capabilities
 - **Tarot Community**: For the rich tradition of tarot interpretation
 - **Open Source Community**: For the amazing tools and libraries
 - **Cloudflare**: For R2 object storage

@@ -322,14 +322,12 @@ def mock_tarot_reader():
 
 
 @pytest.fixture(scope="function")
-def mock_openai():
-    """Mock OpenAI responses for chat functionality"""
-    with patch('routers.chat.ChatOpenAI') as mock_llm, \
-         patch('openai.OpenAI') as mock_client, \
-         patch('langchain_openai.ChatOpenAI') as mock_langchain, \
-         patch('utils.metrics.track_openai_request') as mock_track:
+def mock_gemini():
+    """Mock Gemini (LangChain) responses for chat functionality"""
+    with patch('routers.chat.ChatGoogleGenerativeAI') as mock_llm, \
+         patch('utils.metrics.track_gemini_request') as mock_track:
 
-        # Mock the ChatOpenAI instance
+        # Mock the ChatGoogleGenerativeAI instance
         mock_instance = mock_llm.return_value
 
         # Default response for invoke
@@ -356,28 +354,8 @@ def mock_openai():
         mock_instance.set_invoke_response = set_invoke_response
         mock_instance.set_stream_response = set_stream_response
 
-        # Mock the OpenAI client
-        mock_client_instance = mock_client.return_value
-        mock_client_instance.chat.completions.create.return_value = type('obj', (object,), {
-            'choices': [
-                type('obj', (object,), {
-                    'message': type('obj', (object,), {
-                        'content': "Thank you for your question. I can help you with a tarot reading.",
-                        'tool_calls': None
-                    })()
-                })()
-            ]
-        })()
-
-        # Mock the Langchain ChatOpenAI
-        mock_langchain_instance = mock_langchain.return_value
-        mock_langchain_instance.invoke.return_value = type('obj', (object,), {
-            'content': "Thank you for your question. I can help you with a tarot reading.",
-            'tool_calls': None
-        })()
-
-        # Default streaming response for langchain
-        mock_langchain_instance.stream.return_value = [
+        # Default streaming response for LangChain
+        mock_instance.stream.return_value = [
             type('obj', (object,), {'content': 'Hello, '})(),
             type('obj', (object,), {'content': 'I can help '})(),
             type('obj', (object,), {'content': 'with tarot guidance.'})()
@@ -385,11 +363,11 @@ def mock_openai():
 
         # Mock astream for async streaming
         async def mock_astream(*args, **kwargs):
-            for chunk in mock_langchain_instance.stream.return_value:
+            for chunk in mock_instance.stream.return_value:
                 yield chunk
                 await asyncio.sleep(0)
 
-        mock_langchain_instance.astream = mock_astream
+        mock_instance.astream = mock_astream
 
         # Mock metrics tracking
         mock_track.return_value = None

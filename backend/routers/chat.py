@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from sqlalchemy.orm import Session, selectinload
 
 from config import settings
@@ -865,11 +865,11 @@ async def create_message(
                 yield f"data: {json.dumps(event_payload_user)}\n\n"
 
                 # Initialize LLM with tool calling
-                llm = ChatOpenAI(
-                    temperature=0.7,
-                    model=settings.OPENAI_MODEL,
-                    streaming=True,
-                    max_tokens=800,
+                llm = ChatGoogleGenerativeAI(
+                    model=settings.GEMINI_MODEL,
+                    google_api_key=settings.GEMINI_API_KEY,
+                    temperature=settings.GEMINI_TEMPERATURE,
+                    max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
                 )
 
                 # Create the system message

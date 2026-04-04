@@ -4,7 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi_mail import ConnectionConfig
 from pydantic import PrivateAttr, validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Load environment variables
 env_file = os.getenv("ENV_FILE", ".env")
@@ -14,8 +14,9 @@ load_dotenv(Path(env_file))
 class Settings(BaseSettings):
     """Application settings loaded from environment variables or .env file.
 
-    This class centralizes all configuration for the backend, including JWT, database, Celery, Redis, email, OpenAI, and other service settings.
+    This class centralizes all configuration for the backend, including JWT, database, Celery, Redis, email, Gemini, and other service settings.
     All fields are loaded from environment variables if available, otherwise default values are used.
+    Unknown env keys (for example legacy OpenAI variables) are ignored.
 
     Attributes:
         JWT_SECRET_KEY (str): Secret key for JWT authentication.
@@ -33,10 +34,10 @@ class Settings(BaseSettings):
         REDIS_HOST (str): Redis host.
         REDIS_PORT (int): Redis port.
         REDIS_DB (int): Redis database index.
-        OPENAI_API_KEY (str): OpenAI API key.
-        OPENAI_MODEL (str): OpenAI model name.
-        OPENAI_TEMPERATURE (float): OpenAI model temperature.
-        OPENAI_MAX_TOKENS (int): Max tokens for OpenAI responses.
+        GEMINI_API_KEY (str): Google Gemini API key (or set GOOGLE_API_KEY).
+        GEMINI_MODEL (str): Gemini model name.
+        GEMINI_TEMPERATURE (float): Gemini model temperature.
+        GEMINI_MAX_OUTPUT_TOKENS (int): Max output tokens for Gemini responses.
         MAIL_USERNAME (str): Email username.
         MAIL_PASSWORD (str): Email password.
         MAIL_FROM (str): Email sender address.
@@ -54,6 +55,8 @@ class Settings(BaseSettings):
         FASTAPI_ENV (str): FastAPI environment (e.g., 'local', 'production').
         email_config (ConnectionConfig): Email connection configuration.
     """
+
+    model_config = SettingsConfigDict(env_file=env_file, extra="ignore")
 
     # JWT Settings
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your-secret-key")
@@ -86,11 +89,11 @@ class Settings(BaseSettings):
             return value  # Already in correct format
         return value
 
-    # OpenAI Settings
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "test-key")  # Default to test-key for testing
-    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-    OPENAI_TEMPERATURE: float = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
-    OPENAI_MAX_TOKENS: int = int(os.getenv("OPENAI_MAX_TOKENS", "800"))
+    # Gemini (Google AI) settings — GEMINI_API_KEY or GOOGLE_API_KEY (AI Studio)
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "test-key")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    GEMINI_TEMPERATURE: float = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
+    GEMINI_MAX_OUTPUT_TOKENS: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "800"))
 
     # Email Settings
     MAIL_USERNAME: str = os.getenv("MAIL_USERNAME", "")
@@ -176,15 +179,6 @@ class Settings(BaseSettings):
                 VALIDATE_CERTS=self.VALIDATE_CERTS,
             )
         return self._email_config
-
-    class Config:
-        """Pydantic configuration for the Settings class.
-
-        Attributes:
-            env_file (str): Path to the .env file to load environment variables from.
-        """
-
-        env_file = env_file
 
 
 settings = Settings()
