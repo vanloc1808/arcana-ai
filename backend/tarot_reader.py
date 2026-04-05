@@ -5,12 +5,11 @@ import random
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
+from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from sqlalchemy.orm import Session
-
-from config import settings
 
 # Configure logging
 logging.basicConfig(
@@ -20,14 +19,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Load environment variables
+load_dotenv()
+
+
 class TarotReader:
     def __init__(self, db: Session = None, deck_id: int = 1):
         logger.info("Initializing TarotReader...")
-        self.llm = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_MODEL,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=settings.GEMINI_TEMPERATURE,
-            max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
+        self.llm = ChatOpenAI(
+            temperature=0.7,
+            model="gpt-4.1-mini",
+            streaming=True,
+            max_tokens=800,  # This will ensure responses are under 1000 words
         )
         self.image_urls = self._load_image_urls()
         self.cards = self._load_cards(db, deck_id) if db else self._load_cards_from_json()

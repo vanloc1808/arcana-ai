@@ -23,7 +23,7 @@ jobs:
         run: |
           echo "MAIL_FROM=your-email@example.com" >> $GITHUB_ENV
           # Add other required environment variables here
-          echo "GEMINI_API_KEY=test-gemini-key" >> $GITHUB_ENV
+          echo "OPENAI_API_KEY=sk-proj-1234567890" >> $GITHUB_ENV
           echo "FASTAPI_ENV=local" >> $GITHUB_ENV
           echo "SQLALCHEMY_DATABASE_URL=sqlite:///./tarot.db" >> $GITHUB_ENV
           echo "CI=true" >> $GITHUB_ENV

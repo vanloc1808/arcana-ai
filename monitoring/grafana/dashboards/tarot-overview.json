@@ -238,11 +238,11 @@
             },
             {
                 "id": 8,
-                "title": "Gemini Token Usage",
+                "title": "OpenAI Token Usage",
                 "type": "timeseries",
                 "targets": [
                     {
-                        "expr": "rate(tarot_gemini_tokens_used_total[5m])",
+                        "expr": "rate(tarot_openai_tokens_used_total[5m])",
                         "legendFormat": "{{type}} tokens"
                     }
                 ],

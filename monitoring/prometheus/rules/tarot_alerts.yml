@@ -45,16 +45,16 @@ groups:
           summary: "Database errors detected"
           description: "Database error rate: {{ $value }} errors/second"
 
-      # Gemini API errors
-      - alert: TarotGeminiErrors
-        expr: rate(tarot_gemini_requests_total{status!="success"}[5m]) > 0.1
+      # OpenAI API errors
+      - alert: TarotOpenAIErrors
+        expr: rate(tarot_openai_requests_total{status!="success"}[5m]) > 0.1
         for: 3m
         labels:
           severity: warning
           service: tarot-ai
         annotations:
-          summary: "Gemini API errors detected"
-          description: "Gemini error rate: {{ $value }} errors/second"
+          summary: "OpenAI API errors detected"
+          description: "OpenAI error rate: {{ $value }} errors/second"
 
       # High memory usage
       - alert: TarotHighMemoryUsage

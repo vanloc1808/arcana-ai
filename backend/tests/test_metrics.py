@@ -15,7 +15,7 @@ from utils.metrics import (
     track_card_drawn,
     track_auth_request,
     track_database_query,
-    track_gemini_request,
+    track_openai_request,
     track_application_error,
     track_chat_message,
     MetricsTimer,
@@ -28,8 +28,8 @@ from utils.metrics import (
     auth_requests_total,
     database_queries_total,
     database_query_duration,
-    gemini_requests_total,
-    gemini_tokens_used,
+    openai_requests_total,
+    openai_tokens_used,
     application_errors_total,
     chat_messages_total,
     chat_conversations_active,
@@ -228,10 +228,10 @@ class TestTrackingFunctions:
         mock_duration.labels.assert_called_once_with(operation="insert", table="messages")
         mock_duration_labels.observe.assert_called_once_with(0.1)
 
-    @patch('utils.metrics.gemini_requests_total')
-    @patch('utils.metrics.gemini_tokens_used')
-    def test_track_gemini_request_with_tokens(self, mock_tokens_counter, mock_requests_counter):
-        """Test tracking Gemini request with token usage."""
+    @patch('utils.metrics.openai_requests_total')
+    @patch('utils.metrics.openai_tokens_used')
+    def test_track_openai_request_with_tokens(self, mock_tokens_counter, mock_requests_counter):
+        """Test tracking OpenAI request with token usage."""
         # Mock metric objects
         mock_requests_labels = Mock()
         mock_requests_counter.labels.return_value = mock_requests_labels
@@ -248,10 +248,10 @@ class TestTrackingFunctions:
         mock_tokens_counter.labels.side_effect = mock_tokens_labels
 
         # Call function
-        track_gemini_request("gemini-2.0-flash", "success", prompt_tokens=100, completion_tokens=50)
+        track_openai_request("gpt-4", "success", prompt_tokens=100, completion_tokens=50)
 
         # Verify request counter was incremented
-        mock_requests_counter.labels.assert_called_once_with(model="gemini-2.0-flash", status="success")
+        mock_requests_counter.labels.assert_called_once_with(model="gpt-4", status="success")
         mock_requests_labels.inc.assert_called_once()
 
         # Verify token counters were incremented
@@ -259,19 +259,19 @@ class TestTrackingFunctions:
         mock_tokens_prompt_labels.inc.assert_called_once_with(100)
         mock_tokens_completion_labels.inc.assert_called_once_with(50)
 
-    @patch('utils.metrics.gemini_requests_total')
-    @patch('utils.metrics.gemini_tokens_used')
-    def test_track_gemini_request_no_tokens(self, mock_tokens_counter, mock_requests_counter):
-        """Test tracking Gemini request without token usage."""
+    @patch('utils.metrics.openai_requests_total')
+    @patch('utils.metrics.openai_tokens_used')
+    def test_track_openai_request_no_tokens(self, mock_tokens_counter, mock_requests_counter):
+        """Test tracking OpenAI request without token usage."""
         # Mock metric objects
         mock_requests_labels = Mock()
         mock_requests_counter.labels.return_value = mock_requests_labels
 
         # Call function
-        track_gemini_request("gemini-2.0-flash", "error", prompt_tokens=0, completion_tokens=0)
+        track_openai_request("gpt-3.5-turbo", "error", prompt_tokens=0, completion_tokens=0)
 
         # Verify request counter was incremented
-        mock_requests_counter.labels.assert_called_once_with(model="gemini-2.0-flash", status="error")
+        mock_requests_counter.labels.assert_called_once_with(model="gpt-3.5-turbo", status="error")
         mock_requests_labels.inc.assert_called_once()
 
         # Verify token counters were not called
@@ -421,8 +421,8 @@ class TestMetricsIntegration:
         assert auth_requests_total is not None
         assert database_queries_total is not None
         assert database_query_duration is not None
-        assert gemini_requests_total is not None
-        assert gemini_tokens_used is not None
+        assert openai_requests_total is not None
+        assert openai_tokens_used is not None
         assert application_errors_total is not None
         assert chat_messages_total is not None
         assert chat_conversations_active is not None

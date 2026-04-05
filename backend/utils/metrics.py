@@ -54,12 +54,12 @@ database_query_duration = Histogram(
     buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0],
 )
 
-# Gemini API metrics
-gemini_requests_total = Counter("tarot_gemini_requests_total", "Total Gemini API requests", ["model", "status"])
+# AI/OpenAI API metrics
+openai_requests_total = Counter("tarot_openai_requests_total", "Total OpenAI API requests", ["model", "status"])
 
-gemini_tokens_used = Counter(
-    "tarot_gemini_tokens_used_total",
-    "Total Gemini tokens used",
+openai_tokens_used = Counter(
+    "tarot_openai_tokens_used_total",
+    "Total OpenAI tokens used",
     ["model", "type"],  # type: prompt, completion
 )
 
@@ -132,13 +132,13 @@ def track_database_query(operation: str, table: str, duration: float, status: st
     database_query_duration.labels(operation=operation, table=table).observe(duration)
 
 
-def track_gemini_request(model: str, status: str, prompt_tokens: int = 0, completion_tokens: int = 0):
-    """Track Gemini API requests and token usage."""
-    gemini_requests_total.labels(model=model, status=status).inc()
+def track_openai_request(model: str, status: str, prompt_tokens: int = 0, completion_tokens: int = 0):
+    """Track OpenAI API requests and token usage."""
+    openai_requests_total.labels(model=model, status=status).inc()
     if prompt_tokens > 0:
-        gemini_tokens_used.labels(model=model, type="prompt").inc(prompt_tokens)
+        openai_tokens_used.labels(model=model, type="prompt").inc(prompt_tokens)
     if completion_tokens > 0:
-        gemini_tokens_used.labels(model=model, type="completion").inc(completion_tokens)
+        openai_tokens_used.labels(model=model, type="completion").inc(completion_tokens)
 
 
 def track_application_error(error_type: str, endpoint: str):
