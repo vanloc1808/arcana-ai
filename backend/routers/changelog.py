@@ -141,6 +141,82 @@ async def get_latest_version():
         )
 
 
+@router.get("/all")
+async def get_all_versions():
+    """
+    Get all version information from the changelog
+
+    Parses the changelog to extract all version details.
+
+    Returns:
+        list: All version information including version number, date, and changes
+
+    Raises:
+        HTTPException: If the changelog file cannot be read or parsed
+    """
+    try:
+        if not CHANGELOG_PATH.exists():
+            raise HTTPException(
+                status_code=404,
+                detail="Changelog file not found"
+            )
+
+        with open(CHANGELOG_PATH, 'r', encoding='utf-8') as file:
+            content = file.read()
+
+        lines = content.split('\n')
+        all_versions = []
+        current_version = None
+        current_date = None
+        current_changes = {}
+        current_section = None
+
+        for line in lines:
+            line = line.strip()
+
+            if line.startswith('## [') and '] - ' in line:
+                if current_version is not None:
+                    all_versions.append({
+                        "version": current_version,
+                        "date": current_date,
+                        "changes": current_changes
+                    })
+
+                version_start = line.find('[') + 1
+                version_end = line.find(']')
+                date_start = line.find(' - ') + 3
+
+                if version_start > 0 and version_end > version_start and date_start > 2:
+                    current_version = line[version_start:version_end]
+                    current_date = line[date_start:]
+                    current_changes = {}
+                    current_section = None
+
+            elif current_version is not None and line.startswith('### '):
+                current_section = line[4:].lower()
+                current_changes[current_section] = []
+
+            elif current_version is not None and current_section and line.startswith('- ') and line != '- N/A':
+                change_item = line[2:]
+                if change_item.strip():
+                    current_changes[current_section].append(change_item)
+
+        if current_version is not None:
+            all_versions.append({
+                "version": current_version,
+                "date": current_date,
+                "changes": current_changes
+            })
+
+        return all_versions
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error parsing changelog: {str(e)}"
+        )
+
+
 @router.get("/version/{version}")
 async def get_version_info(version: str):
     """
