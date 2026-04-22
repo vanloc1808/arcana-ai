@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC
 
 from passlib.context import CryptContext
-from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
@@ -318,8 +318,12 @@ class Card(Base):
 
     __tablename__ = "cards"
 
+    __table_args__ = (
+        UniqueConstraint('name', 'deck_id', name='ix_cards_name_deck_id'),
+    )
+
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    name = Column(String, index=True)
     suit = Column(String, nullable=True)  # E.g., Wands, Cups, Swords, Pentacles, or Major Arcana
     rank = Column(String, nullable=True)  # E.g., Ace, Two, King, The Fool, The Magician
     image_url = Column(String, nullable=True)  # URL to the card image
