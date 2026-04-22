@@ -14,25 +14,25 @@ help:
 	@echo "  redis       - Start Redis locally (requires redis-server)"
 
 worker:
-	celery -A celery_app worker --loglevel=info --queues=email,notifications,celery
+	uv run celery -A celery_app worker --loglevel=info --queues=email,notifications,celery
 
 beat:
-	celery -A celery_app beat --loglevel=info
+	uv run celery -A celery_app beat --loglevel=info
 
 monitor:
-	celery -A celery_app events
+	uv run celery -A celery_app events
 
 purge:
-	celery -A celery_app purge
+	uv run celery -A celery_app purge
 
 flower:
-	celery -A celery_app flower --port=5555
+	uv run celery -A celery_app flower --port=5555
 
 dev-worker:
-	celery -A celery_app worker --loglevel=debug --queues=email,notifications,celery --concurrency=1
+	uv run celery -A celery_app worker --loglevel=debug --queues=email,notifications,celery --concurrency=1
 
 dev-beat:
-	celery -A celery_app beat --loglevel=debug
+	uv run celery -A celery_app beat --loglevel=debug
 
 redis:
 	redis-server --port 6379 --daemonize yes
@@ -46,8 +46,8 @@ check-redis:
 
 # Show active tasks
 active:
-	celery -A celery_app inspect active
+	uv run celery -A celery_app inspect active
 
 # Show registered tasks
 tasks:
-	celery -A celery_app inspect registered
+	uv run celery -A celery_app inspect registered
