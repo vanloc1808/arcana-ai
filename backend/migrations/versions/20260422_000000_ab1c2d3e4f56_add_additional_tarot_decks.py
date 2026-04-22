@@ -96,8 +96,10 @@ def upgrade() -> None:
     rider_waite_id = row[0]
 
     # Step 3: Insert each new deck and copy Rider-Waite cards into it.
-    # image_url is set to NULL so the frontend renders its mystical placeholder
-    # until deck-specific artwork is uploaded to the CDN.
+    # image_url is copied from the Rider-Waite cards so every card shows a real
+    # working image immediately via the existing Cloudflare CDN.  The CDN images
+    # are the same artwork for now; replace image_url per-card once deck-specific
+    # artwork (Thoth, Marseille, etc.) is uploaded to the CDN.
     for deck_info in DECKS:
         connection.execute(
             text("INSERT INTO decks (name, description) VALUES (:name, :desc)"),
@@ -119,7 +121,7 @@ def upgrade() -> None:
                 SELECT
                     name, suit, rank, description_short, description_upright,
                     description_reversed, element, astrology, numerology, :new_deck_id,
-                    NULL
+                    image_url
                 FROM cards
                 WHERE deck_id = :rider_waite_id
             """),
