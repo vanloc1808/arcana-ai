@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
+import AdminLayout, { AdminCard, SectionHeader, AdminLoadingScreen, tableHeadStyle, tableCellStyle } from "@/components/AdminLayout";
 import api from "@/lib/api";
 
 interface AdminSharedReading {
@@ -30,14 +29,8 @@ export default function AdminSharedReadingsPage() {
 
     useEffect(() => {
         if (isAuthLoading) return;
-        if (!isAuthenticated) {
-            router.push("/login");
-            return;
-        }
-        if (!user?.is_admin) {
-            router.push("/");
-            return;
-        }
+        if (!isAuthenticated) { router.push("/login"); return; }
+        if (!user?.is_admin) { router.push("/"); return; }
         loadReadings();
     }, [isAuthenticated, user, router, isAuthLoading]);
 
@@ -53,74 +46,97 @@ export default function AdminSharedReadingsPage() {
         }
     };
 
-    if (isAuthLoading || !user) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
-                <div className="text-center">
-                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">Loading Shared Readings...</p>
-                </div>
-            </div>
-        );
-    }
+    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading Readings…" />;
+    if (!user.is_admin) return null;
+    if (loading) return <AdminLoadingScreen label="Gathering the visions…" />;
 
-    if (!user.is_admin) {
-        return null;
-    }
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-            </div>
-        );
-    }
+    const publicCount = readings.filter(r => r.is_public).length;
+    const totalViews  = readings.reduce((sum, r) => sum + r.view_count, 0);
 
     return (
-        <div className="flex flex-col gap-4 p-4">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Shared Readings</CardTitle>
-                    <CardDescription>View all shared readings.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>UUID</TableHead>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Concern</TableHead>
-                                <TableHead>Spread Name</TableHead>
-                                <TableHead>Deck Name</TableHead>
-                                <TableHead>Created At</TableHead>
-                                <TableHead>Expires At</TableHead>
-                                <TableHead>Is Public</TableHead>
-                                <TableHead>View Count</TableHead>
-                                <TableHead>User ID</TableHead>
-                                <TableHead>Username</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
+        <AdminLayout activePath="/admin/shared-readings" breadcrumb="Shared Readings" username={user.username ?? 'Admin'}>
+            <SectionHeader title="Shared Readings" />
+
+            {/* Quick stats */}
+            <div className="grid grid-cols-3 gap-4 mb-6 sm:max-w-lg">
+                {[
+                    { label: 'Total',       value: readings.length, color: '#fb7185' },
+                    { label: 'Public',      value: publicCount,     color: '#4ade80' },
+                    { label: 'Total Views', value: totalViews,      color: '#a78bfa' },
+                ].map(({ label, value, color }) => (
+                    <AdminCard key={label} style={{ padding: '18px 20px', textAlign: 'center' }}>
+                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '24px', fontWeight: 600, color, marginBottom: '4px' }}>
+                            {value.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(160,140,200,0.4)' }}>
+                            {label}
+                        </div>
+                    </AdminCard>
+                ))}
+            </div>
+
+            <AdminCard>
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[760px]">
+                        <thead>
+                            <tr>
+                                {['ID', 'Title', 'User', 'Spread', 'Deck', 'Public', 'Views', 'Expires', 'Created'].map(h => (
+                                    <th key={h} style={tableHeadStyle}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
                             {readings.map((r) => (
-                                <TableRow key={r.id}>
-                                    <TableCell>{r.id}</TableCell>
-                                    <TableCell>{r.uuid}</TableCell>
-                                    <TableCell>{r.title}</TableCell>
-                                    <TableCell>{r.concern}</TableCell>
-                                    <TableCell>{r.spread_name}</TableCell>
-                                    <TableCell>{r.deck_name}</TableCell>
-                                    <TableCell>{r.created_at}</TableCell>
-                                    <TableCell>{r.expires_at}</TableCell>
-                                    <TableCell>{r.is_public ? "Yes" : "No"}</TableCell>
-                                    <TableCell>{r.view_count}</TableCell>
-                                    <TableCell>{r.user_id}</TableCell>
-                                    <TableCell>{r.username}</TableCell>
-                                </TableRow>
+                                <tr
+                                    key={r.id}
+                                    style={{ transition: 'background 0.15s' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,92,246,0.04)')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                    <td style={{ ...tableCellStyle, color: 'rgba(160,140,200,0.4)', fontSize: '12px' }}>#{r.id}</td>
+                                    <td style={{ ...tableCellStyle, color: '#f0e6ff', maxWidth: '160px' }}>
+                                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>
+                                            {r.title || '—'}
+                                        </div>
+                                    </td>
+                                    <td style={tableCellStyle}>
+                                        <div style={{ color: '#a78bfa' }}>{r.username}</div>
+                                        <div style={{ fontSize: '11px', color: 'rgba(160,140,200,0.4)' }}>#{r.user_id}</div>
+                                    </td>
+                                    <td style={tableCellStyle}>{r.spread_name || '—'}</td>
+                                    <td style={tableCellStyle}>{r.deck_name || '—'}</td>
+                                    <td style={tableCellStyle}>
+                                        <span
+                                            style={{
+                                                padding: '3px 8px', borderRadius: '20px', fontSize: '11px',
+                                                background: r.is_public ? 'rgba(74,222,128,0.1)' : 'rgba(180,140,255,0.06)',
+                                                color:      r.is_public ? '#4ade80'              : 'rgba(160,140,200,0.4)',
+                                                border:     `1px solid ${r.is_public ? 'rgba(74,222,128,0.2)' : 'rgba(180,140,255,0.1)'}`,
+                                            }}
+                                        >
+                                            {r.is_public ? 'Yes' : 'No'}
+                                        </span>
+                                    </td>
+                                    <td style={{ ...tableCellStyle, color: '#fb7185' }}>{r.view_count}</td>
+                                    <td style={{ ...tableCellStyle, fontSize: '12px', color: 'rgba(160,140,200,0.4)' }}>
+                                        {r.expires_at ? new Date(r.expires_at).toLocaleDateString() : '—'}
+                                    </td>
+                                    <td style={{ ...tableCellStyle, fontSize: '12px', color: 'rgba(160,140,200,0.4)' }}>
+                                        {new Date(r.created_at).toLocaleDateString()}
+                                    </td>
+                                </tr>
                             ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </div>
+                            {readings.length === 0 && (
+                                <tr>
+                                    <td colSpan={9} style={{ ...tableCellStyle, textAlign: 'center', padding: '48px', color: 'rgba(160,140,200,0.3)', fontStyle: 'italic' }}>
+                                        No shared readings found
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </AdminCard>
+        </AdminLayout>
     );
 }
