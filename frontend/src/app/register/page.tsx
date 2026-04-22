@@ -299,9 +299,6 @@ export default function Register() {
                             View Pricing Plans
                         </Link>
                     </p>
-                    <p className="text-center text-xs text-cyan-400 font-medium">
-                        ✨ After registration, we&apos;ll take you on a quick tour!
-                    </p>
 
                     <div className="flex items-center space-x-4 text-xs text-gray-400 pt-2 border-t border-gray-700">
                         <Link href="/terms-of-service" className="hover:text-purple-400 transition-colors">
