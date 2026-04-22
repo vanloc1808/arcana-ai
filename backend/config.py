@@ -62,7 +62,10 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 180  # 180 days
 
     # Database Settings
-    SQLALCHEMY_DATABASE_URL: str = os.getenv("SQLALCHEMY_DATABASE_URL", "sqlite:///./tarot.db")
+    SQLALCHEMY_DATABASE_URL: str = os.getenv(
+        "SQLALCHEMY_DATABASE_URL",
+        os.getenv("DATABASE_URL", "sqlite:///./tarot.db"),
+    )
 
     # Celery Settings
     CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
@@ -83,7 +86,16 @@ class Settings(BaseSettings):
             str: The validated or normalized database URL.
         """
         if isinstance(value, str) and value.startswith("sqlite:///"):
-            return value  # Already in correct format
+            sqlite_path = value.replace("sqlite:///", "", 1)
+
+            # Resolve relative SQLite DB paths against backend directory,
+            # not the process working directory.
+            if sqlite_path.startswith("./"):
+                backend_dir = Path(__file__).resolve().parent
+                resolved = (backend_dir / sqlite_path[2:]).resolve()
+                return f"sqlite:///{resolved}"
+
+            return value
         return value
 
     # OpenAI Settings
