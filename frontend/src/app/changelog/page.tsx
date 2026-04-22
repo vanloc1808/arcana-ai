@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarIcon, TagIcon, ArrowUpIcon, PlusIcon, MinusIcon, ExclamationTriangleIcon, ShieldCheckIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
@@ -23,68 +23,46 @@ interface ChangelogPageProps {
 }
 
 export default function ChangelogPage({ searchParams }: ChangelogPageProps) {
-    const [changelog, setChangelog] = useState<string>('');
-    const [latestVersion, setLatestVersion] = useState<ChangelogEntry | null>(null);
-    const [selectedVersion, setSelectedVersion] = useState<ChangelogEntry | null>(null);
+    const [allVersions, setAllVersions] = useState<ChangelogEntry[]>([]);
+    const [activeVersion, setActiveVersion] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [versions, setVersions] = useState<string[]>([]);
+    const versionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
     useEffect(() => {
-        const handleParams = async () => {
-            fetchChangelog();
-            fetchLatestVersion();
+        const init = async () => {
+            await fetchAllVersions();
             if (searchParams) {
                 const params = await searchParams;
                 if (params?.version) {
-                    fetchVersionInfo(params.version);
+                    setActiveVersion(params.version);
                 }
             }
         };
 
-        handleParams();
+        init();
     }, [searchParams]);
 
-    const fetchChangelog = async () => {
+    useEffect(() => {
+        if (activeVersion && versionRefs.current[activeVersion]) {
+            versionRefs.current[activeVersion]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [activeVersion, allVersions]);
+
+    const fetchAllVersions = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/changelog');
+            const response = await fetch('/api/changelog/all');
             if (!response.ok) throw new Error('Failed to fetch changelog');
-            const data = await response.text();
-            setChangelog(data);
-
-            // Extract versions from the markdown
-            const versionMatches = data.match(/## \[([^\]]+)\]/g);
-            if (versionMatches) {
-                const extractedVersions = versionMatches.map(match => match.replace('## [', '').replace(']', ''));
-                setVersions(extractedVersions);
+            const data: ChangelogEntry[] = await response.json();
+            setAllVersions(data);
+            if (data.length > 0) {
+                setActiveVersion(data[0].version);
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to fetch changelog');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const fetchLatestVersion = async () => {
-        try {
-            const response = await fetch('/api/changelog/latest');
-            if (!response.ok) throw new Error('Failed to fetch latest version');
-            const data = await response.json();
-            setLatestVersion(data);
-        } catch (err) {
-            console.error('Failed to fetch latest version:', err);
-        }
-    };
-
-    const fetchVersionInfo = async (version: string) => {
-        try {
-            const response = await fetch(`/api/changelog/version/${version}`);
-            if (!response.ok) throw new Error('Failed to fetch version info');
-            const data = await response.json();
-            setSelectedVersion(data);
-        } catch (err) {
-            console.error('Failed to fetch version info:', err);
         }
     };
 
@@ -106,8 +84,6 @@ export default function ChangelogPage({ searchParams }: ChangelogPageProps) {
                 return <TagIcon className="w-5 h-5 text-gray-500" />;
         }
     };
-
-
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
@@ -145,12 +121,13 @@ export default function ChangelogPage({ searchParams }: ChangelogPageProps) {
         );
     };
 
-    const renderVersionCard = (version: ChangelogEntry, isLatest = false) => (
+    const renderVersionCard = (version: ChangelogEntry, isLatest = false, index = 0) => (
         <motion.div
             key={version.version}
+            ref={(el) => { versionRefs.current[version.version] = el; }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.5, delay: index * 0.05 }}
             className={`relative p-6 rounded-xl border backdrop-blur-sm ${isLatest
                 ? 'border-purple-500/50 bg-purple-500/10 shadow-lg shadow-purple-500/20'
                 : 'border-gray-600/30 bg-gray-800/30'
@@ -204,7 +181,7 @@ export default function ChangelogPage({ searchParams }: ChangelogPageProps) {
                     <h2 className="text-2xl font-bold text-white mb-2">Error Loading Changelog</h2>
                     <p className="text-gray-400 mb-4">{error}</p>
                     <button
-                        onClick={fetchChangelog}
+                        onClick={fetchAllVersions}
                         className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >
                         Try Again
@@ -246,16 +223,19 @@ export default function ChangelogPage({ searchParams }: ChangelogPageProps) {
                             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
                                 <h3 className="text-lg font-semibold text-white mb-4">Versions</h3>
                                 <div className="space-y-2">
-                                    {versions.map((version) => (
+                                    {allVersions.map((entry) => (
                                         <button
-                                            key={version}
-                                            onClick={() => fetchVersionInfo(version)}
-                                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${selectedVersion?.version === version
+                                            key={entry.version}
+                                            onClick={() => {
+                                                setActiveVersion(entry.version);
+                                                versionRefs.current[entry.version]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }}
+                                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${activeVersion === entry.version
                                                 ? 'bg-purple-600 text-white'
                                                 : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
                                                 }`}
                                         >
-                                            v{version}
+                                            v{entry.version}
                                         </button>
                                     ))}
                                 </div>
@@ -263,34 +243,12 @@ export default function ChangelogPage({ searchParams }: ChangelogPageProps) {
                         </div>
                     </div>
 
-                    {/* Main Content */}
+                    {/* Main Content - All Versions */}
                     <div className="lg:col-span-3">
                         <div className="space-y-8">
-                            {/* Latest Version */}
-                            {latestVersion && (
-                                <div>
-                                    <h2 className="text-2xl font-bold text-white mb-6">Latest Release</h2>
-                                    {renderVersionCard(latestVersion, true)}
-                                </div>
+                            {allVersions.map((entry, index) =>
+                                renderVersionCard(entry, index === 0, index)
                             )}
-
-                            {/* Selected Version */}
-                            {selectedVersion && selectedVersion.version !== latestVersion?.version && (
-                                <div>
-                                    <h2 className="text-2xl font-bold text-white mb-6">Version Details</h2>
-                                    {renderVersionCard(selectedVersion)}
-                                </div>
-                            )}
-
-                            {/* Full Changelog */}
-                            <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
-                                <h2 className="text-2xl font-bold text-white mb-6">Complete Changelog</h2>
-                                <div className="prose prose-invert max-w-none">
-                                    <pre className="whitespace-pre-wrap text-sm text-gray-300 font-mono bg-gray-900/50 p-4 rounded-lg overflow-x-auto">
-                                        {changelog}
-                                    </pre>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
