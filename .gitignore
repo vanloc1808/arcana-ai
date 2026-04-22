@@ -8,3 +8,4 @@ user-avatars/
 docs/ISSUE_SCANNING.md
 .vscode/
 plans/*.md
+backend/tarot.db
