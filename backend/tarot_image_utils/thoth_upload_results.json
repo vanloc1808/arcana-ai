@@ -1,0 +1,314 @@
+{
+  "Two of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-02.jpg",
+    "stem": "sm_Thot-C-02"
+  },
+  "Three of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-03.jpg",
+    "stem": "sm_Thot-C-03"
+  },
+  "Four of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-04.jpg",
+    "stem": "sm_Thot-C-04"
+  },
+  "Five of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-05.jpg",
+    "stem": "sm_Thot-C-05"
+  },
+  "Six of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-06.jpg",
+    "stem": "sm_Thot-C-06"
+  },
+  "Seven of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-07.jpg",
+    "stem": "sm_Thot-C-07"
+  },
+  "Eight of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-08.jpg",
+    "stem": "sm_Thot-C-08"
+  },
+  "Nine of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-09.jpg",
+    "stem": "sm_Thot-C-09"
+  },
+  "Ace of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-0A.jpg",
+    "stem": "sm_Thot-C-0A"
+  },
+  "Ten of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-10.jpg",
+    "stem": "sm_Thot-C-10"
+  },
+  "Knight of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-KN.jpg",
+    "stem": "sm_Thot-C-KN"
+  },
+  "Prince of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-PN.jpg",
+    "stem": "sm_Thot-C-PN"
+  },
+  "Princess of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-PS.jpg",
+    "stem": "sm_Thot-C-PS"
+  },
+  "Queen of Cups": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-C-QU.jpg",
+    "stem": "sm_Thot-C-QU"
+  },
+  "Two of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-02.jpg",
+    "stem": "sm_Thot-D-02"
+  },
+  "Three of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-03.jpg",
+    "stem": "sm_Thot-D-03"
+  },
+  "Four of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-04.jpg",
+    "stem": "sm_Thot-D-04"
+  },
+  "Five of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-05.jpg",
+    "stem": "sm_Thot-D-05"
+  },
+  "Six of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-06.jpg",
+    "stem": "sm_Thot-D-06"
+  },
+  "Seven of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-07.jpg",
+    "stem": "sm_Thot-D-07"
+  },
+  "Eight of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-08.jpg",
+    "stem": "sm_Thot-D-08"
+  },
+  "Nine of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-09.jpg",
+    "stem": "sm_Thot-D-09"
+  },
+  "Ace of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-0A.jpg",
+    "stem": "sm_Thot-D-0A"
+  },
+  "Ten of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-10.jpg",
+    "stem": "sm_Thot-D-10"
+  },
+  "Knight of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-KN.jpg",
+    "stem": "sm_Thot-D-KN"
+  },
+  "Prince of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-PN.jpg",
+    "stem": "sm_Thot-D-PN"
+  },
+  "Princess of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-PS.jpg",
+    "stem": "sm_Thot-D-PS"
+  },
+  "Queen of Disks": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-D-QU.jpg",
+    "stem": "sm_Thot-D-QU"
+  },
+  "Two of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-02.jpg",
+    "stem": "sm_Thot-S-02"
+  },
+  "Three of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-03.jpg",
+    "stem": "sm_Thot-S-03"
+  },
+  "Four of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-04.jpg",
+    "stem": "sm_Thot-S-04"
+  },
+  "Five of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-05.jpg",
+    "stem": "sm_Thot-S-05"
+  },
+  "Six of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-06.jpg",
+    "stem": "sm_Thot-S-06"
+  },
+  "Seven of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-07.jpg",
+    "stem": "sm_Thot-S-07"
+  },
+  "Eight of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-08.jpg",
+    "stem": "sm_Thot-S-08"
+  },
+  "Nine of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-09.jpg",
+    "stem": "sm_Thot-S-09"
+  },
+  "Ace of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-0A.jpg",
+    "stem": "sm_Thot-S-0A"
+  },
+  "Ten of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-10.jpg",
+    "stem": "sm_Thot-S-10"
+  },
+  "Knight of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-KN.jpg",
+    "stem": "sm_Thot-S-KN"
+  },
+  "Prince of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-PN.jpg",
+    "stem": "sm_Thot-S-PN"
+  },
+  "Princess of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-PS.jpg",
+    "stem": "sm_Thot-S-PS"
+  },
+  "Queen of Swords": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-S-QU.jpg",
+    "stem": "sm_Thot-S-QU"
+  },
+  "The Fool": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-00.jpg",
+    "stem": "sm_Thot-T-00"
+  },
+  "The Magus": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-01.jpg",
+    "stem": "sm_Thot-T-01"
+  },
+  "The Priestess": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-02.jpg",
+    "stem": "sm_Thot-T-02"
+  },
+  "The Empress": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-03.jpg",
+    "stem": "sm_Thot-T-03"
+  },
+  "The Emperor": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-04.jpg",
+    "stem": "sm_Thot-T-04"
+  },
+  "The Hierophant": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-05.jpg",
+    "stem": "sm_Thot-T-05"
+  },
+  "The Lovers": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-06.jpg",
+    "stem": "sm_Thot-T-06"
+  },
+  "The Chariot": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-07.jpg",
+    "stem": "sm_Thot-T-07"
+  },
+  "Adjustment": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-08.jpg",
+    "stem": "sm_Thot-T-08"
+  },
+  "The Hermit": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-09.jpg",
+    "stem": "sm_Thot-T-09"
+  },
+  "Fortune": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-10.jpg",
+    "stem": "sm_Thot-T-10"
+  },
+  "Lust": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-11.jpg",
+    "stem": "sm_Thot-T-11"
+  },
+  "The Hanged Man": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-12.jpg",
+    "stem": "sm_Thot-T-12"
+  },
+  "Death": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-13.jpg",
+    "stem": "sm_Thot-T-13"
+  },
+  "Art": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-14.jpg",
+    "stem": "sm_Thot-T-14"
+  },
+  "The Devil": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-15.jpg",
+    "stem": "sm_Thot-T-15"
+  },
+  "The Tower": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-16.jpg",
+    "stem": "sm_Thot-T-16"
+  },
+  "The Star": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-17.jpg",
+    "stem": "sm_Thot-T-17"
+  },
+  "The Moon": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-18.jpg",
+    "stem": "sm_Thot-T-18"
+  },
+  "The Sun": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-19.jpg",
+    "stem": "sm_Thot-T-19"
+  },
+  "The Aeon": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-20.jpg",
+    "stem": "sm_Thot-T-20"
+  },
+  "The Universe": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-T-21.jpg",
+    "stem": "sm_Thot-T-21"
+  },
+  "Two of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-02.jpg",
+    "stem": "sm_Thot-W-02"
+  },
+  "Three of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-03.jpg",
+    "stem": "sm_Thot-W-03"
+  },
+  "Four of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-04.jpg",
+    "stem": "sm_Thot-W-04"
+  },
+  "Five of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-05.jpg",
+    "stem": "sm_Thot-W-05"
+  },
+  "Six of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-06.jpg",
+    "stem": "sm_Thot-W-06"
+  },
+  "Seven of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-07.jpg",
+    "stem": "sm_Thot-W-07"
+  },
+  "Eight of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-08.jpg",
+    "stem": "sm_Thot-W-08"
+  },
+  "Nine of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-09.jpg",
+    "stem": "sm_Thot-W-09"
+  },
+  "Ace of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-0A.jpg",
+    "stem": "sm_Thot-W-0A"
+  },
+  "Ten of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-10.jpg",
+    "stem": "sm_Thot-W-10"
+  },
+  "Knight of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-KN.jpg",
+    "stem": "sm_Thot-W-KN"
+  },
+  "Prince of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-PN.jpg",
+    "stem": "sm_Thot-W-PN"
+  },
+  "Princess of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-PS.jpg",
+    "stem": "sm_Thot-W-PS"
+  },
+  "Queen of Wands": {
+    "cdn_url": "cdn.nguyenvanloc.com/thoth/cards/sm_Thot-W-QU.jpg",
+    "stem": "sm_Thot-W-QU"
+  }
+}
