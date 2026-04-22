@@ -244,7 +244,7 @@ export default function Register() {
                     )}
 
                     <div className="flex items-start space-x-3">
-                        <div className="relative">
+                        <label htmlFor="termsAccepted" className="relative cursor-pointer">
                             <input
                                 id="termsAccepted"
                                 type="checkbox"
@@ -262,7 +262,7 @@ export default function Register() {
                                     </svg>
                                 )}
                             </div>
-                        </div>
+                        </label>
                         <label htmlFor="termsAccepted" className="text-sm text-gray-300 leading-relaxed cursor-pointer select-none">
                             I agree to the{' '}
                             <Link href="/terms-of-service" className="text-purple-400 hover:text-purple-300 transition-colors underline">
