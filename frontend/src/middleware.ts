@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Public routes that don't require authentication
-    const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/password-reset-confirm', '/test-images', '/pricing', '/terms-of-service', '/privacy-policy'];
+    const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/password-reset-confirm', '/test-images', '/pricing', '/terms-of-service', '/privacy-policy', '/changelog'];
 
     // Auth-specific routes that authenticated users should be redirected away from
     const authOnlyRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/password-reset-confirm'];
