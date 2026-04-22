@@ -8,6 +8,7 @@ global.fetch = jest.fn();
 describe('ChangelogPage', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        window.HTMLElement.prototype.scrollIntoView = jest.fn();
     });
 
     it('renders loading state initially', async () => {
@@ -21,16 +22,7 @@ describe('ChangelogPage', () => {
     });
 
     it('renders error state when API call fails', async () => {
-        (fetch as jest.Mock)
-            .mockRejectedValueOnce(new Error('API Error'))
-            .mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({
-                    version: '0.0.2',
-                    date: '2025-08-20',
-                    changes: {}
-                }),
-            });
+        (fetch as jest.Mock).mockRejectedValueOnce(new Error('API Error'));
 
         render(<ChangelogPage />);
 
@@ -42,33 +34,27 @@ describe('ChangelogPage', () => {
     });
 
     it('renders changelog content when API call succeeds', async () => {
-        const mockChangelog = `# Changelog for ArcanaAI
+        const mockVersions = [
+            {
+                version: '0.0.2',
+                date: '2025-08-20',
+                changes: {
+                    changed: ['Update username validation: only ASCII numbers, characters, underscores, and dots are allowed.']
+                }
+            },
+            {
+                version: '0.0.1',
+                date: '2025-08-18',
+                changes: {
+                    added: ['Initial release']
+                }
+            }
+        ];
 
-## [0.0.2] - 2025-08-20
-
-### Changed
-- Update username validation: only ASCII numbers, characters, underscores, and dots are allowed.
-
-## [0.0.1] - 2025-08-18
-
-### Added
-- Initial release`;
-
-        (fetch as jest.Mock)
-            .mockResolvedValueOnce({
-                ok: true,
-                text: () => Promise.resolve(mockChangelog),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({
-                    version: '0.0.2',
-                    date: '2025-08-20',
-                    changes: {
-                        changed: ['Update username validation: only ASCII numbers, characters, underscores, and dots are allowed.']
-                    }
-                }),
-            });
+        (fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockVersions),
+        });
 
         await act(async () => {
             render(<ChangelogPage />);
@@ -78,35 +64,32 @@ describe('ChangelogPage', () => {
             expect(screen.getByText('Changelog')).toBeInTheDocument();
         });
 
-        // Check for Latest Release heading (more specific)
-        const latestReleaseHeading = screen.getByText('Latest Release', { selector: 'h2' });
-        expect(latestReleaseHeading).toBeInTheDocument();
+        // Check for Latest Release badge on the first version card
+        expect(screen.getByText('Latest Release')).toBeInTheDocument();
 
-        // Check for version in the sidebar (more specific)
+        // Check for version in the sidebar
         const sidebarVersion = screen.getByRole('button', { name: 'v0.0.2' });
         expect(sidebarVersion).toBeInTheDocument();
     });
 
     it('displays version navigation sidebar', async () => {
-        const mockChangelog = `# Changelog for ArcanaAI
+        const mockVersions = [
+            {
+                version: '0.0.2',
+                date: '2025-08-20',
+                changes: {}
+            },
+            {
+                version: '0.0.1',
+                date: '2025-08-18',
+                changes: {}
+            }
+        ];
 
-## [0.0.2] - 2025-08-20
-
-## [0.0.1] - 2025-08-18`;
-
-        (fetch as jest.Mock)
-            .mockResolvedValueOnce({
-                ok: true,
-                text: () => Promise.resolve(mockChangelog),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({
-                    version: '0.0.2',
-                    date: '2025-08-20',
-                    changes: {}
-                }),
-            });
+        (fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockVersions),
+        });
 
         await act(async () => {
             render(<ChangelogPage />);
@@ -116,7 +99,7 @@ describe('ChangelogPage', () => {
             expect(screen.getByText('Versions')).toBeInTheDocument();
         });
 
-        // Check for versions in the sidebar (more specific)
+        // Check for versions in the sidebar
         const version2Button = screen.getByRole('button', { name: 'v0.0.2' });
         const version1Button = screen.getByRole('button', { name: 'v0.0.1' });
         expect(version2Button).toBeInTheDocument();
@@ -124,46 +107,34 @@ describe('ChangelogPage', () => {
     });
 
     it('handles search params for specific version', async () => {
-        const mockChangelog = `# Changelog for ArcanaAI
+        const mockVersions = [
+            {
+                version: '0.0.2',
+                date: '2025-08-20',
+                changes: {}
+            },
+            {
+                version: '0.0.1',
+                date: '2025-08-18',
+                changes: {
+                    added: ['Initial release']
+                }
+            }
+        ];
 
-## [0.0.2] - 2025-08-20
-
-## [0.0.1] - 2025-08-18`;
-
-        (fetch as jest.Mock)
-            .mockResolvedValueOnce({
-                ok: true,
-                text: () => Promise.resolve(mockChangelog),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({
-                    version: '0.0.2',
-                    date: '2025-08-20',
-                    changes: {}
-                }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({
-                    version: '0.0.1',
-                    date: '2025-08-18',
-                    changes: {
-                        added: ['Initial release']
-                    }
-                }),
-            });
+        (fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockVersions),
+        });
 
         await act(async () => {
             render(<ChangelogPage searchParams={Promise.resolve({ version: '0.0.1' })} />);
         });
 
         await waitFor(() => {
-            expect(screen.getByText('Version Details')).toBeInTheDocument();
+            // All versions are always rendered; confirm the requested version card is present
+            const versionHeading = screen.getByText('v0.0.1', { selector: 'h3' });
+            expect(versionHeading).toBeInTheDocument();
         });
-
-        // Check for version details (more specific)
-        const versionDetails = screen.getByText('v0.0.1', { selector: 'h3' });
-        expect(versionDetails).toBeInTheDocument();
     });
 });
