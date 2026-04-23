@@ -8,9 +8,11 @@ RUN npm ci && npx patch-package
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Add build argument for API URL
+# Add build arguments for public env vars (must be present at next build time)
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_ADSTERRA_SCRIPT_URL
+ENV NEXT_PUBLIC_ADSTERRA_SCRIPT_URL=$NEXT_PUBLIC_ADSTERRA_SCRIPT_URL
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./

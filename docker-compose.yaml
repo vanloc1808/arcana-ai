@@ -25,6 +25,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://backend-arcanaai.nguyenvanloc.com
+        NEXT_PUBLIC_ADSTERRA_SCRIPT_URL: ${NEXT_PUBLIC_ADSTERRA_SCRIPT_URL}
     image: vanloc1808/tarot-frontend:latest
     container_name: tarot-frontend
     restart: always
