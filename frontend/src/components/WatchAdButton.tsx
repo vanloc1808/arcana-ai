@@ -32,8 +32,15 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
     const [claiming, setClaiming] = useState(false);
     const [adStarted, setAdStarted] = useState(false);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const adContainerRef = useRef<HTMLDivElement>(null);
+    const adContainerRef = useRef<HTMLDivElement | null>(null);
     const scriptRef = useRef<HTMLScriptElement | null>(null);
+    // Track actual DOM mount — refs don't trigger effects, so we need state
+    const [adContainerMounted, setAdContainerMounted] = useState(false);
+
+    const adContainerCallbackRef = useCallback((node: HTMLDivElement | null) => {
+        adContainerRef.current = node;
+        if (node) setAdContainerMounted(true);
+    }, []);
 
     const remaining = DAILY_LIMIT - adTurnsEarnedToday;
     const limitReached = remaining <= 0;
@@ -62,9 +69,9 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
         }, 1000);
     }, [clearTimer]);
 
-    // Inject Adsterra script into the ad container when the modal opens
+    // Inject Adsterra script once the ad container div is actually in the DOM
     useEffect(() => {
-        if (!isOpen || !adContainerRef.current) return;
+        if (!isOpen || !adContainerMounted || !adContainerRef.current) return;
 
         // Remove any previous script
         if (scriptRef.current) {
@@ -91,7 +98,7 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
 
         adContainerRef.current.appendChild(script);
         scriptRef.current = script;
-    }, [isOpen, startCountdown]);
+    }, [isOpen, adContainerMounted, startCountdown]);
 
     const handleOpen = () => {
         if (limitReached) return;
@@ -106,6 +113,7 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
         setIsOpen(false);
         setAdStarted(false);
         setCanClaim(false);
+        setAdContainerMounted(false);
     };
 
     const handleClaim = async () => {
@@ -157,7 +165,7 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
                     <div className="space-y-4">
                         {/* Ad container */}
                         <div
-                            ref={adContainerRef}
+                            ref={adContainerCallbackRef}
                             className="min-h-[100px] bg-gray-800 rounded flex items-center justify-center border border-gray-700"
                         >
                             {!adStarted && (
