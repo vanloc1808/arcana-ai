@@ -175,7 +175,7 @@ class User(Base):
             self.number_of_paid_turns = 0
         self.number_of_paid_turns += turns
 
-    AD_TURNS_DAILY_LIMIT = 5
+    AD_TURNS_DAILY_LIMIT = 20
 
     def reset_ad_turns_if_needed(self):
         """Reset the daily ad turn counter if the date has changed."""

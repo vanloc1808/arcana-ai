@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast';
 // Adsterra zone ID — set NEXT_PUBLIC_ADSTERRA_ZONE_ID in your .env
 const ADSTERRA_ZONE_ID = process.env.NEXT_PUBLIC_ADSTERRA_ZONE_ID ?? '';
 const AD_WATCH_SECONDS = 15;
-const DAILY_LIMIT = 5;
+const DAILY_LIMIT = 20;
 
 interface WatchAdButtonProps {
     adTurnsEarnedToday: number;
