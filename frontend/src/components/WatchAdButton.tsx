@@ -37,6 +37,11 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
     // Track actual DOM mount — refs don't trigger effects, so we need state
     const [adContainerMounted, setAdContainerMounted] = useState(false);
 
+    const adContainerCallbackRef = useCallback((node: HTMLDivElement | null) => {
+        adContainerRef.current = node;
+        if (node) setAdContainerMounted(true);
+    }, []);
+
     const remaining = DAILY_LIMIT - adTurnsEarnedToday;
     const limitReached = remaining <= 0;
 
@@ -160,10 +165,7 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
                     <div className="space-y-4">
                         {/* Ad container */}
                         <div
-                            ref={(node) => {
-                                adContainerRef.current = node;
-                                if (node && !adContainerMounted) setAdContainerMounted(true);
-                            }}
+                            ref={adContainerCallbackRef}
                             className="min-h-[100px] bg-gray-800 rounded flex items-center justify-center border border-gray-700"
                         >
                             {!adStarted && (
