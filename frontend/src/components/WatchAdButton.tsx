@@ -34,13 +34,6 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const adContainerRef = useRef<HTMLDivElement | null>(null);
     const scriptRef = useRef<HTMLScriptElement | null>(null);
-    // Track actual DOM mount — refs don't trigger effects, so we need state
-    const [adContainerMounted, setAdContainerMounted] = useState(false);
-
-    const adContainerCallbackRef = useCallback((node: HTMLDivElement | null) => {
-        adContainerRef.current = node;
-        if (node) setAdContainerMounted(true);
-    }, []);
 
     const remaining = DAILY_LIMIT - adTurnsEarnedToday;
     const limitReached = remaining <= 0;
@@ -69,36 +62,43 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
         }, 1000);
     }, [clearTimer]);
 
-    // Inject Adsterra script once the ad container div is actually in the DOM
+    // Defer ad init by one task so the Dialog portal has mounted before we
+    // read adContainerRef or inject a script. The cleanup cancels the timeout
+    // on unmount, which also prevents React StrictMode's double-invocation
+    // from calling startCountdown twice.
     useEffect(() => {
-        if (!isOpen || !adContainerMounted || !adContainerRef.current) return;
+        if (!isOpen) return;
 
-        // Remove any previous script
-        if (scriptRef.current) {
-            scriptRef.current.remove();
-            scriptRef.current = null;
-        }
+        const initTimer = setTimeout(() => {
+            if (!adContainerRef.current) return;
 
-        if (!ADSTERRA_SCRIPT_URL) {
-            // No script URL configured — start countdown anyway (dev/test mode)
-            startCountdown();
-            return;
-        }
+            if (scriptRef.current) {
+                scriptRef.current.remove();
+                scriptRef.current = null;
+            }
 
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = ADSTERRA_SCRIPT_URL;
-        script.async = true;
-        script.setAttribute('data-cfasync', 'false');
-        script.onload = () => startCountdown();
-        script.onerror = () => {
-            // Ad blocked or failed — still start countdown so user isn't stuck
-            startCountdown();
-        };
+            if (!ADSTERRA_SCRIPT_URL) {
+                startCountdown();
+                return;
+            }
 
-        adContainerRef.current.appendChild(script);
-        scriptRef.current = script;
-    }, [isOpen, adContainerMounted, startCountdown]);
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = ADSTERRA_SCRIPT_URL;
+            script.async = true;
+            script.setAttribute('data-cfasync', 'false');
+            script.onload = () => startCountdown();
+            script.onerror = () => {
+                // Ad blocked or failed — still start countdown so user isn't stuck
+                startCountdown();
+            };
+
+            adContainerRef.current.appendChild(script);
+            scriptRef.current = script;
+        }, 0);
+
+        return () => clearTimeout(initTimer);
+    }, [isOpen, startCountdown]);
 
     const handleOpen = () => {
         if (limitReached) return;
@@ -113,7 +113,6 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
         setIsOpen(false);
         setAdStarted(false);
         setCanClaim(false);
-        setAdContainerMounted(false);
     };
 
     const handleClaim = async () => {
@@ -165,7 +164,7 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
                     <div className="space-y-4">
                         {/* Ad container */}
                         <div
-                            ref={adContainerCallbackRef}
+                            ref={adContainerRef}
                             className="min-h-[100px] bg-gray-800 rounded flex items-center justify-center border border-gray-700"
                         >
                             {!adStarted && (
