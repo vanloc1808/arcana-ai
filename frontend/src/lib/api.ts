@@ -24,7 +24,9 @@ import {
     JournalAnalytics,
     Reminder,
     ReminderCreate,
-    JournalFilters
+    JournalFilters,
+    AdCompleteResponse,
+    AdStatus,
 } from "@/types/tarot";
 
 // Callback function to be set by AuthProvider
@@ -479,6 +481,19 @@ export const subscription = {
 
     getSubscriptionPlans: async (): Promise<SubscriptionPlan[]> => {
         const response = await api.get("/api/subscription/plans");
+        return response.data;
+    },
+};
+
+// Ad-watching endpoints
+export const ads = {
+    complete: async (adProvider: string = "adsterra"): Promise<AdCompleteResponse> => {
+        const response = await api.post("/api/ads/complete", { ad_provider: adProvider });
+        return response.data;
+    },
+
+    getStatus: async (): Promise<AdStatus> => {
+        const response = await api.get("/api/ads/status");
         return response.data;
     },
 };

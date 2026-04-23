@@ -382,3 +382,18 @@ export interface JournalFilters {
     sort_by?: string;
     sort_order?: 'asc' | 'desc';
 }
+
+export interface AdCompleteResponse {
+    success: boolean;
+    turns_awarded: number;
+    total_turns: number;
+    ad_turns_earned_today: number;
+    ad_turns_remaining_today: number;
+    message: string;
+}
+
+export interface AdStatus {
+    ad_turns_earned_today: number;
+    ad_turns_remaining_today: number;
+    daily_limit: number;
+}
