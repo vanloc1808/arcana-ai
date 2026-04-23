@@ -13,8 +13,9 @@ import { Tv2, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { ads } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 
-// Adsterra zone ID — set NEXT_PUBLIC_ADSTERRA_ZONE_ID in your .env
-const ADSTERRA_ZONE_ID = process.env.NEXT_PUBLIC_ADSTERRA_ZONE_ID ?? '';
+// Full Adsterra script URL — copy it from the "Get Code" popup in your Adsterra dashboard
+// and set NEXT_PUBLIC_ADSTERRA_SCRIPT_URL in your .env
+const ADSTERRA_SCRIPT_URL = process.env.NEXT_PUBLIC_ADSTERRA_SCRIPT_URL ?? '';
 const AD_WATCH_SECONDS = 15;
 const DAILY_LIMIT = 20;
 
@@ -71,16 +72,15 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
             scriptRef.current = null;
         }
 
-        if (!ADSTERRA_ZONE_ID) {
-            // No zone ID configured — start countdown anyway (dev/test mode)
+        if (!ADSTERRA_SCRIPT_URL) {
+            // No script URL configured — start countdown anyway (dev/test mode)
             startCountdown();
             return;
         }
 
         const script = document.createElement('script');
         script.type = 'text/javascript';
-        // Adsterra banner/interstitial embed
-        script.src = `//www.topdisplaynetwork.com/${ADSTERRA_ZONE_ID}/invoke.js`;
+        script.src = ADSTERRA_SCRIPT_URL;
         script.async = true;
         script.setAttribute('data-cfasync', 'false');
         script.onload = () => startCountdown();

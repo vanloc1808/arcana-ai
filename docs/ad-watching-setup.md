@@ -17,8 +17,13 @@
 Add this to your frontend `.env` (or `.env.production`):
 
 ```env
-NEXT_PUBLIC_ADSTERRA_ZONE_ID=your_zone_id_here
+NEXT_PUBLIC_ADSTERRA_SCRIPT_URL=
 ```
+
+To find your script URL:
+1. Open your Adsterra dashboard
+2. Expand your site → click **Get Code** next to the Popunder zone
+3. Copy the `src="..."` value from the `<script>` tag — that is your full script URL
 
 > Without this, the 15-second countdown still works but no real ad is shown. That is useful for local testing.
 
