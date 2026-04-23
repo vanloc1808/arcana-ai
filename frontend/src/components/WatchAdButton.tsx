@@ -82,13 +82,15 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
     const handleOpen = () => {
         if (limitReached) return;
 
+        console.log('[WatchAd] handleOpen — ADSTERRA_SCRIPT_URL:', ADSTERRA_SCRIPT_URL || '(not set)');
+
         setIsOpen(true);
         setAdStarted(false);
         setCanClaim(false);
         setSecondsLeft(AD_WATCH_SECONDS);
 
         if (!ADSTERRA_SCRIPT_URL) {
-            // No ad URL configured — dev/test mode, just run the countdown
+            console.warn('[WatchAd] No ADSTERRA_SCRIPT_URL configured — running countdown in dev/test mode (no real ad)');
             setTimeout(startCountdown, 0);
             return;
         }
@@ -106,16 +108,21 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
         script.src = ADSTERRA_SCRIPT_URL;
         script.async = true;
         script.setAttribute('data-cfasync', 'false');
-        script.onload = () => startCountdown();
-        script.onerror = () => {
-            // Ad blocked or failed — still start countdown so user isn't stuck
+        script.onload = () => {
+            console.log('[WatchAd] Adsterra script loaded successfully — starting countdown');
             startCountdown();
         };
+        script.onerror = (err) => {
+            console.error('[WatchAd] Adsterra script failed to load (blocked or network error):', err);
+            startCountdown();
+        };
+        console.log('[WatchAd] Appending Adsterra script to document.body');
         document.body.appendChild(script);
         scriptRef.current = script;
     };
 
     const handleClose = () => {
+        console.log('[WatchAd] handleClose — cleaning up timer and script');
         clearTimer();
         removeAdScript();
         setIsOpen(false);
@@ -125,13 +132,16 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
 
     const handleClaim = async () => {
         if (!canClaim || claiming) return;
+        console.log('[WatchAd] handleClaim — calling ads.complete');
         setClaiming(true);
         try {
-            await ads.complete('adsterra');
+            const result = await ads.complete('adsterra');
+            console.log('[WatchAd] ads.complete response:', result);
             toast.success('Turn awarded! Enjoy your reading.');
             onTurnEarned();
             handleClose();
         } catch (err: unknown) {
+            console.error('[WatchAd] ads.complete failed:', err);
             const msg =
                 err && typeof err === 'object' && 'response' in err
                     ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? 'Failed to claim turn.'
