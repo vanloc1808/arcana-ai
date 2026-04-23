@@ -32,7 +32,6 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
     const [claiming, setClaiming] = useState(false);
     const [adStarted, setAdStarted] = useState(false);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const adContainerRef = useRef<HTMLDivElement | null>(null);
     const scriptRef = useRef<HTMLScriptElement | null>(null);
 
     const remaining = DAILY_LIMIT - adTurnsEarnedToday;
@@ -62,54 +61,63 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
         }, 1000);
     }, [clearTimer]);
 
-    // Defer ad init by one task so the Dialog portal has mounted before we
-    // read adContainerRef or inject a script. The cleanup cancels the timeout
-    // on unmount, which also prevents React StrictMode's double-invocation
-    // from calling startCountdown twice.
+    // Cleanup on unmount
     useEffect(() => {
-        if (!isOpen) return;
-
-        const initTimer = setTimeout(() => {
-            if (!adContainerRef.current) return;
-
+        return () => {
+            clearTimer();
             if (scriptRef.current) {
                 scriptRef.current.remove();
                 scriptRef.current = null;
             }
+        };
+    }, [clearTimer]);
 
-            if (!ADSTERRA_SCRIPT_URL) {
-                startCountdown();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.src = ADSTERRA_SCRIPT_URL;
-            script.async = true;
-            script.setAttribute('data-cfasync', 'false');
-            script.onload = () => startCountdown();
-            script.onerror = () => {
-                // Ad blocked or failed — still start countdown so user isn't stuck
-                startCountdown();
-            };
-
-            adContainerRef.current.appendChild(script);
-            scriptRef.current = script;
-        }, 0);
-
-        return () => clearTimeout(initTimer);
-    }, [isOpen, startCountdown]);
+    const removeAdScript = useCallback(() => {
+        if (scriptRef.current) {
+            scriptRef.current.remove();
+            scriptRef.current = null;
+        }
+    }, []);
 
     const handleOpen = () => {
         if (limitReached) return;
+
         setIsOpen(true);
         setAdStarted(false);
         setCanClaim(false);
         setSecondsLeft(AD_WATCH_SECONDS);
+
+        if (!ADSTERRA_SCRIPT_URL) {
+            // No ad URL configured — dev/test mode, just run the countdown
+            setTimeout(startCountdown, 0);
+            return;
+        }
+
+        // Remove any leftover script from a previous ad view
+        removeAdScript();
+
+        // Inject the Adsterra popunder script directly into document.body here,
+        // inside the synchronous click handler. Popunder scripts must live at the
+        // body level (not inside a dialog subtree) and injecting them within a
+        // user-gesture call stack gives them the best chance of passing the
+        // browser's popup-blocker check.
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = ADSTERRA_SCRIPT_URL;
+        script.async = true;
+        script.setAttribute('data-cfasync', 'false');
+        script.onload = () => startCountdown();
+        script.onerror = () => {
+            // Ad blocked or failed — still start countdown so user isn't stuck
+            startCountdown();
+        };
+        document.body.appendChild(script);
+        scriptRef.current = script;
     };
 
     const handleClose = () => {
         clearTimer();
+        removeAdScript();
         setIsOpen(false);
         setAdStarted(false);
         setCanClaim(false);
@@ -162,14 +170,13 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
                     </DialogHeader>
 
                     <div className="space-y-4">
-                        {/* Ad container */}
-                        <div
-                            ref={adContainerRef}
-                            className="min-h-[100px] bg-gray-800 rounded flex items-center justify-center border border-gray-700"
-                        >
-                            {!adStarted && (
-                                <span className="text-gray-500 text-sm">Loading ad...</span>
-                            )}
+                        {/* Ad placeholder — the Adsterra popunder opens in a new tab/window */}
+                        <div className="min-h-[100px] bg-gray-800 rounded flex items-center justify-center border border-gray-700">
+                            <span className="text-gray-500 text-sm">
+                                {adStarted
+                                    ? 'Ad opened — please watch it in the new tab'
+                                    : 'Loading ad…'}
+                            </span>
                         </div>
 
                         {/* Countdown / status */}
