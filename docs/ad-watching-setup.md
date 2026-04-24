@@ -6,9 +6,11 @@
 2. Add your website (`arcanaai.nguyenvanloc.com`) as a new site
 3. Wait for site approval (usually within 24 hours)
 4. Once approved, create a new ad zone:
-   - **Format**: **Direct Link** (required for inline iframe display)
+   - **Format**: **Banner** (required for inline display — Direct Link / Smartlink URLs
+     are blocked from iframe embedding by `X-Frame-Options`)
+   - **Size**: 300×250
    - **Category**: Entertainment / Lifestyle
-   - Copy the **Direct Link URL** — you will need it in step 2
+   - Copy the **invoke.js URL** — you will need it in step 2
 
 ---
 
@@ -17,13 +19,16 @@
 Add this to your frontend `.env` (or `.env.production`):
 
 ```env
-NEXT_PUBLIC_ADSTERRA_DIRECT_LINK_URL=
+NEXT_PUBLIC_ADSTERRA_BANNER_INVOKE_URL=
 ```
 
-To find your Direct Link URL:
+To find your invoke.js URL:
 1. Open your Adsterra dashboard
-2. Expand your site → click **Get Code** next to the Direct Link zone
-3. Copy the full Direct Link URL — it should look like `https://www.highcpmrevenuenetwork.com/...`
+2. Expand your site → click **Get Code** next to the Banner zone
+3. You'll see two `<script>` tags. Copy the `src` of the second one — it looks like
+   `https://www.highperformanceformat.com/<KEY>/invoke.js` (host may vary).
+   The component extracts the zone key from the URL path automatically, so no
+   other value needs to be copied.
 
 > Without this, the 15-second countdown still works but no real ad is shown. That is useful for local testing.
 

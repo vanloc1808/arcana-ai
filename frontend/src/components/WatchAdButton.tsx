@@ -13,9 +13,46 @@ import { Tv2, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { ads } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 
-const ADSTERRA_DIRECT_LINK_URL = process.env.NEXT_PUBLIC_ADSTERRA_DIRECT_LINK_URL ?? '';
 const AD_WATCH_SECONDS = 15;
 const DAILY_LIMIT = 20;
+const AD_WIDTH = 300;
+const AD_HEIGHT = 250;
+
+// Adsterra banner invoke.js URL shape: https://HOST/<key>/invoke.js.
+// Validate + extract the key so a misconfigured env var can't inject HTML
+// into the iframe's srcDoc (the key and URL are interpolated verbatim).
+function buildAdSrcDoc(): string {
+    const raw = process.env.NEXT_PUBLIC_ADSTERRA_BANNER_INVOKE_URL ?? '';
+    if (!raw) return '';
+
+    let url: URL;
+    try {
+        url = new URL(raw);
+    } catch {
+        return '';
+    }
+    if (url.protocol !== 'https:') return '';
+
+    const segments = url.pathname.split('/').filter(Boolean);
+    if (segments.length < 2 || segments[segments.length - 1] !== 'invoke.js') return '';
+
+    const key = segments[0];
+    if (!/^[a-zA-Z0-9]+$/.test(key)) return '';
+
+    return `<!DOCTYPE html>
+<html>
+<head><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}</style></head>
+<body>
+<script type="text/javascript">
+atOptions = { 'key' : '${key}', 'format' : 'iframe', 'height' : ${AD_HEIGHT}, 'width' : ${AD_WIDTH}, 'params' : {} };
+</script>
+<script src="${url.href}"></script>
+</body>
+</html>`;
+}
+
+const AD_SRC_DOC = buildAdSrcDoc();
+const HAS_AD = AD_SRC_DOC !== '';
 
 interface WatchAdButtonProps {
     adTurnsEarnedToday: number;
@@ -28,7 +65,6 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
     const [secondsLeft, setSecondsLeft] = useState(AD_WATCH_SECONDS);
     const [canClaim, setCanClaim] = useState(false);
     const [claiming, setClaiming] = useState(false);
-    const [iframeSrc, setIframeSrc] = useState('');
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const remaining = DAILY_LIMIT - adTurnsEarnedToday;
@@ -42,6 +78,7 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
     }, []);
 
     const startCountdown = useCallback(() => {
+        clearTimer();
         setSecondsLeft(AD_WATCH_SECONDS);
         setCanClaim(false);
 
@@ -61,34 +98,29 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
         return () => clearTimer();
     }, [clearTimer]);
 
+    // Dev mode (no env var): no iframe to wait on, start the countdown directly.
+    useEffect(() => {
+        if (isOpen && !HAS_AD) startCountdown();
+    }, [isOpen, startCountdown]);
+
     const handleOpen = () => {
         if (limitReached) return;
-
         setIsOpen(true);
         setCanClaim(false);
         setSecondsLeft(AD_WATCH_SECONDS);
-
-        if (!ADSTERRA_DIRECT_LINK_URL) {
-            setTimeout(startCountdown, 0);
-            return;
-        }
-
-        setIframeSrc(ADSTERRA_DIRECT_LINK_URL);
     };
 
     const handleClose = () => {
         clearTimer();
         setIsOpen(false);
         setCanClaim(false);
-        setIframeSrc('');
     };
 
     const handleClaim = async () => {
         if (!canClaim || claiming) return;
         setClaiming(true);
         try {
-            const result = await ads.complete('adsterra');
-            console.log('[WatchAd] ads.complete response:', result);
+            await ads.complete('adsterra');
             toast.success('Turn awarded! Enjoy your reading.');
             onTurnEarned();
             handleClose();
@@ -131,15 +163,24 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
                     </DialogHeader>
 
                     <div className="space-y-4">
-                        <iframe
-                            src={iframeSrc || undefined}
-                            width="100%"
-                            height="250"
-                            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                            onLoad={iframeSrc ? startCountdown : undefined}
-                            className="rounded border border-gray-700 bg-gray-800"
-                            title="Advertisement"
-                        />
+                        <div
+                            className="flex items-center justify-center bg-gray-800 rounded border border-gray-700 overflow-hidden"
+                            style={{ minHeight: AD_HEIGHT }}
+                        >
+                            {HAS_AD && isOpen ? (
+                                <iframe
+                                    srcDoc={AD_SRC_DOC}
+                                    width={AD_WIDTH}
+                                    height={AD_HEIGHT}
+                                    scrolling="no"
+                                    onLoad={startCountdown}
+                                    className="border-0"
+                                    title="Advertisement"
+                                />
+                            ) : (
+                                <span className="text-gray-500 text-sm">Loading ad…</span>
+                            )}
+                        </div>
 
                         <div className="flex items-center justify-between">
                             {!canClaim ? (

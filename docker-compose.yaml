@@ -25,7 +25,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://backend-arcanaai.nguyenvanloc.com
-        NEXT_PUBLIC_ADSTERRA_DIRECT_LINK_URL: https://www.profitablecpmratenetwork.com/gjhaubgj?key=fd3b9e0fba0451386ca530ff3c6f229a
+        NEXT_PUBLIC_ADSTERRA_BANNER_INVOKE_URL: https://www.highperformanceformat.com/735130079105e43d77267b2ad5fb1aa6/invoke.js
     image: vanloc1808/tarot-frontend:latest
     container_name: tarot-frontend
     restart: always
