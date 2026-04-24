@@ -6,9 +6,9 @@
 2. Add your website (`arcanaai.nguyenvanloc.com`) as a new site
 3. Wait for site approval (usually within 24 hours)
 4. Once approved, create a new ad zone:
-   - **Format**: Direct Link or Interstitial (both work for web)
+   - **Format**: **Direct Link** (required for inline iframe display)
    - **Category**: Entertainment / Lifestyle
-   - Copy the **Zone ID** — you will need it in step 2
+   - Copy the **Direct Link URL** — you will need it in step 2
 
 ---
 
@@ -17,13 +17,13 @@
 Add this to your frontend `.env` (or `.env.production`):
 
 ```env
-NEXT_PUBLIC_ADSTERRA_SCRIPT_URL=
+NEXT_PUBLIC_ADSTERRA_DIRECT_LINK_URL=
 ```
 
-To find your script URL:
+To find your Direct Link URL:
 1. Open your Adsterra dashboard
-2. Expand your site → click **Get Code** next to the Popunder zone
-3. Copy the `src="..."` value from the `<script>` tag — that is your full script URL
+2. Expand your site → click **Get Code** next to the Direct Link zone
+3. Copy the full Direct Link URL — it should look like `https://www.highcpmrevenuenetwork.com/...`
 
 > Without this, the 15-second countdown still works but no real ad is shown. That is useful for local testing.
 

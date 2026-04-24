@@ -13,9 +13,7 @@ import { Tv2, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { ads } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 
-// Full Adsterra script URL — copy it from the "Get Code" popup in your Adsterra dashboard
-// and set NEXT_PUBLIC_ADSTERRA_SCRIPT_URL in your .env
-const ADSTERRA_SCRIPT_URL = process.env.NEXT_PUBLIC_ADSTERRA_SCRIPT_URL ?? '';
+const ADSTERRA_DIRECT_LINK_URL = process.env.NEXT_PUBLIC_ADSTERRA_DIRECT_LINK_URL ?? '';
 const AD_WATCH_SECONDS = 15;
 const DAILY_LIMIT = 20;
 
@@ -30,9 +28,8 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
     const [secondsLeft, setSecondsLeft] = useState(AD_WATCH_SECONDS);
     const [canClaim, setCanClaim] = useState(false);
     const [claiming, setClaiming] = useState(false);
-    const [adStarted, setAdStarted] = useState(false);
+    const [iframeSrc, setIframeSrc] = useState('');
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const scriptRef = useRef<HTMLScriptElement | null>(null);
 
     const remaining = DAILY_LIMIT - adTurnsEarnedToday;
     const limitReached = remaining <= 0;
@@ -45,7 +42,6 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
     }, []);
 
     const startCountdown = useCallback(() => {
-        setAdStarted(true);
         setSecondsLeft(AD_WATCH_SECONDS);
         setCanClaim(false);
 
@@ -61,78 +57,34 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
         }, 1000);
     }, [clearTimer]);
 
-    // Cleanup on unmount
     useEffect(() => {
-        return () => {
-            clearTimer();
-            if (scriptRef.current) {
-                scriptRef.current.remove();
-                scriptRef.current = null;
-            }
-        };
+        return () => clearTimer();
     }, [clearTimer]);
-
-    const removeAdScript = useCallback(() => {
-        if (scriptRef.current) {
-            scriptRef.current.remove();
-            scriptRef.current = null;
-        }
-    }, []);
 
     const handleOpen = () => {
         if (limitReached) return;
 
-        console.log('[WatchAd] handleOpen — ADSTERRA_SCRIPT_URL:', ADSTERRA_SCRIPT_URL || '(not set)');
-
         setIsOpen(true);
-        setAdStarted(false);
         setCanClaim(false);
         setSecondsLeft(AD_WATCH_SECONDS);
 
-        if (!ADSTERRA_SCRIPT_URL) {
-            console.warn('[WatchAd] No ADSTERRA_SCRIPT_URL configured — running countdown in dev/test mode (no real ad)');
+        if (!ADSTERRA_DIRECT_LINK_URL) {
             setTimeout(startCountdown, 0);
             return;
         }
 
-        // Remove any leftover script from a previous ad view
-        removeAdScript();
-
-        // Inject the Adsterra popunder script directly into document.body here,
-        // inside the synchronous click handler. Popunder scripts must live at the
-        // body level (not inside a dialog subtree) and injecting them within a
-        // user-gesture call stack gives them the best chance of passing the
-        // browser's popup-blocker check.
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = ADSTERRA_SCRIPT_URL;
-        script.async = true;
-        script.setAttribute('data-cfasync', 'false');
-        script.onload = () => {
-            console.log('[WatchAd] Adsterra script loaded successfully — starting countdown');
-            startCountdown();
-        };
-        script.onerror = (err) => {
-            console.error('[WatchAd] Adsterra script failed to load (blocked or network error):', err);
-            startCountdown();
-        };
-        console.log('[WatchAd] Appending Adsterra script to document.body');
-        document.body.appendChild(script);
-        scriptRef.current = script;
+        setIframeSrc(ADSTERRA_DIRECT_LINK_URL);
     };
 
     const handleClose = () => {
-        console.log('[WatchAd] handleClose — cleaning up timer and script');
         clearTimer();
-        removeAdScript();
         setIsOpen(false);
-        setAdStarted(false);
         setCanClaim(false);
+        setIframeSrc('');
     };
 
     const handleClaim = async () => {
         if (!canClaim || claiming) return;
-        console.log('[WatchAd] handleClaim — calling ads.complete');
         setClaiming(true);
         try {
             const result = await ads.complete('adsterra');
@@ -141,7 +93,6 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
             onTurnEarned();
             handleClose();
         } catch (err: unknown) {
-            console.error('[WatchAd] ads.complete failed:', err);
             const msg =
                 err && typeof err === 'object' && 'response' in err
                     ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? 'Failed to claim turn.'
@@ -180,25 +131,21 @@ export function WatchAdButton({ adTurnsEarnedToday, onTurnEarned, className = ''
                     </DialogHeader>
 
                     <div className="space-y-4">
-                        {/* Ad placeholder — the Adsterra popunder opens in a new tab/window */}
-                        <div className="min-h-[100px] bg-gray-800 rounded flex items-center justify-center border border-gray-700">
-                            <span className="text-gray-500 text-sm">
-                                {adStarted
-                                    ? 'Ad opened — please watch it in the new tab'
-                                    : 'Loading ad…'}
-                            </span>
-                        </div>
+                        <iframe
+                            src={iframeSrc || undefined}
+                            width="100%"
+                            height="250"
+                            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                            onLoad={iframeSrc ? startCountdown : undefined}
+                            className="rounded border border-gray-700 bg-gray-800"
+                            title="Advertisement"
+                        />
 
-                        {/* Countdown / status */}
                         <div className="flex items-center justify-between">
                             {!canClaim ? (
                                 <div className="flex items-center space-x-2 text-indigo-300">
                                     <Clock className="h-4 w-4 animate-pulse" />
-                                    <span className="text-sm">
-                                        {adStarted
-                                            ? `Please wait ${secondsLeft}s…`
-                                            : 'Ad loading…'}
-                                    </span>
+                                    <span className="text-sm">Please wait {secondsLeft}s…</span>
                                 </div>
                             ) : (
                                 <div className="flex items-center space-x-2 text-green-400">
