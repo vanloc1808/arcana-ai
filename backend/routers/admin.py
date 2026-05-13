@@ -68,7 +68,7 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db), a
 
     # Get counts
     total_users = db.query(User).count()
-    active_users = db.query(User).filter(User.is_active == True).count()  # noqa: E712
+    active_users = db.query(User).filter(User.is_active.is_(True)).count()
     total_chat_sessions = db.query(ChatSession).count()
     total_messages = db.query(Message).count()
     total_cards = db.query(Card).count()

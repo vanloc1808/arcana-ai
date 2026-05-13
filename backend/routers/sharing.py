@@ -129,7 +129,7 @@ async def get_shared_reading(uuid: str, db: Session = Depends(get_db)):
     try:
         # Get shared reading
         shared_reading = (
-            db.query(SharedReading).filter(SharedReading.uuid == uuid, SharedReading.is_public == True).first()  # noqa: E712
+            db.query(SharedReading).filter(SharedReading.uuid == uuid, SharedReading.is_public.is_(True)).first()
         )
 
         if not shared_reading:
