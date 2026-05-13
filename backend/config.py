@@ -58,6 +58,18 @@ class Settings(BaseSettings):
     # JWT Settings
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your-secret-key")
     JWT_ALGORITHM: str = "HS256"
+
+    @validator("JWT_SECRET_KEY")
+    def validate_jwt_secret_key(cls, value):  # noqa: N805
+        """Raise an error if the insecure default JWT secret key is used outside local/test environments."""
+        if value == "your-secret-key":
+            env = os.getenv("FASTAPI_ENV", "production")
+            if env not in ("local", "test"):
+                raise ValueError(
+                    "JWT_SECRET_KEY must be set to a secure secret. "
+                    "The default 'your-secret-key' value is not allowed in non-local environments."
+                )
+        return value
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 20160  # 14 * 24 * 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 180  # 180 days
 
@@ -142,7 +154,7 @@ class Settings(BaseSettings):
     REDIS_DB: int = int(os.getenv("REDIS_DB", "1"))
 
     # FastAPI Environment
-    FASTAPI_ENV: str = os.getenv("FASTAPI_ENV", "local")
+    FASTAPI_ENV: str = os.getenv("FASTAPI_ENV", "production")
 
     # Frontend URL for password reset links
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")

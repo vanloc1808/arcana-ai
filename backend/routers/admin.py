@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Card, ChatSession, Deck, Message, SharedReading, Spread, User
-from routers.auth import get_current_user
+from routers.auth import get_admin_user, get_current_user
 from schemas import (
     AdminCardCreate,
     AdminCardResponse,
@@ -61,15 +61,6 @@ def build_admin_user_response(user: User, base_url: str = "") -> AdminUserRespon
         shared_readings_count=len(user.shared_readings),
     )
 
-
-# Admin authentication middleware
-async def get_admin_user(current_user: User = Depends(get_current_user)):
-    """Ensure the current user is an admin"""
-    if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    return current_user
-
-
 # Dashboard
 @router.get("/dashboard", response_model=AdminDashboardStats)
 async def get_dashboard_stats(request: Request, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
@@ -77,7 +68,7 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db), a
 
     # Get counts
     total_users = db.query(User).count()
-    active_users = db.query(User).filter(User.is_active is True).count()
+    active_users = db.query(User).filter(User.is_active == True).count()  # noqa: E712
     total_chat_sessions = db.query(ChatSession).count()
     total_messages = db.query(Message).count()
     total_cards = db.query(Card).count()
@@ -342,7 +333,7 @@ async def get_user(user_id: int, request: Request, db: Session = Depends(get_db)
     """Get a specific user by ID"""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found")
 
     return build_admin_user_response(user, str(request.base_url).rstrip('/'))
 
@@ -358,7 +349,7 @@ async def update_user(
     """Update a user"""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found")
 
     update_data = user_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -375,7 +366,7 @@ async def delete_user(user_id: int, db: Session = Depends(get_db), admin_user: U
     """Delete a user"""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found")
 
     db.delete(user)
     db.commit()

@@ -16,14 +16,8 @@ class EthereumService:
     def __init__(self):
         """Initialize the Ethereum service with Web3 connection."""
         # Use a reliable Ethereum RPC endpoint (you should set this in your environment)
-        self.rpc_url = getattr(
-            settings,
-            "ETHEREUM_RPC_URL",
-            "https://eth-mainnet.g.alchemy.com/v2/your-api-key",
-        )
-        self.payment_address = getattr(
-            settings, "ETHEREUM_PAYMENT_ADDRESS", "0x0146311BDb312198b64c905fc249a35770Dd9193"
-        ).lower()
+        self.rpc_url = settings.ETHEREUM_RPC_URL
+        self.payment_address = settings.ETHEREUM_PAYMENT_ADDRESS.lower()
 
         try:
             self.w3 = Web3(Web3.HTTPProvider(self.rpc_url))

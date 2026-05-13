@@ -200,11 +200,16 @@ class AvatarManager:
 
         Returns:
             Path object if file exists, None otherwise
+
+        Raises:
+            HTTPException: If the filename contains a path traversal attempt
         """
         if not filename:
             return None
 
-        file_path = self.upload_dir / filename
+        file_path = (self.upload_dir / filename).resolve()
+        if not file_path.is_relative_to(self.upload_dir.resolve()):
+            raise HTTPException(status_code=400, detail="Invalid filename")
         return file_path if file_path.exists() else None
 
     def get_avatar_url(self, filename: str, base_url: str = "") -> Optional[str]:
