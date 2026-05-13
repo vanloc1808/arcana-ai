@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     def validate_jwt_secret_key(cls, value):  # noqa: N805
         """Raise an error if the insecure default JWT secret key is used outside local/test environments."""
         if value == "your-secret-key":
-            env = os.getenv("FASTAPI_ENV", "production")
+            env = os.getenv("FASTAPI_ENV", "local")
             if env not in ("local", "test"):
                 raise ValueError(
                     "JWT_SECRET_KEY must be set to a secure secret. "
@@ -154,7 +154,7 @@ class Settings(BaseSettings):
     REDIS_DB: int = int(os.getenv("REDIS_DB", "1"))
 
     # FastAPI Environment
-    FASTAPI_ENV: str = os.getenv("FASTAPI_ENV", "production")
+    FASTAPI_ENV: str = os.getenv("FASTAPI_ENV", "local")
 
     # Frontend URL for password reset links
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
