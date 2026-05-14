@@ -22,6 +22,7 @@ Author: ArcanaAI Development Team
 Version: 1.0.0
 """
 
+import html
 import re
 from datetime import date, datetime, timedelta
 from typing import Optional
@@ -52,13 +53,15 @@ router = APIRouter(prefix="/api/journal", tags=["journal"])
 
 # Utility function for HTML sanitization
 def sanitize_html(text: str) -> str:
-    """Basic HTML sanitization for user input."""
+    """Sanitize user input by stripping HTML tags and escaping special characters."""
     if not text:
         return text
 
-    # Simple sanitization - remove HTML tags
+    # Remove HTML tags
     clean = re.compile("<.*?>")
-    return re.sub(clean, "", text)
+    stripped = re.sub(clean, "", text)
+    # Escape remaining special HTML characters to prevent XSS
+    return html.escape(stripped)
 
 
 # --- Journal Entry Endpoints ---

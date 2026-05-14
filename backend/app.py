@@ -31,7 +31,7 @@ Author: ArcanaAI Development Team
 Version: 1.0.0
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -81,6 +81,18 @@ instrumentator = setup_metrics(app)
 # Add custom middleware
 # Request logging middleware must be added before CORS middleware
 app.add_middleware(RequestLoggingMiddleware)
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """Add security-related HTTP response headers to every response."""
+    response: Response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
+
 
 # Configure CORS (Cross-Origin Resource Sharing)
 # This allows the frontend to communicate with the backend API
