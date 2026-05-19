@@ -11,6 +11,7 @@ import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { MysticalSidebar } from '@/components/MysticalSidebar';
 import { TarotCard } from '@/components/TarotCard';
+import { tarot } from '@/lib/api';
 
 // Daily Card and Featured Cards Data
 const getDailyCard = () => {
@@ -155,33 +156,54 @@ const getDailyFact = () => {
   return tarotFacts[index];
 };
 
+type FeaturedCard = {
+  name: string;
+  image_url: string | null;
+  description_upright: string | null;
+  element: string | null;
+};
+
+const FALLBACK_CARDS: FeaturedCard[] = [
+  { name: "The Sun", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m19.jpg", description_upright: "Joy, success, celebration, positivity", element: "Fire" },
+  { name: "The Moon", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m18.jpg", description_upright: "Intuition, dreams, subconscious, mystery", element: "Water" },
+  { name: "The World", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m21.jpg", description_upright: "Completion, accomplishment, travel, fulfillment", element: "Earth" },
+];
+
 // Enhanced Welcome Component
 const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => {
   const [dailyCard] = useState(getDailyCard());
   const [dailyQuote] = useState(getDailyQuote());
   const [dailyFact] = useState(getDailyFact());
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const [featuredCards, setFeaturedCards] = useState<FeaturedCard[]>(FALLBACK_CARDS);
+  const [cardsVisible, setCardsVisible] = useState(true);
+  const [shuffling, setShuffling] = useState(false);
 
-  const featuredCards = [
-    {
-      name: "The Sun",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m19.jpg",
-      description_upright: "Joy, success, celebration, positivity",
-      element: "Fire"
-    },
-    {
-      name: "The Moon",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m18.jpg",
-      description_upright: "Intuition, dreams, subconscious, mystery",
-      element: "Water"
-    },
-    {
-      name: "The World",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m21.jpg",
-      description_upright: "Completion, accomplishment, travel, fulfillment",
-      element: "Earth"
+  const loadFeaturedCards = useCallback(async () => {
+    try {
+      const cards = await tarot.getFeaturedCards(3);
+      return cards as FeaturedCard[];
+    } catch {
+      return null;
     }
-  ];
+  }, []);
+
+  useEffect(() => {
+    loadFeaturedCards().then((cards) => {
+      if (cards && cards.length > 0) setFeaturedCards(cards);
+    });
+  }, [loadFeaturedCards]);
+
+  const shuffleCards = async () => {
+    if (shuffling) return;
+    setShuffling(true);
+    setCardsVisible(false);
+    await new Promise((r) => setTimeout(r, 350));
+    const cards = await loadFeaturedCards();
+    if (cards && cards.length > 0) setFeaturedCards(cards);
+    setCardsVisible(true);
+    setShuffling(false);
+  };
 
   return (
     <div className="w-full">
@@ -294,16 +316,27 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
                 Explore the Mystical
               </span>
             </h2>
-            <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto px-2">
+            <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto px-2 mb-4">
               Discover the profound wisdom within each card of the Major Arcana
             </p>
+            <button
+              onClick={shuffleCards}
+              disabled={shuffling}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-purple-500/60 text-purple-300 text-sm hover:bg-purple-500/10 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+            >
+              <FiLoader className={`w-4 h-4 ${shuffling ? 'animate-spin' : ''}`} />
+              {shuffling ? 'Shuffling...' : 'Shuffle Cards'}
+            </button>
           </div>
 
           {/* Mobile-first card grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12 transition-opacity duration-300"
+            style={{ opacity: cardsVisible ? 1 : 0 }}
+          >
             {featuredCards.map((card, index) => (
               <div
-                key={card.name}
+                key={`${card.name}-${index}`}
                 className="card-mystical p-4 md:p-6 text-center group cursor-pointer relative overflow-hidden touch-manipulation"
                 onMouseEnter={() => setHoveredCard(index)}
                 onMouseLeave={() => setHoveredCard(null)}

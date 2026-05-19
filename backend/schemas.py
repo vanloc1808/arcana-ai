@@ -538,6 +538,15 @@ class CardResponse(BaseModel):
     position_index: int | None = None  # Index of the position in the spread
 
 
+class FeaturedCardResponse(BaseModel):
+    """Response schema for a featured card on the homepage."""
+
+    name: str
+    image_url: str | None = None
+    description_upright: str | None = None
+    element: str | None = None
+
+
 # Spread Models
 class SpreadBase(BaseModel):
     """Base schema for a tarot spread.
