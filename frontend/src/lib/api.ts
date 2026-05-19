@@ -338,6 +338,11 @@ export const tarot = {
         const response = await api.get(`/tarot/spreads/${spreadId}`);
         return response.data;
     },
+
+    getFeaturedCards: async (count: number = 3) => {
+        const response = await api.get(`/tarot/featured-cards?count=${count}`);
+        return response.data;
+    },
 };
 
 // Sharing endpoints

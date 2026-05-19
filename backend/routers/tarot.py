@@ -1,12 +1,13 @@
+import random
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Spread, User
+from models import Card, Spread, User
 from routers.auth import get_current_user
-from schemas import CardResponse, ReadingRequest, SpreadListResponse, SpreadResponse
+from schemas import CardResponse, FeaturedCardResponse, ReadingRequest, SpreadListResponse, SpreadResponse
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
 from utils.error_handlers import TarotAPIException, ValidationError, logger
@@ -14,6 +15,25 @@ from utils.metrics import active_users, track_card_drawn, track_tarot_reading
 from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/tarot", tags=["tarot"])
+
+
+@router.get("/featured-cards", response_model=list[FeaturedCardResponse])
+async def get_featured_cards(count: int = 3, db: Session = Depends(get_db)):
+    """Return a random selection of Major Arcana cards for the homepage."""
+    major_arcana = db.query(Card).filter(Card.suit == "Major Arcana").all()
+    if not major_arcana:
+        return []
+    count = max(1, min(count, len(major_arcana)))
+    selected = random.sample(major_arcana, count)
+    return [
+        FeaturedCardResponse(
+            name=card.name,
+            image_url=card.image_url,
+            description_upright=card.description_upright,
+            element=card.element,
+        )
+        for card in selected
+    ]
 
 
 @router.post("/reading", response_model=list[CardResponse])
