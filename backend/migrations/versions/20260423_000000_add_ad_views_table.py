@@ -1,7 +1,7 @@
 """add ad_views table and ad turn fields to users
 
 Revision ID: add_ad_views_table
-Revises: 58b706ad7d4e
+Revises: de4f5a6b7c89
 Create Date: 2026-04-23 00:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "add_ad_views_table"
-down_revision: Union[str, None] = "58b706ad7d4e"
+down_revision: Union[str, None] = "de4f5a6b7c89"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
