@@ -320,10 +320,10 @@ def test_login_missing_password(client):
 
 
 def test_login_empty_credentials(client):
-    """Test login with empty credentials returns 401 (not 422)"""
+    """Test login with empty credentials returns 422 validation error"""
     response = client.post("/auth/token", data={"username": "", "password": ""})
-    # Empty credentials result in authentication failure, not validation error
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    # FastAPI's OAuth2 form rejects blank values at validation time
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 # Token Authentication Tests

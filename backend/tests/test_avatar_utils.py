@@ -356,7 +356,7 @@ class TestAvatarManager:
         filename = "avatar.jpg"
         result = manager.get_avatar_path(filename)
 
-        expected_path = manager.upload_dir / filename
+        expected_path = (manager.upload_dir / filename).resolve()
         assert result == expected_path
 
     @patch('pathlib.Path.exists')
@@ -428,5 +428,4 @@ class TestAvatarManager:
         result = manager.find_user_avatars(username)
 
         assert result == []
-
 

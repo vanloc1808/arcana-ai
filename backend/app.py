@@ -31,7 +31,7 @@ Author: ArcanaAI Development Team
 Version: 1.0.0
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -39,7 +39,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from config import settings
 from database import Base, engine
-from routers import admin, auth, changelog, chat, health, journal, sharing, subscription, support, tarot, tasks
+from routers import ads, admin, auth, changelog, chat, health, journal, sharing, subscription, support, tarot, tasks
 from utils.error_handlers import (
     TarotAPIException,
     general_exception_handler,
@@ -81,6 +81,18 @@ instrumentator = setup_metrics(app)
 # Add custom middleware
 # Request logging middleware must be added before CORS middleware
 app.add_middleware(RequestLoggingMiddleware)
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """Add security-related HTTP response headers to every response."""
+    response: Response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
+
 
 # Configure CORS (Cross-Origin Resource Sharing)
 # This allows the frontend to communicate with the backend API
@@ -137,6 +149,7 @@ app.include_router(health.router)  # Health checks and system status
 app.include_router(admin.router)  # Administrative functions
 app.include_router(sharing.router)  # Reading sharing functionality
 app.include_router(subscription.router)  # Subscription and payment management
+app.include_router(ads.router)  # Ad-watching turn rewards
 app.include_router(journal.router)  # Advanced tarot journal and personal growth
 app.include_router(support.router)  # Support ticket system with file uploads
 app.include_router(changelog.router)  # Changelog and version information

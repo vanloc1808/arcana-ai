@@ -148,15 +148,15 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                             )}
                         </div>
 
-                        {/* Always show Buy More button unless unlimited turns */}
+                        {/* Show "Get Turns" button (ad-watching) unless unlimited */}
                         {!hasUnlimitedTurns && (
                             <Button
                                 size="sm"
                                 onClick={onPurchaseClick}
-                                className="flex items-center space-x-1 bg-purple-600 hover:bg-purple-700 text-white ml-4"
+                                className="flex items-center space-x-1 bg-indigo-600 hover:bg-indigo-700 text-white ml-4"
                             >
                                 <Plus className="h-4 w-4" />
-                                <span>Buy More</span>
+                                <span>Get Turns</span>
                             </Button>
                         )}
                     </div>
@@ -201,14 +201,14 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                                     {/* No turns warning */}
                                     {turns.total_turns === 0 && (
                                         <div className="text-xs text-orange-200 bg-orange-800/50 dark:text-orange-200 dark:bg-orange-800/50 p-2 rounded">
-                                            You&apos;ve used all your turns! Purchase more to continue drawing cards.
+                                            You&apos;ve used all your turns! Watch an ad to earn more.
                                         </div>
                                     )}
 
                                     {/* Low turns warning */}
                                     {hasLowTurns && turns.total_turns > 0 && (
                                         <div className="text-xs text-orange-200 bg-orange-800/50 dark:text-orange-200 dark:bg-orange-800/50 p-2 rounded">
-                                            Running low on turns! Consider purchasing more to avoid interruptions.
+                                            Running low! Watch an ad to earn a free turn.
                                         </div>
                                     )}
                                 </>
