@@ -67,23 +67,46 @@ def upgrade() -> None:
     if 'ix_cards_name' in existing_indexes:
         op.drop_index('ix_cards_name', table_name='cards')
 
-    # Find and drop any remaining unique constraints on name alone
-    unique_constraints = inspector.get_unique_constraints('cards')
-    name_only_constraints = [c for c in unique_constraints if c['column_names'] == ['name']]
-
-    with op.batch_alter_table('cards', schema=None, recreate='always') as batch_op:
-        for constraint in name_only_constraints:
-            try:
-                batch_op.drop_constraint(constraint['name'], type_='unique')
-            except Exception as e:
-                print(f"Note: could not drop constraint '{constraint['name']}': {e}")
-
-        # Create composite unique: one card name per deck
-        batch_op.create_index(
-            'ix_cards_name_deck_id',
-            ['name', 'deck_id'],
-            unique=True,
+    # SQLite cannot drop an unnamed UNIQUE constraint via ALTER TABLE.
+    # The cards table was created with sa.UniqueConstraint("name") (no name),
+    # so batch_alter_table(recreate='always') fails when SQLAlchemy reflects
+    # that constraint and cannot render it without a name. Rebuild manually.
+    connection.execute(text("ALTER TABLE cards RENAME TO cards_old"))
+    connection.execute(text("""
+        CREATE TABLE cards (
+            id INTEGER NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            suit VARCHAR(50),
+            rank VARCHAR(50),
+            image_url VARCHAR(512),
+            description_short VARCHAR(255),
+            description_upright VARCHAR,
+            description_reversed VARCHAR,
+            element VARCHAR(50),
+            astrology VARCHAR(100),
+            numerology INTEGER,
+            deck_id INTEGER,
+            PRIMARY KEY (id),
+            CONSTRAINT fk_cards_deck_id FOREIGN KEY (deck_id) REFERENCES decks (id)
         )
+    """))
+    connection.execute(text("""
+        INSERT INTO cards (id, name, suit, rank, image_url, description_short,
+                           description_upright, description_reversed, element,
+                           astrology, numerology, deck_id)
+        SELECT id, name, suit, rank, image_url, description_short,
+               description_upright, description_reversed, element,
+               astrology, numerology, deck_id
+        FROM cards_old
+    """))
+    connection.execute(text("DROP TABLE cards_old"))
+
+    # Recreate indexes that were on the old table, plus the new composite unique
+    connection.execute(text("CREATE INDEX IF NOT EXISTS ix_cards_id ON cards (id)"))
+    connection.execute(text("CREATE INDEX IF NOT EXISTS ix_cards_deck_id ON cards (deck_id)"))
+    connection.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_cards_name_deck_id ON cards (name, deck_id)"
+    ))
 
     # Step 2: Get the Rider-Waite deck id (created in migration 2d033e0e569b)
     result = connection.execute(
