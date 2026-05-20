@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC
 
 from passlib.context import CryptContext
-from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
@@ -58,6 +58,10 @@ class User(Base):
     # Specialized premium access (for acquaintances/VIP users)
     is_specialized_premium = Column(Boolean, default=False)
 
+    # Ad-watching turn system
+    ad_turns_earned_today = Column(Integer, default=0)
+    ad_turns_reset_date = Column(Date, nullable=True)  # Date when daily ad counter was last reset
+
     # Avatar storage
     avatar_filename = Column(String, nullable=True)  # Stores the filename of the avatar
 
@@ -74,6 +78,7 @@ class User(Base):
     subscription_events = relationship("SubscriptionEvent", back_populates="user", cascade="all, delete-orphan")
     payment_transactions = relationship("PaymentTransaction", back_populates="user", cascade="all, delete-orphan")
     turn_usage_history = relationship("TurnUsageHistory", back_populates="user", cascade="all, delete-orphan")
+    ad_views = relationship("AdView", back_populates="user", cascade="all, delete-orphan")
 
     @property
     def password(self):
@@ -169,6 +174,24 @@ class User(Base):
         if self.number_of_paid_turns is None:
             self.number_of_paid_turns = 0
         self.number_of_paid_turns += turns
+
+    AD_TURNS_DAILY_LIMIT = 20
+
+    def reset_ad_turns_if_needed(self):
+        """Reset the daily ad turn counter if the date has changed."""
+        from datetime import date
+        today = date.today()
+        if self.ad_turns_reset_date != today:
+            self.ad_turns_earned_today = 0
+            self.ad_turns_reset_date = today
+
+    def can_earn_ad_turn(self) -> bool:
+        self.reset_ad_turns_if_needed()
+        return (self.ad_turns_earned_today or 0) < self.AD_TURNS_DAILY_LIMIT
+
+    def remaining_ad_turns_today(self) -> int:
+        self.reset_ad_turns_if_needed()
+        return self.AD_TURNS_DAILY_LIMIT - (self.ad_turns_earned_today or 0)
 
 
 class ChatSession(Base):
@@ -318,8 +341,12 @@ class Card(Base):
 
     __tablename__ = "cards"
 
+    __table_args__ = (
+        UniqueConstraint('name', 'deck_id', name='ix_cards_name_deck_id'),
+    )
+
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    name = Column(String, index=True)
     suit = Column(String, nullable=True)  # E.g., Wands, Cups, Swords, Pentacles, or Major Arcana
     rank = Column(String, nullable=True)  # E.g., Ace, Two, King, The Fool, The Magician
     image_url = Column(String, nullable=True)  # URL to the card image
@@ -964,3 +991,20 @@ class ReadingReminder(Base):
     __table_args__ = (
         CheckConstraint("reminder_type IN ('anniversary', 'follow_up', 'milestone')", name="valid_reminder_type"),
     )
+
+
+class AdView(Base):
+    """Records a completed ad view that awarded the user one turn.
+
+    Used to track daily ad view counts (capped at 5/day) and prevent abuse.
+    """
+
+    __tablename__ = "ad_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    ad_provider = Column(String, nullable=False, default="adsterra")
+    turns_awarded = Column(Integer, default=1)
+    viewed_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    user = relationship("User", back_populates="ad_views")

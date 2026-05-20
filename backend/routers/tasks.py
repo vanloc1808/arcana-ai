@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
 from models import User
-from routers.auth import get_current_user
+from routers.auth import get_admin_user, get_current_user
 from utils.celery_utils import (
     email_task_manager,
     notification_task_manager,
@@ -49,7 +49,7 @@ class TaskCreateResponse(BaseModel):
 
 
 @router.get("/status/{task_id}", response_model=TaskStatusResponse)
-async def get_task_status(task_id: str, current_user: User = Depends(get_current_user)):
+async def get_task_status(task_id: str, current_user: User = Depends(get_admin_user)):
     """
     Get the status of a specific task.
 
@@ -71,7 +71,7 @@ async def get_task_status(task_id: str, current_user: User = Depends(get_current
 
 
 @router.delete("/cancel/{task_id}")
-async def cancel_task(task_id: str, current_user: User = Depends(get_current_user)):
+async def cancel_task(task_id: str, current_user: User = Depends(get_admin_user)):
     """
     Cancel a running task.
 
@@ -93,7 +93,7 @@ async def cancel_task(task_id: str, current_user: User = Depends(get_current_use
 
 
 @router.get("/active")
-async def get_active_tasks(current_user: User = Depends(get_current_user)):
+async def get_active_tasks(current_user: User = Depends(get_admin_user)):
     """
     Get information about currently active tasks.
 
@@ -114,7 +114,7 @@ async def get_active_tasks(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/workers")
-async def get_worker_stats(current_user: User = Depends(get_current_user)):
+async def get_worker_stats(current_user: User = Depends(get_admin_user)):
     """
     Get Celery worker statistics.
 
@@ -135,7 +135,7 @@ async def get_worker_stats(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/email/bulk", response_model=TaskCreateResponse)
-async def send_bulk_email(request: BulkEmailRequest, current_user: User = Depends(get_current_user)):
+async def send_bulk_email(request: BulkEmailRequest, current_user: User = Depends(get_admin_user)):
     """
     Send bulk emails asynchronously.
 
@@ -165,7 +165,7 @@ async def send_bulk_email(request: BulkEmailRequest, current_user: User = Depend
 
 
 @router.post("/email/welcome", response_model=TaskCreateResponse)
-async def send_welcome_email(email: EmailStr, username: str, current_user: User = Depends(get_current_user)):
+async def send_welcome_email(email: EmailStr, username: str, current_user: User = Depends(get_admin_user)):
     """
     Send welcome email asynchronously.
 
@@ -190,7 +190,7 @@ async def send_welcome_email(email: EmailStr, username: str, current_user: User 
 
 @router.post("/notifications/reminder", response_model=TaskCreateResponse)
 async def send_reading_reminder(
-    user_id: int, reminder_type: str = "daily", current_user: User = Depends(get_current_user)
+    user_id: int, reminder_type: str = "daily", current_user: User = Depends(get_admin_user)
 ):
     """
     Send reading reminder asynchronously.
@@ -222,7 +222,7 @@ async def send_reading_reminder(
 
 
 @router.post("/notifications/daily-reminders", response_model=TaskCreateResponse)
-async def process_daily_reminders(current_user: User = Depends(get_current_user)):
+async def process_daily_reminders(current_user: User = Depends(get_admin_user)):
     """
     Process daily reminders for all users asynchronously.
 
@@ -246,12 +246,9 @@ async def process_daily_reminders(current_user: User = Depends(get_current_user)
 @router.post("/notifications/system", response_model=TaskCreateResponse)
 async def send_system_notification(
     request: SystemNotificationRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """Send a system notification."""
-    if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-
     task_id = notification_task_manager.send_system_notification_async(
         request.notification_type, request.data, request.target_users
     )
@@ -261,12 +258,9 @@ async def send_system_notification(
 
 @router.post("/reset-monthly-turns")
 async def reset_monthly_free_turns(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """Manually trigger the monthly free turns reset task (admin only)."""
-    if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-
     task_id = notification_task_manager.reset_monthly_free_turns_async()
 
     return {
@@ -277,7 +271,7 @@ async def reset_monthly_free_turns(
 
 
 @router.post("/maintenance/cleanup", response_model=TaskCreateResponse)
-async def cleanup_old_tasks(days_old: int = 30, current_user: User = Depends(get_current_user)):
+async def cleanup_old_tasks(days_old: int = 30, current_user: User = Depends(get_admin_user)):
     """
     Cleanup old tasks asynchronously.
 

@@ -17,8 +17,7 @@ import {
     Crown,
     Star,
     X,
-    HelpCircle,
-    GitBranch
+    HelpCircle
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -213,12 +212,6 @@ export function EnhancedNavigation() {
                                 <Link href="/journal">
                                     <BookOpen className="w-5 h-5 mr-2" />
                                     Journal
-                                </Link>
-                            </Button>
-                            <Button variant="ghost" size="sm" asChild className="text-gray-300 hover:text-white hover:bg-gray-800 px-4 py-3 touch-manipulation">
-                                <Link href="/changelog">
-                                    <GitBranch className="w-5 h-5 mr-2" />
-                                    Changelog
                                 </Link>
                             </Button>
                         </div>
@@ -444,17 +437,6 @@ export function EnhancedNavigation() {
                                             <div>
                                                 <div className="text-white font-medium">Journal</div>
                                                 <div className="text-gray-400 text-sm">Track your insights</div>
-                                            </div>
-                                        </Link>
-                                        <Link
-                                            href="/changelog"
-                                            onClick={() => setIsMobileSearchOpen(false)}
-                                            className="flex items-center gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:bg-gray-800 transition-colors touch-manipulation"
-                                        >
-                                            <GitBranch className="w-6 h-6 text-blue-500" />
-                                            <div>
-                                                <div className="text-white font-medium">Changelog</div>
-                                                <div className="text-gray-400 text-sm">See what&apos;s new</div>
                                             </div>
                                         </Link>
                                     </div>

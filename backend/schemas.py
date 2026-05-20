@@ -538,6 +538,15 @@ class CardResponse(BaseModel):
     position_index: int | None = None  # Index of the position in the spread
 
 
+class FeaturedCardResponse(BaseModel):
+    """Response schema for a featured card on the homepage."""
+
+    name: str
+    image_url: str | None = None
+    description_upright: str | None = None
+    element: str | None = None
+
+
 # Spread Models
 class SpreadBase(BaseModel):
     """Base schema for a tarot spread.
@@ -1717,3 +1726,19 @@ class SupportTicketResponse(BaseModel):
     message: str
     ticket_id: str
     slack_message_id: Optional[str] = None
+
+
+# Ad-watching schemas
+class AdCompleteRequest(BaseModel):
+    """Request schema for completing an ad view to earn a turn."""
+    ad_provider: str = "adsterra"
+
+
+class AdCompleteResponse(BaseModel):
+    """Response schema after a successful ad view."""
+    success: bool
+    turns_awarded: int
+    total_turns: int
+    ad_turns_earned_today: int
+    ad_turns_remaining_today: int
+    message: str

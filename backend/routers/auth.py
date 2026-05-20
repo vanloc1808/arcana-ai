@@ -127,6 +127,11 @@ async def get_current_user(
                 message="Invalid token payload",
                 details={"error": "Missing username in token"},
             )
+        if payload.get("type") == "refresh":
+            raise AuthenticationError(
+                message="Invalid token",
+                details={"error": "Refresh tokens cannot be used for authentication"},
+            )
         token_data = TokenData(username=username)
     except JWTError as e:
         logger.logger.error("JWT decode error", extra={"error": str(e)})
@@ -142,6 +147,29 @@ async def get_current_user(
     response.headers["Access-Control-Expose-Headers"] = "X-Access-Token"
 
     return user
+
+
+async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Get Current Admin User
+
+    Validate that the current authenticated user has administrator privileges.
+
+    Args:
+        current_user (User): The authenticated user from get_current_user dependency
+
+    Returns:
+        User: The admin user object
+
+    Raises:
+        HTTPException (403): If the user does not have admin privileges
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required",
+        )
+    return current_user
 
 
 def generate_reset_token() -> str:

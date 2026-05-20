@@ -1,0 +1,314 @@
+{
+  "Ace of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-01.jpg",
+    "stem": "sm_MaNC-B-01"
+  },
+  "Two of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-02.jpg",
+    "stem": "sm_MaNC-B-02"
+  },
+  "Three of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-03.jpg",
+    "stem": "sm_MaNC-B-03"
+  },
+  "Four of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-04.jpg",
+    "stem": "sm_MaNC-B-04"
+  },
+  "Five of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-05.jpg",
+    "stem": "sm_MaNC-B-05"
+  },
+  "Six of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-06.jpg",
+    "stem": "sm_MaNC-B-06"
+  },
+  "Seven of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-07.jpg",
+    "stem": "sm_MaNC-B-07"
+  },
+  "Eight of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-08.jpg",
+    "stem": "sm_MaNC-B-08"
+  },
+  "Nine of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-09.jpg",
+    "stem": "sm_MaNC-B-09"
+  },
+  "Ten of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-10.jpg",
+    "stem": "sm_MaNC-B-10"
+  },
+  "Page of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-J1.jpg",
+    "stem": "sm_MaNC-B-J1"
+  },
+  "Knight of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-J2.jpg",
+    "stem": "sm_MaNC-B-J2"
+  },
+  "King of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-KI.jpg",
+    "stem": "sm_MaNC-B-KI"
+  },
+  "Queen of Wands": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-B-QU.jpg",
+    "stem": "sm_MaNC-B-QU"
+  },
+  "Ace of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-01.jpg",
+    "stem": "sm_MaNC-C-01"
+  },
+  "Two of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-02.jpg",
+    "stem": "sm_MaNC-C-02"
+  },
+  "Three of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-03.jpg",
+    "stem": "sm_MaNC-C-03"
+  },
+  "Four of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-04.jpg",
+    "stem": "sm_MaNC-C-04"
+  },
+  "Five of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-05.jpg",
+    "stem": "sm_MaNC-C-05"
+  },
+  "Six of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-06.jpg",
+    "stem": "sm_MaNC-C-06"
+  },
+  "Seven of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-07.jpg",
+    "stem": "sm_MaNC-C-07"
+  },
+  "Eight of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-08.jpg",
+    "stem": "sm_MaNC-C-08"
+  },
+  "Nine of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-09.jpg",
+    "stem": "sm_MaNC-C-09"
+  },
+  "Ten of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-10.jpg",
+    "stem": "sm_MaNC-C-10"
+  },
+  "Page of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-J1.jpg",
+    "stem": "sm_MaNC-C-J1"
+  },
+  "Knight of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-J2.jpg",
+    "stem": "sm_MaNC-C-J2"
+  },
+  "King of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-KI.jpg",
+    "stem": "sm_MaNC-C-KI"
+  },
+  "Queen of Cups": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-C-QU.jpg",
+    "stem": "sm_MaNC-C-QU"
+  },
+  "Ace of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-01.jpg",
+    "stem": "sm_MaNC-D-01"
+  },
+  "Two of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-02.jpg",
+    "stem": "sm_MaNC-D-02"
+  },
+  "Three of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-03.jpg",
+    "stem": "sm_MaNC-D-03"
+  },
+  "Four of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-04.jpg",
+    "stem": "sm_MaNC-D-04"
+  },
+  "Five of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-05.jpg",
+    "stem": "sm_MaNC-D-05"
+  },
+  "Six of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-06.jpg",
+    "stem": "sm_MaNC-D-06"
+  },
+  "Seven of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-07.jpg",
+    "stem": "sm_MaNC-D-07"
+  },
+  "Eight of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-08.jpg",
+    "stem": "sm_MaNC-D-08"
+  },
+  "Nine of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-09.jpg",
+    "stem": "sm_MaNC-D-09"
+  },
+  "Ten of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-10.jpg",
+    "stem": "sm_MaNC-D-10"
+  },
+  "Page of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-J1.jpg",
+    "stem": "sm_MaNC-D-J1"
+  },
+  "Knight of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-J2.jpg",
+    "stem": "sm_MaNC-D-J2"
+  },
+  "King of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-KI.jpg",
+    "stem": "sm_MaNC-D-KI"
+  },
+  "Queen of Pentacles": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-D-QU.jpg",
+    "stem": "sm_MaNC-D-QU"
+  },
+  "Ace of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-01.jpg",
+    "stem": "sm_MaNC-S-01"
+  },
+  "Two of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-02.jpg",
+    "stem": "sm_MaNC-S-02"
+  },
+  "Three of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-03.jpg",
+    "stem": "sm_MaNC-S-03"
+  },
+  "Four of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-04.jpg",
+    "stem": "sm_MaNC-S-04"
+  },
+  "Five of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-05.jpg",
+    "stem": "sm_MaNC-S-05"
+  },
+  "Six of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-06.jpg",
+    "stem": "sm_MaNC-S-06"
+  },
+  "Seven of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-07.jpg",
+    "stem": "sm_MaNC-S-07"
+  },
+  "Eight of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-08.jpg",
+    "stem": "sm_MaNC-S-08"
+  },
+  "Nine of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-09.jpg",
+    "stem": "sm_MaNC-S-09"
+  },
+  "Ten of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-10.jpg",
+    "stem": "sm_MaNC-S-10"
+  },
+  "Page of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-J1.jpg",
+    "stem": "sm_MaNC-S-J1"
+  },
+  "Knight of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-J2.jpg",
+    "stem": "sm_MaNC-S-J2"
+  },
+  "King of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-KI.jpg",
+    "stem": "sm_MaNC-S-KI"
+  },
+  "Queen of Swords": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-S-QU.jpg",
+    "stem": "sm_MaNC-S-QU"
+  },
+  "The Fool": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-00.jpg",
+    "stem": "sm_MaNC-T-00"
+  },
+  "The Magician": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-01.jpg",
+    "stem": "sm_MaNC-T-01"
+  },
+  "The High Priestess": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-02.jpg",
+    "stem": "sm_MaNC-T-02"
+  },
+  "The Empress": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-03.jpg",
+    "stem": "sm_MaNC-T-03"
+  },
+  "The Emperor": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-04.jpg",
+    "stem": "sm_MaNC-T-04"
+  },
+  "The Hierophant": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-05.jpg",
+    "stem": "sm_MaNC-T-05"
+  },
+  "The Lovers": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-06.jpg",
+    "stem": "sm_MaNC-T-06"
+  },
+  "The Chariot": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-07.jpg",
+    "stem": "sm_MaNC-T-07"
+  },
+  "Justice": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-08.jpg",
+    "stem": "sm_MaNC-T-08"
+  },
+  "The Hermit": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-09.jpg",
+    "stem": "sm_MaNC-T-09"
+  },
+  "Wheel of Fortune": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-10.jpg",
+    "stem": "sm_MaNC-T-10"
+  },
+  "Strength": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-11.jpg",
+    "stem": "sm_MaNC-T-11"
+  },
+  "The Hanged Man": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-12.jpg",
+    "stem": "sm_MaNC-T-12"
+  },
+  "Death": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-13.jpg",
+    "stem": "sm_MaNC-T-13"
+  },
+  "Temperance": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-14.jpg",
+    "stem": "sm_MaNC-T-14"
+  },
+  "The Devil": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-15.jpg",
+    "stem": "sm_MaNC-T-15"
+  },
+  "The Tower": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-16.jpg",
+    "stem": "sm_MaNC-T-16"
+  },
+  "The Star": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-17.jpg",
+    "stem": "sm_MaNC-T-17"
+  },
+  "The Moon": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-18.jpg",
+    "stem": "sm_MaNC-T-18"
+  },
+  "The Sun": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-19.jpg",
+    "stem": "sm_MaNC-T-19"
+  },
+  "Judgement": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-20.jpg",
+    "stem": "sm_MaNC-T-20"
+  },
+  "The World": {
+    "cdn_url": "https://cdn.nguyenvanloc.com/marseille/cards/sm_MaNC-T-21.jpg",
+    "stem": "sm_MaNC-T-21"
+  }
+}

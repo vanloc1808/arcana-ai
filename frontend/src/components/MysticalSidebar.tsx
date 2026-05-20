@@ -13,16 +13,12 @@ import {
 } from 'react-icons/fi';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { TarotCard } from '@/components/TarotCard';
 import { useAuth } from '@/contexts/AuthContext';
+import { getDailyCard } from '@/lib/dailyCard';
 
 interface MysticalSidebarProps {
     className?: string;
-}
-
-interface DailyCard {
-    name: string;
-    meaning: string;
-    image_url?: string;
 }
 
 interface MoonPhase {
@@ -46,11 +42,7 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
     const { user } = useAuth();
     const [dailyQuote, setDailyQuote] = useState('');
     const [moonPhase, setMoonPhase] = useState<MoonPhase>({ phase: 'New Moon', illumination: 0, emoji: '🌑' });
-    const [dailyCard] = useState<DailyCard>({
-        name: "The Star",
-        meaning: "Hope, inspiration, and spiritual guidance illuminate your path today.",
-        image_url: undefined
-    });
+    const [dailyCard] = useState(getDailyCard);
 
     useEffect(() => {
         // Set daily quote based on date to ensure consistency
@@ -96,9 +88,12 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                             </h3>
                         </div>
 
-                        {/* Card placeholder */}
-                        <div className="w-20 h-32 mx-auto mb-3 bg-gradient-to-b from-purple-600 to-purple-800 rounded-lg border border-yellow-400/30 flex items-center justify-center">
-                            <span className="text-2xl">✨</span>
+                        <div className="mx-auto mb-3 w-[100px]">
+                            <TarotCard
+                                card={dailyCard}
+                                size="small"
+                                showDetails={false}
+                            />
                         </div>
 
                         <h4 className="font-semibold text-purple-300 mb-2">{dailyCard.name}</h4>

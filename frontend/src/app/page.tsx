@@ -11,113 +11,8 @@ import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { MysticalSidebar } from '@/components/MysticalSidebar';
 import { TarotCard } from '@/components/TarotCard';
-
-// Daily Card and Featured Cards Data
-const getDailyCard = () => {
-  const today = new Date();
-  const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
-
-  const featuredCards = [
-    {
-      name: "The Fool",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m00.jpg",
-      description_upright: "New beginnings, innocence, spontaneity, a leap of faith",
-      meaning: "Today brings fresh opportunities and new adventures. Trust your instincts and embrace the unknown with an open heart.",
-      element: "Air",
-      keywords: ["freedom", "faith", "innocence", "new beginnings"]
-    },
-    {
-      name: "The Magician",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m01.jpg",
-      description_upright: "Manifestation, resourcefulness, power, inspired action",
-      meaning: "You have all the tools you need to manifest your desires. Focus your energy and take inspired action today.",
-      element: "Air",
-      keywords: ["power", "manifestation", "action", "skill"]
-    },
-    {
-      name: "The High Priestess",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m02.jpg",
-      description_upright: "Intuition, sacred knowledge, divine feminine, subconscious mind",
-      meaning: "Listen to your inner wisdom today. The answers you seek lie within your intuitive knowing.",
-      element: "Water",
-      keywords: ["intuition", "mystery", "knowledge", "feminine"]
-    },
-    {
-      name: "The Empress",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m03.jpg",
-      description_upright: "Femininity, beauty, nature, nurturing, abundance",
-      meaning: "Embrace your creative and nurturing side. Abundance flows naturally when you align with love.",
-      element: "Earth",
-      keywords: ["abundance", "creativity", "nurturing", "beauty"]
-    },
-    {
-      name: "The Emperor",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m04.jpg",
-      description_upright: "Authority, establishment, structure, father figure",
-      meaning: "Take charge of your situation with confidence and structure. Leadership comes naturally to you today.",
-      element: "Fire",
-      keywords: ["authority", "structure", "leadership", "stability"]
-    },
-    {
-      name: "The Hierophant",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m05.jpg",
-      description_upright: "Spiritual wisdom, religious beliefs, conformity, tradition",
-      meaning: "Seek guidance from trusted mentors or spiritual practices. Traditional wisdom offers valuable insights.",
-      element: "Earth",
-      keywords: ["tradition", "wisdom", "guidance", "spirituality"]
-    },
-    {
-      name: "The Lovers",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m06.jpg",
-      description_upright: "Love, harmony, relationships, values alignment",
-      meaning: "Important choices in love and relationships await. Follow your heart while honoring your values.",
-      element: "Air",
-      keywords: ["love", "choice", "harmony", "relationships"]
-    },
-    {
-      name: "The Chariot",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m07.jpg",
-      description_upright: "Control, willpower, success, determination",
-      meaning: "Victory is within reach through focused determination. Stay in control and move forward with purpose.",
-      element: "Water",
-      keywords: ["victory", "control", "determination", "success"]
-    },
-    {
-      name: "Strength",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m08.jpg",
-      description_upright: "Strength, courage, persuasion, influence, compassion",
-      meaning: "True strength comes from compassion and inner courage. Face challenges with a gentle but firm heart.",
-      element: "Fire",
-      keywords: ["courage", "strength", "compassion", "influence"]
-    },
-    {
-      name: "The Hermit",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m09.jpg",
-      description_upright: "Soul searching, introspection, inner guidance",
-      meaning: "Turn inward for the answers you seek. Solitude and reflection will illuminate your path forward.",
-      element: "Earth",
-      keywords: ["introspection", "guidance", "solitude", "wisdom"]
-    },
-    {
-      name: "Wheel of Fortune",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m10.jpg",
-      description_upright: "Good luck, karma, life cycles, destiny, a turning point",
-      meaning: "A fortunate turn of events is approaching. Trust in the natural cycles and embrace positive change.",
-      element: "Fire",
-      keywords: ["fortune", "cycles", "destiny", "change"]
-    },
-    {
-      name: "The Star",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m17.jpg",
-      description_upright: "Hope, faith, purpose, renewal, spirituality",
-      meaning: "Hope and inspiration illuminate your path. Trust in the universe's plan and follow your dreams.",
-      element: "Air",
-      keywords: ["hope", "inspiration", "faith", "renewal"]
-    }
-  ];
-
-  return featuredCards[dayOfYear % featuredCards.length];
-};
+import { tarot } from '@/lib/api';
+import { getDailyCard } from '@/lib/dailyCard';
 
 const mysticalQuotes = [
   "The cards reveal what the heart already knows.",
@@ -155,33 +50,54 @@ const getDailyFact = () => {
   return tarotFacts[index];
 };
 
+type FeaturedCard = {
+  name: string;
+  image_url: string | null;
+  description_upright: string | null;
+  element: string | null;
+};
+
+const FALLBACK_CARDS: FeaturedCard[] = [
+  { name: "The Sun", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m19.jpg", description_upright: "Joy, success, celebration, positivity", element: "Fire" },
+  { name: "The Moon", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m18.jpg", description_upright: "Intuition, dreams, subconscious, mystery", element: "Water" },
+  { name: "The World", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m21.jpg", description_upright: "Completion, accomplishment, travel, fulfillment", element: "Earth" },
+];
+
 // Enhanced Welcome Component
 const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => {
   const [dailyCard] = useState(getDailyCard());
   const [dailyQuote] = useState(getDailyQuote());
   const [dailyFact] = useState(getDailyFact());
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const [featuredCards, setFeaturedCards] = useState<FeaturedCard[]>(FALLBACK_CARDS);
+  const [cardsVisible, setCardsVisible] = useState(true);
+  const [shuffling, setShuffling] = useState(false);
 
-  const featuredCards = [
-    {
-      name: "The Sun",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m19.jpg",
-      description_upright: "Joy, success, celebration, positivity",
-      element: "Fire"
-    },
-    {
-      name: "The Moon",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m18.jpg",
-      description_upright: "Intuition, dreams, subconscious, mystery",
-      element: "Water"
-    },
-    {
-      name: "The World",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m21.jpg",
-      description_upright: "Completion, accomplishment, travel, fulfillment",
-      element: "Earth"
+  const loadFeaturedCards = useCallback(async () => {
+    try {
+      const cards = await tarot.getFeaturedCards(3);
+      return cards as FeaturedCard[];
+    } catch {
+      return null;
     }
-  ];
+  }, []);
+
+  useEffect(() => {
+    loadFeaturedCards().then((cards) => {
+      if (cards && cards.length > 0) setFeaturedCards(cards);
+    });
+  }, [loadFeaturedCards]);
+
+  const shuffleCards = async () => {
+    if (shuffling) return;
+    setShuffling(true);
+    setCardsVisible(false);
+    await new Promise((r) => setTimeout(r, 350));
+    const cards = await loadFeaturedCards();
+    if (cards && cards.length > 0) setFeaturedCards(cards);
+    setCardsVisible(true);
+    setShuffling(false);
+  };
 
   return (
     <div className="w-full">
@@ -294,16 +210,27 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
                 Explore the Mystical
               </span>
             </h2>
-            <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto px-2">
+            <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto px-2 mb-4">
               Discover the profound wisdom within each card of the Major Arcana
             </p>
+            <button
+              onClick={shuffleCards}
+              disabled={shuffling}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-purple-500/60 text-purple-300 text-sm hover:bg-purple-500/10 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+            >
+              <FiLoader className={`w-4 h-4 ${shuffling ? 'animate-spin' : ''}`} />
+              {shuffling ? 'Shuffling...' : 'Shuffle Cards'}
+            </button>
           </div>
 
           {/* Mobile-first card grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12 transition-opacity duration-300"
+            style={{ opacity: cardsVisible ? 1 : 0 }}
+          >
             {featuredCards.map((card, index) => (
               <div
-                key={card.name}
+                key={`${card.name}-${index}`}
                 className="card-mystical p-4 md:p-6 text-center group cursor-pointer relative overflow-hidden touch-manipulation"
                 onMouseEnter={() => setHoveredCard(index)}
                 onMouseLeave={() => setHoveredCard(null)}
@@ -843,31 +770,6 @@ function HomeContent() {
           onClose={() => setIsSubscriptionModalOpen(false)}
         />
 
-        {/* Legal Links - Bottom Left Corner */}
-        <div className="fixed bottom-4 left-4 z-30 flex flex-col space-y-2">
-          <div className="bg-gray-800/80 backdrop-blur-sm border border-purple-700/50 rounded-lg p-3 shadow-lg">
-            <div className="flex flex-col space-y-1">
-              <Link
-                href="/changelog"
-                className="text-xs text-gray-400 hover:text-purple-400 transition-colors"
-              >
-                Changelog
-              </Link>
-              <Link
-                href="/terms-of-service"
-                className="text-xs text-gray-400 hover:text-purple-400 transition-colors"
-              >
-                Terms of Service
-              </Link>
-              <Link
-                href="/privacy-policy"
-                className="text-xs text-gray-400 hover:text-purple-400 transition-colors"
-              >
-                Privacy Policy
-              </Link>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
