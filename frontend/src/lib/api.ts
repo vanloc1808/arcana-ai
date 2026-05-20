@@ -343,6 +343,11 @@ export const tarot = {
         const response = await api.get(`/tarot/featured-cards?count=${count}`);
         return response.data;
     },
+
+    getCardOfTheDay: async () => {
+        const response = await api.get(`/tarot/card-of-the-day`);
+        return response.data;
+    },
 };
 
 // Sharing endpoints

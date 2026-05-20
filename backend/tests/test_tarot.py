@@ -556,3 +556,52 @@ def test_tarot_reading_different_users_different_decks(client, auth_headers, aut
         assert "name" in card
         assert "orientation" in card
         assert "meaning" in card
+
+
+# Card of the Day Tests
+def test_card_of_the_day_anonymous(client, test_cards):
+    """Card of the day works without authentication and uses the default deck."""
+    response = client.get("/tarot/card-of-the-day")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["name"]
+    assert data["deck_id"] == 1
+
+
+def test_card_of_the_day_uses_favorite_deck(client, auth_headers, test_cards, db_session, test_user):
+    """Authenticated requests return a card from the user's favorite deck."""
+    from models import Card, Deck
+
+    other_deck = Deck(name="Card of the Day Deck", description="alt deck")
+    db_session.add(other_deck)
+    db_session.commit()
+    db_session.refresh(other_deck)
+    other_deck_id = other_deck.id
+
+    db_session.add(
+        Card(
+            name="The Fool",
+            suit="Major Arcana",
+            rank="0",
+            description_upright="A new journey begins",
+            element="Air",
+            numerology=0,
+            deck_id=other_deck_id,
+        )
+    )
+    test_user.favorite_deck_id = other_deck_id
+    db_session.commit()
+
+    response = client.get("/tarot/card-of-the-day", headers=auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["deck_id"] == other_deck_id
+    assert data["name"] == "The Fool"
+
+
+def test_card_of_the_day_is_stable_within_day(client, test_cards):
+    """Repeat calls on the same day return the same card."""
+    first = client.get("/tarot/card-of-the-day").json()
+    second = client.get("/tarot/card-of-the-day").json()
+    assert first["name"] == second["name"]
+    assert first["deck_id"] == second["deck_id"]

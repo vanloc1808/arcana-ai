@@ -12,7 +12,7 @@ import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { MysticalSidebar } from '@/components/MysticalSidebar';
 import { TarotCard } from '@/components/TarotCard';
 import { tarot } from '@/lib/api';
-import { getDailyCard } from '@/lib/dailyCard';
+import { getDailyCard, type DailyCard } from '@/lib/dailyCard';
 
 const mysticalQuotes = [
   "The cards reveal what the heart already knows.",
@@ -65,7 +65,7 @@ const FALLBACK_CARDS: FeaturedCard[] = [
 
 // Enhanced Welcome Component
 const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => {
-  const [dailyCard] = useState(getDailyCard());
+  const [dailyCard, setDailyCard] = useState<DailyCard>(getDailyCard);
   const [dailyQuote] = useState(getDailyQuote());
   const [dailyFact] = useState(getDailyFact());
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
@@ -87,6 +87,28 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
       if (cards && cards.length > 0) setFeaturedCards(cards);
     });
   }, [loadFeaturedCards]);
+
+  useEffect(() => {
+    let cancelled = false;
+    tarot
+      .getCardOfTheDay()
+      .then((card) => {
+        if (cancelled || !card) return;
+        setDailyCard((prev) => ({
+          ...prev,
+          name: card.name ?? prev.name,
+          image_url: card.image_url ?? prev.image_url,
+          description_upright: card.description_upright ?? prev.description_upright,
+          element: card.element ?? prev.element,
+        }));
+      })
+      .catch(() => {
+        // Keep the hardcoded fallback card if the request fails.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const shuffleCards = async () => {
     if (shuffling) return;

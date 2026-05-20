@@ -40,6 +40,7 @@ from utils.rate_limiter import RATE_LIMITS, limiter
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token", auto_error=False)
 
 
 def create_access_token(data: dict):
@@ -147,6 +148,28 @@ async def get_current_user(
     response.headers["Access-Control-Expose-Headers"] = "X-Access-Token"
 
     return user
+
+
+async def get_optional_current_user(
+    token: str | None = Depends(optional_oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Return the authenticated user when a valid token is present, otherwise None.
+
+    Used by endpoints that personalize behavior for logged-in users but remain
+    accessible to anonymous visitors.
+    """
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        username: str | None = payload.get("sub")
+        if username is None or payload.get("type") == "refresh":
+            return None
+    except JWTError:
+        return None
+
+    return db.query(User).filter(User.username == username).first()
 
 
 async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:

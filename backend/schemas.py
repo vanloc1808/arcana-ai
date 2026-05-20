@@ -547,6 +547,27 @@ class FeaturedCardResponse(BaseModel):
     element: str | None = None
 
 
+class CardOfTheDayResponse(BaseModel):
+    """Response schema for the daily card shown on the homepage.
+
+    Includes the deck identifier so the client can confirm which deck the
+    card was sourced from (the user's favorite deck when authenticated,
+    or the default deck otherwise).
+    """
+
+    name: str
+    suit: str | None = None
+    rank: str | None = None
+    image_url: str | None = None
+    description_short: str | None = None
+    description_upright: str | None = None
+    description_reversed: str | None = None
+    element: str | None = None
+    astrology: str | None = None
+    numerology: int | None = None
+    deck_id: int | None = None
+
+
 # Spread Models
 class SpreadBase(BaseModel):
     """Base schema for a tarot spread.

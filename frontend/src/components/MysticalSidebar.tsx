@@ -15,7 +15,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TarotCard } from '@/components/TarotCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { getDailyCard } from '@/lib/dailyCard';
+import { tarot } from '@/lib/api';
+import { getDailyCard, type DailyCard } from '@/lib/dailyCard';
 
 interface MysticalSidebarProps {
     className?: string;
@@ -42,7 +43,29 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
     const { user } = useAuth();
     const [dailyQuote, setDailyQuote] = useState('');
     const [moonPhase, setMoonPhase] = useState<MoonPhase>({ phase: 'New Moon', illumination: 0, emoji: '🌑' });
-    const [dailyCard] = useState(getDailyCard);
+    const [dailyCard, setDailyCard] = useState<DailyCard>(getDailyCard);
+
+    useEffect(() => {
+        let cancelled = false;
+        tarot
+            .getCardOfTheDay()
+            .then((card) => {
+                if (cancelled || !card) return;
+                setDailyCard((prev) => ({
+                    ...prev,
+                    name: card.name ?? prev.name,
+                    image_url: card.image_url ?? prev.image_url,
+                    description_upright: card.description_upright ?? prev.description_upright,
+                    element: card.element ?? prev.element,
+                }));
+            })
+            .catch(() => {
+                // Keep the hardcoded fallback card if the request fails.
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         // Set daily quote based on date to ensure consistency
