@@ -12,42 +12,7 @@ import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { MysticalSidebar } from '@/components/MysticalSidebar';
 import { TarotCard } from '@/components/TarotCard';
 import { tarot } from '@/lib/api';
-
-// Daily inspirational meaning text keyed by Major Arcana card name. The card
-// itself (artwork, element, descriptions) comes from the user's favorite deck
-// via the /tarot/card-of-the-day endpoint; this lookup just provides the
-// "today brings..." prose the UI displays alongside it.
-const DAILY_MEANINGS: Record<string, string> = {
-  "The Fool": "Today brings fresh opportunities and new adventures. Trust your instincts and embrace the unknown with an open heart.",
-  "The Magician": "You have all the tools you need to manifest your desires. Focus your energy and take inspired action today.",
-  "The High Priestess": "Listen to your inner wisdom today. The answers you seek lie within your intuitive knowing.",
-  "The Empress": "Embrace your creative and nurturing side. Abundance flows naturally when you align with love.",
-  "The Emperor": "Take charge of your situation with confidence and structure. Leadership comes naturally to you today.",
-  "The Hierophant": "Seek guidance from trusted mentors or spiritual practices. Traditional wisdom offers valuable insights.",
-  "The Lovers": "Important choices in love and relationships await. Follow your heart while honoring your values.",
-  "The Chariot": "Victory is within reach through focused determination. Stay in control and move forward with purpose.",
-  "Strength": "True strength comes from compassion and inner courage. Face challenges with a gentle but firm heart.",
-  "The Hermit": "Turn inward for the answers you seek. Solitude and reflection will illuminate your path forward.",
-  "Wheel of Fortune": "A fortunate turn of events is approaching. Trust in the natural cycles and embrace positive change.",
-  "Justice": "Seek balance and fairness in your decisions today. Truth and integrity will guide you to the right path.",
-  "The Hanged Man": "Pause and see things from a new perspective. Surrender brings clarity and unexpected insight.",
-  "Death": "Release what no longer serves you. Transformation opens the door to a powerful new beginning.",
-  "Temperance": "Find harmony through patience and moderation. Blending opposites brings peace today.",
-  "The Devil": "Examine what binds you. Awareness of limiting patterns is the first step toward freedom.",
-  "The Tower": "Sudden change clears the way for truth. Trust that what falls away makes room for something stronger.",
-  "The Star": "Hope and inspiration illuminate your path. Trust in the universe's plan and follow your dreams.",
-  "The Moon": "Trust your intuition through uncertainty. Hidden truths surface when you listen to your dreams.",
-  "The Sun": "Joy and clarity shine on you today. Celebrate the warmth of your own light.",
-  "Judgement": "A moment of awakening calls you forward. Answer the call and step into your higher purpose.",
-  "The World": "A cycle completes and a new horizon opens. Celebrate how far you have come.",
-};
-
-const FALLBACK_DAILY_CARD: DailyCard = {
-  name: "Strength",
-  image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m08.jpg",
-  description_upright: "Strength, courage, persuasion, influence, compassion",
-  element: "Fire",
-};
+import { getDailyCard, type DailyCard } from '@/lib/dailyCard';
 
 const mysticalQuotes = [
   "The cards reveal what the heart already knows.",
@@ -92,13 +57,6 @@ type FeaturedCard = {
   element: string | null;
 };
 
-type DailyCard = {
-  name: string;
-  image_url: string | null;
-  description_upright: string | null;
-  element: string | null;
-};
-
 const FALLBACK_CARDS: FeaturedCard[] = [
   { name: "The Sun", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m19.jpg", description_upright: "Joy, success, celebration, positivity", element: "Fire" },
   { name: "The Moon", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m18.jpg", description_upright: "Intuition, dreams, subconscious, mystery", element: "Water" },
@@ -107,7 +65,7 @@ const FALLBACK_CARDS: FeaturedCard[] = [
 
 // Enhanced Welcome Component
 const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => {
-  const [dailyCard, setDailyCard] = useState<DailyCard>(FALLBACK_DAILY_CARD);
+  const [dailyCard, setDailyCard] = useState<DailyCard>(getDailyCard);
   const [dailyQuote] = useState(getDailyQuote());
   const [dailyFact] = useState(getDailyFact());
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
@@ -134,18 +92,23 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
     let cancelled = false;
     tarot
       .getCardOfTheDay()
-      .then((card: DailyCard) => {
-        if (!cancelled && card) setDailyCard(card);
+      .then((card) => {
+        if (cancelled || !card) return;
+        setDailyCard((prev) => ({
+          ...prev,
+          name: card.name ?? prev.name,
+          image_url: card.image_url ?? prev.image_url,
+          description_upright: card.description_upright ?? prev.description_upright,
+          element: card.element ?? prev.element,
+        }));
       })
       .catch(() => {
-        // Keep the fallback card if the request fails.
+        // Keep the hardcoded fallback card if the request fails.
       });
     return () => {
       cancelled = true;
     };
   }, []);
-
-  const dailyMeaning = DAILY_MEANINGS[dailyCard.name] ?? dailyCard.description_upright ?? "";
 
   const shuffleCards = async () => {
     if (shuffling) return;
@@ -247,7 +210,7 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
 
                 <h4 className="text-base md:text-lg font-bold text-white mb-2">{dailyCard.name}</h4>
                 <p className="text-purple-300 text-sm mb-2 md:mb-3">{dailyCard.description_upright}</p>
-                <p className="text-gray-400 text-xs md:text-sm leading-relaxed">{dailyMeaning}</p>
+                <p className="text-gray-400 text-xs md:text-sm leading-relaxed">{dailyCard.meaning}</p>
 
                 <div className="flex items-center justify-center gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-purple-700/50">
                   <span className="text-xs text-purple-400">Element:</span>
