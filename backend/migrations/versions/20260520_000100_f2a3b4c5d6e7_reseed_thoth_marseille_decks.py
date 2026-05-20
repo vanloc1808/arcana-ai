@@ -16,13 +16,15 @@ This migration brings such databases up to the intended state:
 1. Defensively swap UNIQUE(cards.name) → UNIQUE(name, deck_id) if not done.
 2. Insert "Thoth Tarot" and "Tarot de Marseille" decks if missing.
 3. Copy Rider-Waite cards into any deck that has zero cards.
-4. Re-invoke the upgrade() bodies of cd2e3f4a5b67 and de4f5a6b7c89 — both
-   are name-based and idempotent, so they're safe on databases where they
-   already ran.
+4. For decks we just seeded in step 3, invoke the upgrade() body of the
+   matching image/name update migration (cd2e3f4a5b67 for Thoth,
+   de4f5a6b7c89 for Marseille) so the cards end up with the correct names
+   and CDN image URLs.
 
-On a database where ab1c2d3e4f56 already inserted the decks successfully,
-steps 2–3 are no-ops and step 4 is a redundant rerun of update statements
-that already match (zero rows affected).
+On a database where ab1c2d3e4f56 already inserted the decks, steps 2–3
+are no-ops and step 4 is skipped (cd2e3f4a5b67's rename pipeline is not
+idempotent — running it twice on an already-renamed deck would collide
+on the composite UNIQUE).
 """
 from __future__ import annotations
 
@@ -153,6 +155,7 @@ def upgrade() -> None:
         print("Warning: Rider-Waite Tarot deck not found – skipping reseed")
         return
 
+    freshly_seeded: set[str] = set()
     for deck_info in DECKS:
         deck_id = connection.execute(
             text("SELECT id FROM decks WHERE name = :name"),
@@ -189,19 +192,24 @@ def upgrade() -> None:
                 """),
                 {"new_deck_id": deck_id, "rider_waite_id": rider_waite_id},
             )
+            freshly_seeded.add(deck_info["name"])
             print(f"Copied Rider-Waite cards into '{deck_info['name']}' (id={deck_id})")
 
-    # Re-apply the Thoth name/image and Marseille image updates. Both are
-    # name-based and idempotent, so safe to rerun.
-    thoth_mig = _load_sibling_migration(
-        "20260422_000001_cd2e3f4a5b67_update_thoth_deck_images_and_names.py"
-    )
-    thoth_mig.upgrade()
+    # Only run the rename/image-URL passes on decks we just seeded.
+    # cd2e3f4a5b67's rename pipeline is destructive when run twice (it
+    # renames Knight→Prince and then King→Knight, so a second pass would
+    # try to re-rename the new Knights into existing Princes).
+    if "Thoth Tarot" in freshly_seeded:
+        thoth_mig = _load_sibling_migration(
+            "20260422_000001_cd2e3f4a5b67_update_thoth_deck_images_and_names.py"
+        )
+        thoth_mig.upgrade()
 
-    marseille_mig = _load_sibling_migration(
-        "20260422_000002_de4f5a6b7c89_update_marseille_deck_images.py"
-    )
-    marseille_mig.upgrade()
+    if "Tarot de Marseille" in freshly_seeded:
+        marseille_mig = _load_sibling_migration(
+            "20260422_000002_de4f5a6b7c89_update_marseille_deck_images.py"
+        )
+        marseille_mig.upgrade()
 
 
 def downgrade() -> None:
