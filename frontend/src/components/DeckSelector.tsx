@@ -25,16 +25,6 @@ const DECK_META: Record<string, { tradition: string; accent: string; symbol: str
         accent: 'border-red-500 bg-red-900/20',
         symbol: '⚜',
     },
-    'Morgan-Greer Tarot': {
-        tradition: 'Neo-Waite',
-        accent: 'border-emerald-500 bg-emerald-900/20',
-        symbol: '🌿',
-    },
-    'Golden Dawn Tarot': {
-        tradition: 'Hermetic Order',
-        accent: 'border-yellow-500 bg-yellow-900/20',
-        symbol: '🔯',
-    },
 };
 
 function getDeckMeta(name: string) {
