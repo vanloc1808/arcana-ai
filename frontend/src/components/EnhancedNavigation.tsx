@@ -183,15 +183,6 @@ export function EnhancedNavigation() {
 
                     {/* Actions - Mobile-first layout */}
                     <div className="flex items-center space-x-2 md:space-x-3">
-                        {/* Mobile Search Button */}
-                        <button
-                            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                            className="lg:hidden p-3 rounded-xl hover:bg-gray-800 transition-colors touch-manipulation"
-                            aria-label="Search"
-                        >
-                            <Search className="w-6 h-6 text-gray-300" />
-                        </button>
-
                         {/* Turn Counter - Desktop/Tablet */}
                         <div className="hidden md:block">
                             <TurnCounter
