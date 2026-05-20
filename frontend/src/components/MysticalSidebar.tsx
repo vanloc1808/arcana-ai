@@ -11,9 +11,11 @@ import {
     FiZap,
     FiHeart
 } from 'react-icons/fi';
+import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { tarot } from '@/lib/api';
 
 interface MysticalSidebarProps {
     className?: string;
@@ -22,8 +24,15 @@ interface MysticalSidebarProps {
 interface DailyCard {
     name: string;
     meaning: string;
-    image_url?: string;
+    image_url?: string | null;
+    description_upright?: string | null;
 }
+
+const DEFAULT_DAILY_CARD: DailyCard = {
+    name: "The Star",
+    meaning: "Hope, inspiration, and spiritual guidance illuminate your path today.",
+    image_url: null,
+};
 
 interface MoonPhase {
     phase: string;
@@ -46,11 +55,28 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
     const { user } = useAuth();
     const [dailyQuote, setDailyQuote] = useState('');
     const [moonPhase, setMoonPhase] = useState<MoonPhase>({ phase: 'New Moon', illumination: 0, emoji: '🌑' });
-    const [dailyCard] = useState<DailyCard>({
-        name: "The Star",
-        meaning: "Hope, inspiration, and spiritual guidance illuminate your path today.",
-        image_url: undefined
-    });
+    const [dailyCard, setDailyCard] = useState<DailyCard>(DEFAULT_DAILY_CARD);
+
+    useEffect(() => {
+        let cancelled = false;
+        tarot
+            .getCardOfTheDay()
+            .then((card) => {
+                if (cancelled || !card) return;
+                setDailyCard({
+                    name: card.name,
+                    meaning: card.description_upright || DEFAULT_DAILY_CARD.meaning,
+                    image_url: card.image_url ?? null,
+                    description_upright: card.description_upright ?? null,
+                });
+            })
+            .catch(() => {
+                // Keep the default card if the request fails.
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         // Set daily quote based on date to ensure consistency
@@ -96,9 +122,18 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                             </h3>
                         </div>
 
-                        {/* Card placeholder */}
-                        <div className="w-20 h-32 mx-auto mb-3 bg-gradient-to-b from-purple-600 to-purple-800 rounded-lg border border-yellow-400/30 flex items-center justify-center">
-                            <span className="text-2xl">✨</span>
+                        <div className="w-20 h-32 mx-auto mb-3 rounded-lg border border-yellow-400/30 overflow-hidden bg-gradient-to-b from-purple-600 to-purple-800 flex items-center justify-center">
+                            {dailyCard.image_url ? (
+                                <Image
+                                    src={dailyCard.image_url}
+                                    alt={dailyCard.name}
+                                    width={80}
+                                    height={128}
+                                    className="object-cover w-full h-full"
+                                />
+                            ) : (
+                                <span className="text-2xl">✨</span>
+                            )}
                         </div>
 
                         <h4 className="font-semibold text-purple-300 mb-2">{dailyCard.name}</h4>

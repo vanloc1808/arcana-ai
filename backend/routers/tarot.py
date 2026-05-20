@@ -1,13 +1,21 @@
 import random
 import time
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Card, Spread, User
-from routers.auth import get_current_user
-from schemas import CardResponse, FeaturedCardResponse, ReadingRequest, SpreadListResponse, SpreadResponse
+from routers.auth import get_current_user, get_optional_current_user
+from schemas import (
+    CardOfTheDayResponse,
+    CardResponse,
+    FeaturedCardResponse,
+    ReadingRequest,
+    SpreadListResponse,
+    SpreadResponse,
+)
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
 from utils.error_handlers import TarotAPIException, ValidationError, logger
@@ -17,10 +25,28 @@ from utils.rate_limiter import RATE_LIMITS, limiter
 router = APIRouter(prefix="/tarot", tags=["tarot"])
 
 
+DEFAULT_DECK_ID = 1
+
+
 @router.get("/featured-cards", response_model=list[FeaturedCardResponse])
-async def get_featured_cards(count: int = 3, db: Session = Depends(get_db)):
-    """Return a random selection of Major Arcana cards for the homepage."""
-    major_arcana = db.query(Card).filter(Card.suit == "Major Arcana").all()
+async def get_featured_cards(
+    count: int = 3,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+):
+    """Return a random selection of Major Arcana cards for the homepage.
+
+    When the request is authenticated, cards are drawn from the user's
+    favorite deck; otherwise the default deck is used.
+    """
+    deck_id = (current_user.favorite_deck_id if current_user else None) or DEFAULT_DECK_ID
+    major_arcana = (
+        db.query(Card)
+        .filter(Card.suit == "Major Arcana", Card.deck_id == deck_id)
+        .all()
+    )
+    if not major_arcana:
+        major_arcana = db.query(Card).filter(Card.suit == "Major Arcana").all()
     if not major_arcana:
         return []
     count = max(1, min(count, len(major_arcana)))
@@ -34,6 +60,57 @@ async def get_featured_cards(count: int = 3, db: Session = Depends(get_db)):
         )
         for card in selected
     ]
+
+
+@router.get("/card-of-the-day", response_model=CardOfTheDayResponse)
+async def get_card_of_the_day(
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+):
+    """Return today's deterministic Major Arcana card from the user's favorite deck.
+
+    The same card is returned for every request made on the same calendar day
+    for a given deck. When the request is unauthenticated, the default deck is
+    used. Falls back to any Major Arcana card if the favorite deck has none.
+    """
+    deck_id = (current_user.favorite_deck_id if current_user else None) or DEFAULT_DECK_ID
+
+    major_arcana = (
+        db.query(Card)
+        .filter(Card.suit == "Major Arcana", Card.deck_id == deck_id)
+        .order_by(Card.numerology.asc().nullslast(), Card.id.asc())
+        .all()
+    )
+    if not major_arcana:
+        major_arcana = (
+            db.query(Card)
+            .filter(Card.suit == "Major Arcana")
+            .order_by(Card.id.asc())
+            .all()
+        )
+    if not major_arcana:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No Major Arcana cards available",
+        )
+
+    today = date.today()
+    day_of_year = today.timetuple().tm_yday
+    card = major_arcana[day_of_year % len(major_arcana)]
+
+    return CardOfTheDayResponse(
+        name=card.name,
+        suit=card.suit,
+        rank=card.rank,
+        image_url=card.image_url,
+        description_short=card.description_short,
+        description_upright=card.description_upright,
+        description_reversed=card.description_reversed,
+        element=card.element,
+        astrology=card.astrology,
+        numerology=card.numerology,
+        deck_id=card.deck_id,
+    )
 
 
 @router.post("/reading", response_model=list[CardResponse])

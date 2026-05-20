@@ -13,111 +13,40 @@ import { MysticalSidebar } from '@/components/MysticalSidebar';
 import { TarotCard } from '@/components/TarotCard';
 import { tarot } from '@/lib/api';
 
-// Daily Card and Featured Cards Data
-const getDailyCard = () => {
-  const today = new Date();
-  const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
+// Daily inspirational meaning text keyed by Major Arcana card name. The card
+// itself (artwork, element, descriptions) comes from the user's favorite deck
+// via the /tarot/card-of-the-day endpoint; this lookup just provides the
+// "today brings..." prose the UI displays alongside it.
+const DAILY_MEANINGS: Record<string, string> = {
+  "The Fool": "Today brings fresh opportunities and new adventures. Trust your instincts and embrace the unknown with an open heart.",
+  "The Magician": "You have all the tools you need to manifest your desires. Focus your energy and take inspired action today.",
+  "The High Priestess": "Listen to your inner wisdom today. The answers you seek lie within your intuitive knowing.",
+  "The Empress": "Embrace your creative and nurturing side. Abundance flows naturally when you align with love.",
+  "The Emperor": "Take charge of your situation with confidence and structure. Leadership comes naturally to you today.",
+  "The Hierophant": "Seek guidance from trusted mentors or spiritual practices. Traditional wisdom offers valuable insights.",
+  "The Lovers": "Important choices in love and relationships await. Follow your heart while honoring your values.",
+  "The Chariot": "Victory is within reach through focused determination. Stay in control and move forward with purpose.",
+  "Strength": "True strength comes from compassion and inner courage. Face challenges with a gentle but firm heart.",
+  "The Hermit": "Turn inward for the answers you seek. Solitude and reflection will illuminate your path forward.",
+  "Wheel of Fortune": "A fortunate turn of events is approaching. Trust in the natural cycles and embrace positive change.",
+  "Justice": "Seek balance and fairness in your decisions today. Truth and integrity will guide you to the right path.",
+  "The Hanged Man": "Pause and see things from a new perspective. Surrender brings clarity and unexpected insight.",
+  "Death": "Release what no longer serves you. Transformation opens the door to a powerful new beginning.",
+  "Temperance": "Find harmony through patience and moderation. Blending opposites brings peace today.",
+  "The Devil": "Examine what binds you. Awareness of limiting patterns is the first step toward freedom.",
+  "The Tower": "Sudden change clears the way for truth. Trust that what falls away makes room for something stronger.",
+  "The Star": "Hope and inspiration illuminate your path. Trust in the universe's plan and follow your dreams.",
+  "The Moon": "Trust your intuition through uncertainty. Hidden truths surface when you listen to your dreams.",
+  "The Sun": "Joy and clarity shine on you today. Celebrate the warmth of your own light.",
+  "Judgement": "A moment of awakening calls you forward. Answer the call and step into your higher purpose.",
+  "The World": "A cycle completes and a new horizon opens. Celebrate how far you have come.",
+};
 
-  const featuredCards = [
-    {
-      name: "The Fool",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m00.jpg",
-      description_upright: "New beginnings, innocence, spontaneity, a leap of faith",
-      meaning: "Today brings fresh opportunities and new adventures. Trust your instincts and embrace the unknown with an open heart.",
-      element: "Air",
-      keywords: ["freedom", "faith", "innocence", "new beginnings"]
-    },
-    {
-      name: "The Magician",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m01.jpg",
-      description_upright: "Manifestation, resourcefulness, power, inspired action",
-      meaning: "You have all the tools you need to manifest your desires. Focus your energy and take inspired action today.",
-      element: "Air",
-      keywords: ["power", "manifestation", "action", "skill"]
-    },
-    {
-      name: "The High Priestess",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m02.jpg",
-      description_upright: "Intuition, sacred knowledge, divine feminine, subconscious mind",
-      meaning: "Listen to your inner wisdom today. The answers you seek lie within your intuitive knowing.",
-      element: "Water",
-      keywords: ["intuition", "mystery", "knowledge", "feminine"]
-    },
-    {
-      name: "The Empress",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m03.jpg",
-      description_upright: "Femininity, beauty, nature, nurturing, abundance",
-      meaning: "Embrace your creative and nurturing side. Abundance flows naturally when you align with love.",
-      element: "Earth",
-      keywords: ["abundance", "creativity", "nurturing", "beauty"]
-    },
-    {
-      name: "The Emperor",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m04.jpg",
-      description_upright: "Authority, establishment, structure, father figure",
-      meaning: "Take charge of your situation with confidence and structure. Leadership comes naturally to you today.",
-      element: "Fire",
-      keywords: ["authority", "structure", "leadership", "stability"]
-    },
-    {
-      name: "The Hierophant",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m05.jpg",
-      description_upright: "Spiritual wisdom, religious beliefs, conformity, tradition",
-      meaning: "Seek guidance from trusted mentors or spiritual practices. Traditional wisdom offers valuable insights.",
-      element: "Earth",
-      keywords: ["tradition", "wisdom", "guidance", "spirituality"]
-    },
-    {
-      name: "The Lovers",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m06.jpg",
-      description_upright: "Love, harmony, relationships, values alignment",
-      meaning: "Important choices in love and relationships await. Follow your heart while honoring your values.",
-      element: "Air",
-      keywords: ["love", "choice", "harmony", "relationships"]
-    },
-    {
-      name: "The Chariot",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m07.jpg",
-      description_upright: "Control, willpower, success, determination",
-      meaning: "Victory is within reach through focused determination. Stay in control and move forward with purpose.",
-      element: "Water",
-      keywords: ["victory", "control", "determination", "success"]
-    },
-    {
-      name: "Strength",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m08.jpg",
-      description_upright: "Strength, courage, persuasion, influence, compassion",
-      meaning: "True strength comes from compassion and inner courage. Face challenges with a gentle but firm heart.",
-      element: "Fire",
-      keywords: ["courage", "strength", "compassion", "influence"]
-    },
-    {
-      name: "The Hermit",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m09.jpg",
-      description_upright: "Soul searching, introspection, inner guidance",
-      meaning: "Turn inward for the answers you seek. Solitude and reflection will illuminate your path forward.",
-      element: "Earth",
-      keywords: ["introspection", "guidance", "solitude", "wisdom"]
-    },
-    {
-      name: "Wheel of Fortune",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m10.jpg",
-      description_upright: "Good luck, karma, life cycles, destiny, a turning point",
-      meaning: "A fortunate turn of events is approaching. Trust in the natural cycles and embrace positive change.",
-      element: "Fire",
-      keywords: ["fortune", "cycles", "destiny", "change"]
-    },
-    {
-      name: "The Star",
-      image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m17.jpg",
-      description_upright: "Hope, faith, purpose, renewal, spirituality",
-      meaning: "Hope and inspiration illuminate your path. Trust in the universe's plan and follow your dreams.",
-      element: "Air",
-      keywords: ["hope", "inspiration", "faith", "renewal"]
-    }
-  ];
-
-  return featuredCards[dayOfYear % featuredCards.length];
+const FALLBACK_DAILY_CARD: DailyCard = {
+  name: "Strength",
+  image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m08.jpg",
+  description_upright: "Strength, courage, persuasion, influence, compassion",
+  element: "Fire",
 };
 
 const mysticalQuotes = [
@@ -163,6 +92,13 @@ type FeaturedCard = {
   element: string | null;
 };
 
+type DailyCard = {
+  name: string;
+  image_url: string | null;
+  description_upright: string | null;
+  element: string | null;
+};
+
 const FALLBACK_CARDS: FeaturedCard[] = [
   { name: "The Sun", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m19.jpg", description_upright: "Joy, success, celebration, positivity", element: "Fire" },
   { name: "The Moon", image_url: "https://cdn.nguyenvanloc.com/kaggle_tarot_images/cards/m18.jpg", description_upright: "Intuition, dreams, subconscious, mystery", element: "Water" },
@@ -171,7 +107,7 @@ const FALLBACK_CARDS: FeaturedCard[] = [
 
 // Enhanced Welcome Component
 const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => {
-  const [dailyCard] = useState(getDailyCard());
+  const [dailyCard, setDailyCard] = useState<DailyCard>(FALLBACK_DAILY_CARD);
   const [dailyQuote] = useState(getDailyQuote());
   const [dailyFact] = useState(getDailyFact());
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
@@ -193,6 +129,23 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
       if (cards && cards.length > 0) setFeaturedCards(cards);
     });
   }, [loadFeaturedCards]);
+
+  useEffect(() => {
+    let cancelled = false;
+    tarot
+      .getCardOfTheDay()
+      .then((card: DailyCard) => {
+        if (!cancelled && card) setDailyCard(card);
+      })
+      .catch(() => {
+        // Keep the fallback card if the request fails.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dailyMeaning = DAILY_MEANINGS[dailyCard.name] ?? dailyCard.description_upright ?? "";
 
   const shuffleCards = async () => {
     if (shuffling) return;
@@ -294,7 +247,7 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
 
                 <h4 className="text-base md:text-lg font-bold text-white mb-2">{dailyCard.name}</h4>
                 <p className="text-purple-300 text-sm mb-2 md:mb-3">{dailyCard.description_upright}</p>
-                <p className="text-gray-400 text-xs md:text-sm leading-relaxed">{dailyCard.meaning}</p>
+                <p className="text-gray-400 text-xs md:text-sm leading-relaxed">{dailyMeaning}</p>
 
                 <div className="flex items-center justify-center gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-purple-700/50">
                   <span className="text-xs text-purple-400">Element:</span>
