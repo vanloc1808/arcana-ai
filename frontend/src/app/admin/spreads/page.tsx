@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
+import AdminLayout, { AdminCard, SectionHeader, AdminLoadingScreen, tableHeadStyle, tableCellStyle } from "@/components/AdminLayout";
 import api from "@/lib/api";
 
 interface AdminSpread {
@@ -23,14 +22,8 @@ export default function AdminSpreadsPage() {
 
     useEffect(() => {
         if (isAuthLoading) return;
-        if (!isAuthenticated) {
-            router.push("/login");
-            return;
-        }
-        if (!user?.is_admin) {
-            router.push("/");
-            return;
-        }
+        if (!isAuthenticated) { router.push("/login"); return; }
+        if (!user?.is_admin) { router.push("/"); return; }
         loadSpreads();
     }, [isAuthenticated, user, router, isAuthLoading]);
 
@@ -46,60 +39,56 @@ export default function AdminSpreadsPage() {
         }
     };
 
-    if (isAuthLoading || !user) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
-                <div className="text-center">
-                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">Loading Spreads...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!user.is_admin) {
-        return null;
-    }
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-            </div>
-        );
-    }
+    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading Spreads…" />;
+    if (!user.is_admin) return null;
+    if (loading) return <AdminLoadingScreen label="Laying out the cards…" />;
 
     return (
-        <div className="flex flex-col gap-4 p-4">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Spreads</CardTitle>
-                    <CardDescription>View all spreads.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead>Num Cards</TableHead>
-                                <TableHead>Created At</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
+        <AdminLayout activePath="/admin/spreads" breadcrumb="Spreads" username={user.username ?? 'Admin'}>
+            <SectionHeader title="Spreads" />
+
+            <AdminCard>
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[400px]">
+                        <thead>
+                            <tr>
+                                {['ID', 'Name', 'Description', 'Cards', 'Created'].map(h => (
+                                    <th key={h} style={tableHeadStyle}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
                             {spreads.map((s) => (
-                                <TableRow key={s.id}>
-                                    <TableCell>{s.id}</TableCell>
-                                    <TableCell>{s.name}</TableCell>
-                                    <TableCell>{s.description}</TableCell>
-                                    <TableCell>{s.num_cards}</TableCell>
-                                    <TableCell>{s.created_at}</TableCell>
-                                </TableRow>
+                                <tr
+                                    key={s.id}
+                                    style={{ transition: 'background 0.15s' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,92,246,0.04)')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                    <td style={{ ...tableCellStyle, color: 'rgba(160,140,200,0.4)', fontSize: '12px' }}>#{s.id}</td>
+                                    <td style={{ ...tableCellStyle, color: '#f0e6ff', fontWeight: 500 }}>{s.name}</td>
+                                    <td style={{ ...tableCellStyle, maxWidth: '300px' }}>
+                                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }}>
+                                            {s.description || '—'}
+                                        </div>
+                                    </td>
+                                    <td style={{ ...tableCellStyle, color: '#e8cc82' }}>{s.num_cards}</td>
+                                    <td style={{ ...tableCellStyle, fontSize: '12px', color: 'rgba(160,140,200,0.4)' }}>
+                                        {new Date(s.created_at).toLocaleDateString()}
+                                    </td>
+                                </tr>
                             ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </div>
+                            {spreads.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} style={{ ...tableCellStyle, textAlign: 'center', padding: '48px', color: 'rgba(160,140,200,0.3)', fontStyle: 'italic' }}>
+                                        No spreads found
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </AdminCard>
+        </AdminLayout>
     );
 }
