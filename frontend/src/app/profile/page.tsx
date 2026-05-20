@@ -10,6 +10,8 @@ import { SubscriptionHistory } from '@/components/SubscriptionHistory';
 import { useSubscription } from '@/hooks/useSubscription';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { TarotAgentLogo } from '@/components/icons';
 
 export default function ProfilePage() {
     const { isAuthenticated, logout } = useAuth();
@@ -73,6 +75,23 @@ export default function ProfilePage() {
 
     return (
         <div className="min-h-screen bg-gray-900">
+            <div className="container mx-auto px-4 pt-4">
+                <Link
+                    href="/"
+                    className="inline-flex items-center space-x-2 hover:opacity-80 transition-opacity touch-manipulation"
+                    title="Return to Homepage"
+                >
+                    <TarotAgentLogo size={32} className="text-primary-600 md:w-10 md:h-10 lg:w-12 lg:h-12" />
+                    <div>
+                        <h1 className="text-xl md:text-2xl lg:text-3xl font-mystical font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+                            ArcanaAI
+                        </h1>
+                        <p className="text-xs md:text-sm text-gray-400 -mt-1">
+                            Mystical Guidance
+                        </p>
+                    </div>
+                </Link>
+            </div>
             <div className="container mx-auto px-4 py-8">
                 <div className="max-w-4xl mx-auto">
                     {/* Header */}
