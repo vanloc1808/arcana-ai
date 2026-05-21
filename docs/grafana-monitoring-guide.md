@@ -4,9 +4,12 @@ A hands-on guide for building Grafana dashboards and alerts on top of the
 metrics this project already exposes. Written so you can implement it
 yourself and actually learn Grafana along the way.
 
-> Heads up: this repo already ships a working monitoring stack
-> (`monitoring-docker-compose.yaml` + `monitoring/`). This guide explains
-> what's there, what to keep, and what to build on top of it.
+> Heads up: this repo already ships the **config** for a monitoring
+> stack (`monitoring-docker-compose.yaml` + `monitoring/`), but nothing
+> is running yet. [Section 4](#4-setup-from-scratch) walks you through
+> bringing it up from zero. The rest of the guide explains what's in
+> the bundled config and how to build dashboards and alerts on top of
+> it.
 
 ---
 
@@ -15,7 +18,7 @@ yourself and actually learn Grafana along the way.
 1. [What you're monitoring](#1-what-youre-monitoring)
 2. [The stack that's already wired up](#2-the-stack-thats-already-wired-up)
 3. [Grafana concepts in 5 minutes](#3-grafana-concepts-in-5-minutes)
-4. [Bringing the stack up](#4-bringing-the-stack-up)
+4. [Setup from scratch](#4-setup-from-scratch)
 5. [PromQL primer with this project's metrics](#5-promql-primer-with-this-projects-metrics)
 6. [Dashboards to build](#6-dashboards-to-build)
    - [6.1 Golden signals (API health)](#61-dashboard-1--golden-signals-api-health)
@@ -111,34 +114,234 @@ Rule of thumb for panel choice:
 
 ---
 
-## 4. Bringing the stack up
+## 4. Setup from scratch
+
+You're starting from zero — neither the app nor the monitoring stack is
+running. Do these steps in order. Each step has a verification at the
+end; don't skip them.
+
+### 4.1 Prerequisites
+
+- Docker Engine ≥ 20.10 and Docker Compose v2 (`docker compose ...`,
+  not `docker-compose ...`).
+- Ports free on the host: `8000` (backend), `3000` (frontend, optional),
+  `9090` (Prometheus), `3002` (Grafana), `8090` (cAdvisor),
+  `9200` (node-exporter). Check with:
+
+  ```bash
+  ss -tlnp | grep -E ':(8000|3000|9090|3002|8090|9200) '
+  ```
+
+- The backend's `.env` file at `backend/.env` exists and is populated
+  (copy from whatever template the project provides). The monitoring
+  stack doesn't read it, but the backend won't start without it.
+
+### 4.2 Create the shared Docker network
+
+All compose files (`docker-compose.yaml`, `redis-docker-compose.yaml`,
+`monitoring-docker-compose.yaml`) attach to an **external** network
+called `localnet`. Prometheus uses container DNS over that network to
+reach `tarot-backend:8000`, so this must exist before anything starts:
 
 ```bash
-# Network is shared with backend/frontend
-docker network create localnet || true
-
-# Required env var (Grafana refuses to start without it)
-export GRAFANA_ADMIN_PASSWORD='change-me'
-
-docker compose -f monitoring-docker-compose.yaml up -d
+docker network create localnet
 ```
+
+If it already exists you'll get `Error response from daemon: network
+with name localnet already exists` — that's fine, ignore it.
+
+Verify:
+
+```bash
+docker network ls | grep localnet
+```
+
+### 4.3 Start the application stack
+
+The monitoring stack scrapes `tarot-backend:8000/metrics`, so the app
+has to be up first.
+
+```bash
+# From the repo root
+docker compose -f docker-compose.yaml up -d
+```
+
+This brings up `tarot-backend`, `tarot-frontend`, `tarot-redis`,
+`tarot-celery-worker`, `tarot-celery-beat`. Wait ~20s for the backend
+healthcheck to settle, then verify metrics are being exposed:
+
+```bash
+docker exec tarot-prometheus echo ok 2>/dev/null  # will fail — expected, prom isn't up yet
+docker exec tarot-backend curl -s http://localhost:8000/metrics | grep -E '^tarot_' | head
+```
+
+You should see lines like `tarot_active_users 0.0`. If you see nothing:
+
+- `docker logs tarot-backend --tail 100` — look for import errors.
+- Confirm `setup_metrics(app)` is actually called
+  (`backend/app.py:79`).
+
+### 4.4 Configure the monitoring stack
+
+Grafana refuses to start without `GRAFANA_ADMIN_PASSWORD`. Don't export
+this only in your current shell — put it in a `.env` file next to
+`monitoring-docker-compose.yaml` so it survives reboots:
+
+```bash
+# Repo root
+cat > .env <<'EOF'
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=replace-with-a-real-password
+EOF
+chmod 600 .env
+```
+
+Make sure `.env` is gitignored (the repo's `.gitignore` already
+excludes it, but double-check before committing anything):
+
+```bash
+git check-ignore -v .env   # should print a matching rule
+```
+
+### 4.5 Start the monitoring stack
+
+```bash
+docker compose -f monitoring-docker-compose.yaml --env-file .env up -d
+```
+
+`--env-file .env` makes Compose read your password file (it's not
+loaded automatically when the file lives in the repo root but the
+compose file is referenced explicitly).
+
+Confirm all four containers came up:
+
+```bash
+docker ps --filter 'name=tarot-' --format 'table {{.Names}}\t{{.Status}}'
+```
+
+Expect to see `tarot-prometheus`, `tarot-grafana`, `tarot-cadvisor`,
+`tarot-node-exporter` all `Up`.
+
+If Grafana keeps restarting:
+
+```bash
+docker logs tarot-grafana --tail 50
+```
+
+The most common error is `GF_SECURITY_ADMIN_PASSWORD is required` —
+re-check step 4.4.
+
+### 4.6 Verify Prometheus scraping
+
+Open <http://localhost:9090/targets>. You want every job `UP`:
+
+| Job | Endpoint | Expected |
+|---|---|---|
+| `prometheus` | `localhost:9090/metrics` | UP |
+| `tarot-backend` | `tarot-backend:8000/metrics` | UP |
+| `tarot-frontend` | `tarot-frontend:3000/api/metrics` | DOWN until you add a Next.js metrics route (see §9). OK to ignore for now. |
+| `node-exporter` | `tarot-node-exporter:9100/metrics` | UP |
+| `cadvisor` | `tarot-cadvisor:8080/metrics` | UP |
+
+**Troubleshooting a DOWN backend target:**
+
+1. *Connection refused* — backend container isn't on `localnet`. Check
+   with `docker inspect tarot-backend -f '{{json .NetworkSettings.Networks}}'`.
+2. *No such host* — DNS lookup failed; Prometheus is on a different
+   network than the backend.
+3. *Connection timeout* — backend is up but slow to respond. Curl from
+   inside the prom container to confirm:
+   ```bash
+   docker exec tarot-prometheus wget -qO- http://tarot-backend:8000/metrics | head
+   ```
+
+Run a smoke-test query in Prometheus itself — open
+<http://localhost:9090/graph>, run `up` and confirm you get one row per
+target.
+
+### 4.7 First Grafana login
+
+Open <http://localhost:3002>:
+
+- User: `admin`
+- Password: whatever you set in `.env`
 
 Then:
 
-- Prometheus UI: <http://localhost:9090> — `Status → Targets` should show
-  every job `UP`. If `tarot-backend` is `DOWN`, the backend container
-  isn't running or isn't on the `localnet` network.
-- Grafana UI: <http://localhost:3002> (user `admin`, password from
-  `GRAFANA_ADMIN_PASSWORD`).
+1. **Change the admin password** at first prompt (or `Profile →
+   Change password`). Even on localhost.
+2. Go to `Connections → Data sources`. There should already be a
+   Prometheus data source named "Prometheus" (provisioned from
+   `monitoring/grafana/provisioning/datasources/datasources.yml`).
+   Click it, scroll to bottom, click **Save & test**. You want a green
+   "Successfully queried the Prometheus API.".
+3. Go to `Dashboards`. You'll see three provisioned dashboards:
+   `tarot-overview`, `tarot_dashboard`, `infrastructure`. Open
+   `tarot-overview` — if panels render data, your full pipeline
+   (app → Prometheus → Grafana) works. If they show "No data",
+   generate some traffic (hit the backend a few times) and refresh.
 
-Sanity check the metrics endpoint:
+### 4.8 Generate some traffic so the dashboards have something to show
+
+Brand-new Prometheus = empty time series database. Counters need a few
+data points before `rate()` returns anything. Hammer the backend
+briefly:
 
 ```bash
-curl -s http://localhost:8000/metrics | grep -E '^tarot_' | head
+for i in $(seq 1 200); do
+  curl -s -o /dev/null http://localhost:8000/health
+  curl -s -o /dev/null http://localhost:8000/docs
+done
 ```
 
-If that returns nothing, the app didn't call `setup_metrics()` —
-check `backend/app.py`.
+Wait ~30s, then refresh Grafana. Panels driven by
+`rate(http_requests_total[...])` should now have data.
+
+### 4.9 Stopping / cleaning up
+
+```bash
+# Stop monitoring only, keep data
+docker compose -f monitoring-docker-compose.yaml down
+
+# Stop AND wipe Prometheus + Grafana data (e.g. starting over)
+docker compose -f monitoring-docker-compose.yaml down -v
+```
+
+The `-v` flag deletes the named volumes `prometheus-data` and
+`grafana-data`. Don't run that in production unless you mean it.
+
+### 4.10 Dev mode: running the backend on the host, not in Docker
+
+If you're iterating on the backend with `uvicorn` directly on your host
+machine, Prometheus inside Docker can't reach `localhost:8000`. Two
+fixes:
+
+- **Linux**: add `extra_hosts: ["host.docker.internal:host-gateway"]` to
+  the `prometheus` service in `monitoring-docker-compose.yaml`, then
+  change the scrape target to `host.docker.internal:8000`.
+- **macOS/Windows Docker Desktop**: `host.docker.internal` already
+  resolves; just change the target.
+
+Don't commit that change — it's a local dev tweak. Easier: just run
+the backend in Docker too.
+
+---
+
+### Setup recap
+
+You should now have:
+
+- `localnet` Docker network created.
+- App stack up: `tarot-backend`, `tarot-redis`, workers, frontend.
+- Monitoring stack up: `tarot-prometheus`, `tarot-grafana`,
+  `tarot-cadvisor`, `tarot-node-exporter`.
+- All Prometheus targets `UP` (frontend may be `DOWN`; that's expected
+  until you instrument it).
+- Grafana reachable at <http://localhost:3002> with the Prometheus
+  data source connected.
+- Three provisioned dashboards visible and showing data.
+
+If all of that is true, you're ready for the rest of this guide.
 
 ---
 
@@ -536,7 +739,9 @@ These need a few lines of backend code first. Listed in order of value.
 
 ## Suggested learning order
 
-1. Bring the stack up. Confirm targets are `UP` in Prometheus.
+1. Follow [Section 4](#4-setup-from-scratch) end-to-end. Confirm all
+   targets are `UP` in Prometheus and the provisioned dashboards show
+   data.
 2. In Grafana `Explore`, run the queries from [section 5](#5-promql-primer-with-this-projects-metrics)
    one by one. Don't continue until each returns data.
 3. Build **Dashboard 1 (Golden signals)** from scratch. Don't copy the
