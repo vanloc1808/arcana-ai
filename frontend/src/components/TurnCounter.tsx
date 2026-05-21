@@ -148,7 +148,7 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                             )}
                         </div>
 
-                        {/* Show "Get Turns" button (ad-watching) unless unlimited */}
+                        {/* Show "Get Turns" button unless unlimited */}
                         {!hasUnlimitedTurns && (
                             <Button
                                 size="sm"
@@ -201,14 +201,14 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                                     {/* No turns warning */}
                                     {turns.total_turns === 0 && (
                                         <div className="text-xs text-orange-200 bg-orange-800/50 dark:text-orange-200 dark:bg-orange-800/50 p-2 rounded">
-                                            You&apos;ve used all your turns! Watch an ad to earn more.
+                                            You&apos;ve used all your turns! Top up to keep reading.
                                         </div>
                                     )}
 
                                     {/* Low turns warning */}
                                     {hasLowTurns && turns.total_turns > 0 && (
                                         <div className="text-xs text-orange-200 bg-orange-800/50 dark:text-orange-200 dark:bg-orange-800/50 p-2 rounded">
-                                            Running low! Watch an ad to earn a free turn.
+                                            Running low on turns!
                                         </div>
                                     )}
                                 </>

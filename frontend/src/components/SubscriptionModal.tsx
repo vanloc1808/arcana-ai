@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useMetaMask } from '@/hooks/useMetaMask';
 import { Button } from '@/components/ui/button';
@@ -17,11 +17,9 @@ import {
     Star,
     Gift,
     Wallet,
-    Tv2,
 } from 'lucide-react';
-import { subscription, ads } from '@/lib/api';
+import { subscription } from '@/lib/api';
 import { toast } from 'react-hot-toast';
-import { WatchAdButton } from '@/components/WatchAdButton';
 
 interface SubscriptionModalProps {
     isOpen: boolean;
@@ -47,18 +45,6 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
     } = useMetaMask();
 
     const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
-    const [adTurnsEarnedToday, setAdTurnsEarnedToday] = useState(0);
-    const [adStatusLoading, setAdStatusLoading] = useState(false);
-
-    // Fetch today's ad usage whenever the modal opens
-    useEffect(() => {
-        if (!isOpen) return;
-        setAdStatusLoading(true);
-        ads.getStatus()
-            .then((status) => setAdTurnsEarnedToday(status.ad_turns_earned_today))
-            .catch(() => {/* non-critical */})
-            .finally(() => setAdStatusLoading(false));
-    }, [isOpen]);
 
     const handleUSDTPayment = async (productVariant: string, usdtAmount: string, usdPrice: string) => {
         setPaymentLoading(productVariant);
@@ -91,11 +77,6 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
         }
     };
 
-    const handleTurnEarned = async () => {
-        setAdTurnsEarnedToday((prev) => prev + 1);
-        await refreshData();
-    };
-
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto bg-gray-900 border-purple-700">
@@ -108,7 +89,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                         </div>
                     </DialogTitle>
                     <DialogDescription className="text-base md:text-lg text-purple-300 text-center">
-                        Pay with MetaMask or watch a short ad to earn free turns.
+                        Pay with MetaMask USDT to top up your turns.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -138,41 +119,6 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                         {isLoading ? 'Connecting...' : 'Connect'}
                                     </Button>
                                 )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Watch Ad — replaces Credit Card Coming Soon */}
-                    <Card className="border-indigo-500 bg-indigo-900/20">
-                        <CardContent className="p-4 md:p-6 space-y-4">
-                            <div className="flex items-center space-x-3">
-                                <Tv2 className="h-6 w-6 text-indigo-400 flex-shrink-0" />
-                                <div>
-                                    <h3 className="font-medium text-indigo-300 text-lg">Watch an Ad, Earn a Turn</h3>
-                                    <p className="text-sm text-indigo-200 mt-1">
-                                        Watch a 15-second ad and get +1 turn instantly. Up to 20 times per day, completely free.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <WatchAdButton
-                                adTurnsEarnedToday={adStatusLoading ? 0 : adTurnsEarnedToday}
-                                onTurnEarned={handleTurnEarned}
-                                className="w-full justify-center py-3"
-                            />
-
-                            {/* Daily progress bar */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-xs text-gray-400">
-                                    <span>Daily ad turns used</span>
-                                    <span>{adTurnsEarnedToday}/20</span>
-                                </div>
-                                <div className="w-full bg-gray-700 rounded-full h-2">
-                                    <div
-                                        className="bg-indigo-500 h-2 rounded-full transition-all duration-300"
-                                        style={{ width: `${Math.min((adTurnsEarnedToday / 20) * 100, 100)}%` }}
-                                    />
-                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -294,15 +240,11 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                 </div>
                                 <div className="flex items-start space-x-3 md:space-x-2">
                                     <div className="w-2 h-2 md:w-1.5 md:h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                                    <span className="leading-relaxed">Free turns are used first, then paid/ad-earned turns</span>
+                                    <span className="leading-relaxed">Free turns are used first, then paid turns</span>
                                 </div>
                                 <div className="flex items-start space-x-3 md:space-x-2">
                                     <div className="w-2 h-2 md:w-1.5 md:h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
                                     <span className="leading-relaxed">Free turns reset on the 1st of each month</span>
-                                </div>
-                                <div className="flex items-start space-x-3 md:space-x-2">
-                                    <div className="w-2 h-2 md:w-1.5 md:h-1.5 bg-indigo-400 rounded-full mt-2 flex-shrink-0"></div>
-                                    <span className="leading-relaxed">Watch ads to earn up to 20 free turns per day — turns never expire</span>
                                 </div>
                                 <div className="flex items-start space-x-3 md:space-x-2">
                                     <div className="w-2 h-2 md:w-1.5 md:h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
