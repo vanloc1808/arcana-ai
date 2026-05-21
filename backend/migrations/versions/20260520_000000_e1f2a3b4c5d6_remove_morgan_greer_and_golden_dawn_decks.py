@@ -1,7 +1,7 @@
 """remove Morgan-Greer and Golden Dawn tarot decks
 
 Revision ID: e1f2a3b4c5d6
-Revises: de4f5a6b7c89
+Revises: add_ad_views_table
 Create Date: 2026-05-20 00:00:00.000000+00:00
 
 Earlier revisions of migration ab1c2d3e4f56 seeded "Morgan-Greer Tarot" and
@@ -16,7 +16,7 @@ from sqlalchemy import text
 
 
 revision: str = "e1f2a3b4c5d6"
-down_revision: Union[str, None] = "de4f5a6b7c89"
+down_revision: Union[str, None] = "add_ad_views_table"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
