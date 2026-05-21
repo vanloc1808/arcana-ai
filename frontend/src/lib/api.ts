@@ -347,7 +347,43 @@ export const tarot = {
         const response = await api.get(`/tarot/card-of-the-day`);
         return response.data;
     },
+
+    getCompatibilityReading: async (payload: CompatibilityReadingRequest): Promise<CompatibilityReadingResponse> => {
+        const response = await api.post("/tarot/compatibility", payload);
+        return response.data;
+    },
 };
+
+export interface CompatibilityPerson {
+    name: string;
+    birth_date?: string;
+}
+
+export interface CompatibilityReadingRequest {
+    person_a: CompatibilityPerson;
+    person_b: CompatibilityPerson;
+    focus?: string;
+}
+
+export interface CompatibilityCard {
+    name: string;
+    orientation: string;
+    meaning: string;
+    image_url?: string | null;
+    position?: string | null;
+    position_index?: number | null;
+}
+
+export interface CompatibilityReadingResponse {
+    person_a: CompatibilityPerson;
+    person_b: CompatibilityPerson;
+    focus: string | null;
+    spread_name: string;
+    cards: CompatibilityCard[];
+    remaining_free_turns: number;
+    remaining_paid_turns: number;
+    total_remaining_turns: number;
+}
 
 // Sharing endpoints
 export const sharing = {

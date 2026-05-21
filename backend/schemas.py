@@ -518,6 +518,44 @@ class ReadingRequest(BaseModel):
         return _sanitize_string(v, "Concern", min_length=2, max_length=2000)
 
 
+class RelationshipPerson(BaseModel):
+    """One person in a compatibility reading."""
+
+    name: str
+    birth_date: date | None = None
+
+    @field_validator("name")
+    def validate_name(cls, v):
+        return _sanitize_string(v, "Name", min_length=1, max_length=80)
+
+
+class CompatibilityReadingRequest(BaseModel):
+    """Schema for requesting a compatibility (relationship) reading."""
+
+    person_a: RelationshipPerson
+    person_b: RelationshipPerson
+    focus: str | None = None
+
+    @field_validator("focus")
+    def validate_focus(cls, v):
+        if v is None:
+            return v
+        return _sanitize_string(v, "Focus", min_length=1, max_length=500, allow_empty=True)
+
+
+class CompatibilityReadingResponse(BaseModel):
+    """Schema for the response of a compatibility reading."""
+
+    person_a: RelationshipPerson
+    person_b: RelationshipPerson
+    focus: str | None
+    spread_name: str
+    cards: list["CardResponse"]
+    remaining_free_turns: int
+    remaining_paid_turns: int
+    total_remaining_turns: int
+
+
 class CardResponse(BaseModel):
     """Response schema for a card in a tarot reading.
 

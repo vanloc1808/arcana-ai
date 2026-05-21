@@ -1,0 +1,212 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { FiArrowLeft } from 'react-icons/fi';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
+import { tarot, CompatibilityReadingResponse } from '@/lib/api';
+import { SubscriptionModal } from '@/components/SubscriptionModal';
+import { TurnCounter } from '@/components/TurnCounter';
+import { toast } from 'react-hot-toast';
+import { logError } from '@/lib/logger';
+
+export default function CompatibilityReadingPage() {
+    const { isAuthenticated } = useAuth();
+    const { hasTurnsAvailable, refreshData } = useSubscription();
+    const [personAName, setPersonAName] = useState('');
+    const [personADob, setPersonADob] = useState('');
+    const [personBName, setPersonBName] = useState('');
+    const [personBDob, setPersonBDob] = useState('');
+    const [focus, setFocus] = useState('');
+    const [result, setResult] = useState<CompatibilityReadingResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+    const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!isAuthenticated) {
+            toast.error('Please sign in to draw a compatibility reading.');
+            return;
+        }
+        if (!personAName.trim() || !personBName.trim()) {
+            toast.error('Please enter both names.');
+            return;
+        }
+        if (!hasTurnsAvailable()) {
+            setIsSubscriptionModalOpen(true);
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const data = await tarot.getCompatibilityReading({
+                person_a: {
+                    name: personAName.trim(),
+                    birth_date: personADob || undefined,
+                },
+                person_b: {
+                    name: personBName.trim(),
+                    birth_date: personBDob || undefined,
+                },
+                focus: focus.trim() || undefined,
+            });
+            setResult(data);
+            refreshData();
+        } catch (err: unknown) {
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            if (status === 402) {
+                setIsSubscriptionModalOpen(true);
+            } else {
+                logError('Compatibility reading failed', err);
+                toast.error('Unable to draw the reading. Please try again.');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleImageError = (imageUrl: string) => {
+        setBrokenImages((prev) => new Set([...prev, imageUrl]));
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-950 to-gray-900 text-white">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+                <div className="flex items-center justify-between mb-6">
+                    <Link href="/reading" className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white">
+                        <FiArrowLeft className="w-4 h-4" /> Back to readings
+                    </Link>
+                    <TurnCounter onPurchaseClick={() => setIsSubscriptionModalOpen(true)} showDetails={false} />
+                </div>
+
+                <h1 className="text-3xl sm:text-4xl font-serif mb-2">Compatibility Reading</h1>
+                <p className="text-gray-300 mb-8">
+                    Draw a five-card Relationship Cross to see how two people show up in their bond — what
+                    connects them, what tests them, and where the relationship is heading.
+                </p>
+
+                <form
+                    onSubmit={handleSubmit}
+                    className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 space-y-6"
+                    aria-label="Compatibility reading form"
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <fieldset className="space-y-3">
+                            <legend className="text-sm font-medium text-purple-200">First person</legend>
+                            <input
+                                type="text"
+                                value={personAName}
+                                onChange={(e) => setPersonAName(e.target.value)}
+                                placeholder="Name"
+                                maxLength={80}
+                                required
+                                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                            <input
+                                type="date"
+                                value={personADob}
+                                onChange={(e) => setPersonADob(e.target.value)}
+                                aria-label="First person birth date (optional)"
+                                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                        </fieldset>
+
+                        <fieldset className="space-y-3">
+                            <legend className="text-sm font-medium text-purple-200">Second person</legend>
+                            <input
+                                type="text"
+                                value={personBName}
+                                onChange={(e) => setPersonBName(e.target.value)}
+                                placeholder="Name"
+                                maxLength={80}
+                                required
+                                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                            <input
+                                type="date"
+                                value={personBDob}
+                                onChange={(e) => setPersonBDob(e.target.value)}
+                                aria-label="Second person birth date (optional)"
+                                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                        </fieldset>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label htmlFor="focus" className="block text-sm font-medium text-purple-200">
+                            Focus (optional)
+                        </label>
+                        <input
+                            id="focus"
+                            type="text"
+                            value={focus}
+                            onChange={(e) => setFocus(e.target.value)}
+                            placeholder="e.g. Are we ready to commit?"
+                            maxLength={500}
+                            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="btn-mystical w-full sm:w-auto px-6 py-3 rounded-md font-medium disabled:opacity-50"
+                    >
+                        {isLoading ? 'Drawing cards…' : 'Draw the Relationship Cross'}
+                    </button>
+                </form>
+
+                {result && (
+                    <section className="mt-10 space-y-4" aria-live="polite">
+                        <header className="flex items-baseline justify-between flex-wrap gap-2">
+                            <h2 className="text-2xl font-serif">
+                                {result.person_a.name} &amp; {result.person_b.name}
+                            </h2>
+                            <span className="text-sm text-gray-400">{result.spread_name}</span>
+                        </header>
+                        {result.focus && (
+                            <p className="text-gray-300 italic">&ldquo;{result.focus}&rdquo;</p>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {result.cards.map((card, idx) => (
+                                <article
+                                    key={`${card.name}-${idx}`}
+                                    className="bg-gray-800/60 border border-gray-700 rounded-xl p-4"
+                                >
+                                    <div className="text-xs uppercase tracking-wide text-purple-300 mb-2">
+                                        {card.position}
+                                    </div>
+                                    {card.image_url && !brokenImages.has(card.image_url) ? (
+                                        <img
+                                            src={card.image_url}
+                                            alt={`${card.name} (${card.orientation})`}
+                                            className={`w-full h-48 object-contain mb-3 ${
+                                                card.orientation.toLowerCase() === 'reversed' ? 'rotate-180' : ''
+                                            }`}
+                                            onError={() => card.image_url && handleImageError(card.image_url)}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-48 mb-3 flex items-center justify-center bg-gray-900 rounded text-gray-500 text-sm">
+                                            No image
+                                        </div>
+                                    )}
+                                    <h3 className="font-medium">{card.name}</h3>
+                                    <div className="text-xs text-gray-400 mb-2">{card.orientation}</div>
+                                    <p className="text-sm text-gray-300">{card.meaning}</p>
+                                </article>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                <SubscriptionModal
+                    isOpen={isSubscriptionModalOpen}
+                    onClose={() => setIsSubscriptionModalOpen(false)}
+                />
+            </div>
+        </div>
+    );
+}

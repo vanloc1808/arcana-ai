@@ -20,6 +20,8 @@ Covers commits from 2026-05-19 through 2026-05-21 (ISO week 2026-W21).
 - Journal advanced search: filter entries by card name, spread name, AND/OR tag-match mode in addition to the existing date, mood, notes, and favorites filters
 - Journal filter UI now shows the user's previously-used tags as clickable chips with usage counts, and the spread filter populates from spreads the user has actually used
 - `GET /api/journal/tags` and `GET /api/journal/spreads-used` endpoints powering the filter suggestions
+- Compatibility (relationship) readings: new five-card Relationship Cross spread (You / Them / Connection / Challenge / Outcome) and a dedicated `/reading/compatibility` page that takes two names and optional birthdates plus an optional focus question
+- `POST /tarot/compatibility` endpoint that draws the Relationship Cross spread with position labels personalized to the two people's names
 
 ### Changed
 - Tarot deck seeding migration made PostgreSQL-compatible and restricted to the two new decks
