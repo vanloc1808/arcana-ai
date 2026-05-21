@@ -21,7 +21,7 @@ The recommendations below extend that base.
 | ✅     | 1  | Daily streaks & achievements             | High   | Medium | No          |
 | ✅     | 2  | Reading tags + advanced journal search   | High   | Medium | Partial     |
 | ✅     | 3  | Compatibility / relationship readings    | High   | Medium | Yes         |
-| ☐      | 4  | PWA + push notifications                 | High   | Medium | No          |
+| ✅     | 4  | PWA + push notifications                 | High   | Medium | No          |
 | ☐      | 5  | Public reading feed / community gallery  | Medium | Medium | No          |
 | ☐      | 6  | Referral program                         | Medium | Low    | No          |
 | ☐      | 7  | Weekly email digest                      | Medium | Low    | No          |
@@ -99,7 +99,7 @@ The recommendations below extend that base.
 
 ---
 
-## 4. PWA + push notifications
+## 4. PWA + push notifications ✅ Shipped
 
 **Why.** Closes "no mobile app" gap without React Native investment.
 

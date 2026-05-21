@@ -1810,3 +1810,37 @@ class StreakProgressResponse(BaseModel):
     streak: StreakResponse
     achievements: list[AchievementResponse]
 
+
+# --- Web Push ---
+
+
+class WebPushKeys(BaseModel):
+    p256dh: str = Field(..., min_length=8, max_length=255)
+    auth: str = Field(..., min_length=8, max_length=255)
+
+
+class WebPushSubscribeRequest(BaseModel):
+    endpoint: str = Field(..., min_length=8, max_length=2000)
+    keys: WebPushKeys
+    user_agent: Optional[str] = Field(None, max_length=255)
+
+
+class WebPushSubscribeResponse(BaseModel):
+    id: int
+    endpoint: str
+
+
+class WebPushUnsubscribeRequest(BaseModel):
+    endpoint: str = Field(..., min_length=8, max_length=2000)
+
+
+class WebPushPublicKeyResponse(BaseModel):
+    public_key: str
+    configured: bool
+
+
+class WebPushTestResponse(BaseModel):
+    sent: int
+    failed: int
+    pruned: int
+

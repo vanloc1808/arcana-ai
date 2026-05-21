@@ -1036,3 +1036,30 @@ class DailyCardPull(Base):
     )
 
 
+class WebPushSubscription(Base):
+    """A browser/device's Web Push subscription for a user.
+
+    A user may have multiple subscriptions (one per browser/device). The endpoint
+    URL is unique per browser-VAPID pair, so it's used as the dedup key. The
+    p256dh and auth values come straight from the PushSubscription.getKey()
+    output on the client and are needed to encrypt push payloads.
+    """
+
+    __tablename__ = "web_push_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    endpoint = Column(Text, nullable=False)
+    p256dh = Column(String(255), nullable=False)
+    auth = Column(String(255), nullable=False)
+    user_agent = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "endpoint", name="uq_web_push_endpoint_per_user"),
+    )
+
+

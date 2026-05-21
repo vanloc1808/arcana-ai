@@ -685,4 +685,36 @@ export const streaks = {
     },
 };
 
+export interface VapidPublicKeyResponse {
+    public_key: string;
+    configured: boolean;
+}
+
+export interface WebPushSubscribePayload {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+    user_agent?: string;
+}
+
+export const webPush = {
+    getVapidPublicKey: async (): Promise<VapidPublicKeyResponse> => {
+        const response = await api.get("/api/web-push/vapid-public-key");
+        return response.data;
+    },
+
+    subscribe: async (payload: WebPushSubscribePayload) => {
+        const response = await api.post("/api/web-push/subscribe", payload);
+        return response.data;
+    },
+
+    unsubscribe: async (endpoint: string) => {
+        await api.post("/api/web-push/unsubscribe", { endpoint });
+    },
+
+    sendTest: async (): Promise<{ sent: number; failed: number; pruned: number }> => {
+        const response = await api.post("/api/web-push/test");
+        return response.data;
+    },
+};
+
 export default api;

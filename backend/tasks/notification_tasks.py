@@ -427,3 +427,4 @@ def reset_monthly_free_turns_task(self):
 
         # Retry the task
         raise self.retry(countdown=3600, max_retries=2, exc=e)
+

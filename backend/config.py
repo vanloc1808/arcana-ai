@@ -116,6 +116,11 @@ class Settings(BaseSettings):
     OPENAI_TEMPERATURE: float = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
     OPENAI_MAX_TOKENS: int = int(os.getenv("OPENAI_MAX_TOKENS", "800"))
 
+    # Web Push (VAPID) Settings — leave blank to disable web push
+    WEBPUSH_PUBLIC_KEY: str = os.getenv("WEBPUSH_PUBLIC_KEY", "")
+    WEBPUSH_PRIVATE_KEY: str = os.getenv("WEBPUSH_PRIVATE_KEY", "")
+    WEBPUSH_SUBJECT: str = os.getenv("WEBPUSH_SUBJECT", "mailto:admin@arcanaai.com")
+
     # Email Settings
     MAIL_USERNAME: str = os.getenv("MAIL_USERNAME", "")
     MAIL_PASSWORD: str = os.getenv("MAIL_PASSWORD", "")
