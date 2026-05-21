@@ -25,6 +25,7 @@ import {
     Reminder,
     ReminderCreate,
     JournalFilters,
+    TagUsage,
 } from "@/types/tarot";
 
 // Callback function to be set by AuthProvider
@@ -507,12 +508,15 @@ export const journal = {
         if (filters.skip !== undefined) params.append('skip', filters.skip.toString());
         if (filters.limit !== undefined) params.append('limit', filters.limit.toString());
         if (filters.tags) params.append('tags', filters.tags);
+        if (filters.tags_match) params.append('tags_match', filters.tags_match);
         if (filters.favorite_only !== undefined) params.append('favorite_only', filters.favorite_only.toString());
         if (filters.start_date) params.append('start_date', filters.start_date);
         if (filters.end_date) params.append('end_date', filters.end_date);
         if (filters.mood_min !== undefined) params.append('mood_min', filters.mood_min.toString());
         if (filters.mood_max !== undefined) params.append('mood_max', filters.mood_max.toString());
         if (filters.search_notes) params.append('search_notes', filters.search_notes);
+        if (filters.card_name) params.append('card_name', filters.card_name);
+        if (filters.spread_name) params.append('spread_name', filters.spread_name);
         if (filters.sort_by) params.append('sort_by', filters.sort_by);
         if (filters.sort_order) params.append('sort_order', filters.sort_order);
 
@@ -557,6 +561,17 @@ export const journal = {
 
     deleteCardMeaning: async (cardId: number): Promise<void> => {
         await api.delete(`/api/journal/card-meanings/${cardId}`);
+    },
+
+    // Discovery
+    getUsedTags: async (): Promise<TagUsage[]> => {
+        const response = await api.get("/api/journal/tags");
+        return response.data;
+    },
+
+    getUsedSpreads: async (): Promise<string[]> => {
+        const response = await api.get("/api/journal/spreads-used");
+        return response.data;
     },
 
     // Analytics

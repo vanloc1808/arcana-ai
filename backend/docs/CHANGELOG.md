@@ -15,6 +15,11 @@ Covers commits from 2026-05-19 through 2026-05-21 (ISO week 2026-W21).
 - Card of the Day sourced from the user's favorite deck and shared between the hero and sidebar
 - Reseed migration for databases stuck without the Thoth/Marseille decks, rerunning updates only for freshly-seeded decks
 - `AGENTS.md` with an instruction to keep the changelog in sync with user-facing changes
+- Daily activity streaks and achievements: per-user streak counter (flame badge in the navigation header) and unlockable achievements (first reading, first journal, streak milestones at 3/7/30/100 days, journal milestones, Major Arcana completion, card-of-the-day pulls). Streaks and earned achievements are backfilled from each user's existing journal entries, chat messages, turn-usage history, and card associations on first migration.
+- `GET /api/streaks/me` and `POST /api/streaks/recompute` endpoints for client display and manual rebuild from history
+- Journal advanced search: filter entries by card name, spread name, AND/OR tag-match mode in addition to the existing date, mood, notes, and favorites filters
+- Journal filter UI now shows the user's previously-used tags as clickable chips with usage counts, and the spread filter populates from spreads the user has actually used
+- `GET /api/journal/tags` and `GET /api/journal/spreads-used` endpoints powering the filter suggestions
 
 ### Changed
 - Tarot deck seeding migration made PostgreSQL-compatible and restricted to the two new decks

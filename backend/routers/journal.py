@@ -25,17 +25,15 @@ Version: 1.0.0
 import html
 import re
 from datetime import date, datetime, timedelta
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
-from sqlalchemy import asc, desc, func, or_
+from sqlalchemy import String, and_, asc, cast, desc, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from models import Card, ReadingReminder, User, UserCardMeaning, UserReadingJournal
+from models import Card, ReadingReminder, SharedReading, User, UserCardMeaning, UserReadingJournal
 from routers.auth import get_current_user
-from services.streak_service import record_activity as record_streak_activity
 from schemas import (
     JournalAnalytics,
     JournalEntryCreate,
@@ -47,6 +45,7 @@ from schemas import (
     ReminderCreate,
     ReminderResponse,
 )
+from services.streak_service import record_activity as record_streak_activity
 from utils.rate_limiter import limiter
 
 router = APIRouter(prefix="/api/journal", tags=["journal"])
@@ -145,15 +144,18 @@ async def get_journal_entries(
     request: Request,
     skip: int = Query(0, ge=0, description="Number of entries to skip"),
     limit: int = Query(20, le=100, description="Maximum number of entries to return"),
-    tags: Optional[str] = Query(None, description="Comma-separated tags to filter by"),
+    tags: str | None = Query(None, description="Comma-separated tags to filter by"),
     favorite_only: bool = Query(False, description="Show only favorite entries"),
-    start_date: Optional[date] = Query(None, description="Start date for filtering"),
-    end_date: Optional[date] = Query(None, description="End date for filtering"),
-    mood_min: Optional[int] = Query(None, ge=1, le=10, description="Minimum mood rating"),
-    mood_max: Optional[int] = Query(None, ge=1, le=10, description="Maximum mood rating"),
-    search_notes: Optional[str] = Query(None, description="Search in personal notes"),
-    sort_by: Optional[str] = Query("created_at", description="Sort field"),
-    sort_order: Optional[str] = Query("desc", description="Sort order (asc/desc)"),
+    start_date: date | None = Query(None, description="Start date for filtering"),
+    end_date: date | None = Query(None, description="End date for filtering"),
+    mood_min: int | None = Query(None, ge=1, le=10, description="Minimum mood rating"),
+    mood_max: int | None = Query(None, ge=1, le=10, description="Maximum mood rating"),
+    search_notes: str | None = Query(None, description="Search in personal notes"),
+    card_name: str | None = Query(None, description="Filter by card name appearing in the reading"),
+    spread_name: str | None = Query(None, description="Filter by spread name used in the reading"),
+    tags_match: str | None = Query("all", description="Tag match mode: 'all' (default) or 'any'"),
+    sort_by: str | None = Query("created_at", description="Sort field"),
+    sort_order: str | None = Query("desc", description="Sort order (asc/desc)"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -210,13 +212,43 @@ async def get_journal_entries(
             )
 
         if tags:
-            tag_list = [tag.strip() for tag in tags.split(",")]
-            for tag in tag_list:
-                # Use JSON search for SQLite compatibility
-                query = query.filter(func.json_extract(UserReadingJournal.tags, "$").like(f'%"{tag}"%'))
+            tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+            if tag_list:
+                tag_conditions = [
+                    func.json_extract(UserReadingJournal.tags, "$").like(f'%"{tag}"%') for tag in tag_list
+                ]
+                combiner = or_ if (tags_match or "all").lower() == "any" else and_
+                query = query.filter(combiner(*tag_conditions))
 
         if search_notes:
             query = query.filter(UserReadingJournal.personal_notes.ilike(f"%{search_notes}%"))
+
+        if card_name or spread_name:
+            query = query.outerjoin(SharedReading, UserReadingJournal.reading_id == SharedReading.id)
+            snapshot_text = cast(UserReadingJournal.reading_snapshot, String)
+
+            if card_name:
+                needle_spaced = f'%"name": "{card_name}"%'
+                needle_tight = f'%"name":"{card_name}"%'
+                query = query.filter(
+                    or_(
+                        snapshot_text.ilike(needle_spaced),
+                        snapshot_text.ilike(needle_tight),
+                        SharedReading.cards_data.ilike(needle_spaced),
+                        SharedReading.cards_data.ilike(needle_tight),
+                    )
+                )
+
+            if spread_name:
+                query = query.filter(
+                    or_(
+                        snapshot_text.ilike(f'%"spread": "{spread_name}"%'),
+                        snapshot_text.ilike(f'%"spread":"{spread_name}"%'),
+                        snapshot_text.ilike(f'%"spread_name": "{spread_name}"%'),
+                        snapshot_text.ilike(f'%"spread_name":"{spread_name}"%'),
+                        SharedReading.spread_name == spread_name,
+                    )
+                )
 
         # Apply sorting
         sort_field = getattr(UserReadingJournal, sort_by, UserReadingJournal.created_at)
@@ -231,6 +263,73 @@ async def get_journal_entries(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve journal entries: {str(e)}"
         )
+
+
+@router.get("/tags")
+@limiter.limit("60/minute")
+async def get_user_tags(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return distinct tags the user has used, with usage counts (desc)."""
+    rows = (
+        db.query(UserReadingJournal.tags)
+        .filter(UserReadingJournal.user_id == current_user.id, UserReadingJournal.tags.isnot(None))
+        .all()
+    )
+    counts: dict[str, int] = {}
+    for (tags_value,) in rows:
+        if not tags_value:
+            continue
+        if isinstance(tags_value, str):
+            try:
+                import json
+                tags_value = json.loads(tags_value)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        if not isinstance(tags_value, list):
+            continue
+        for tag in tags_value:
+            if isinstance(tag, str) and tag.strip():
+                counts[tag] = counts.get(tag, 0) + 1
+    return [
+        {"tag": tag, "count": count}
+        for tag, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+
+@router.get("/spreads-used")
+@limiter.limit("60/minute")
+async def get_spreads_used(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return distinct spread names that appear in the user's journal entries."""
+    entries = (
+        db.query(UserReadingJournal.reading_snapshot, SharedReading.spread_name)
+        .outerjoin(SharedReading, UserReadingJournal.reading_id == SharedReading.id)
+        .filter(UserReadingJournal.user_id == current_user.id)
+        .all()
+    )
+    spreads: set[str] = set()
+    for snapshot, shared_spread_name in entries:
+        if shared_spread_name:
+            spreads.add(shared_spread_name)
+        snapshot_dict = snapshot
+        if isinstance(snapshot_dict, str):
+            try:
+                import json
+                snapshot_dict = json.loads(snapshot_dict)
+            except (json.JSONDecodeError, TypeError):
+                snapshot_dict = None
+        if isinstance(snapshot_dict, dict):
+            for key in ("spread", "spread_name"):
+                value = snapshot_dict.get(key)
+                if isinstance(value, str) and value.strip():
+                    spreads.add(value)
+    return sorted(spreads)
 
 
 @router.get("/entries/{entry_id}", response_model=JournalEntryResponse)
