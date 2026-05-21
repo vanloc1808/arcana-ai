@@ -12,3 +12,7 @@ When making user-facing changes, update `backend/docs/CHANGELOG.md` as part of t
 ## Pull request hygiene
 
 When pushing a substantive change to an existing PR, update the PR title and description to reflect the new scope. Title should describe the dominant theme; description should list each feature/change shipped on the branch with a short summary. Stale titles like "feat: X" when the branch now ships X+Y+Z are confusing for reviewers.
+
+## Roadmap tracking
+
+When shipping a feature from `plans/feature-recommendations.md`, mark it as done in the same commit: flip the row's status in the priority matrix from `☐` to `✅` and append `✅ Shipped` to the feature's section heading. Keeps the doc honest about what's actually done.

@@ -16,27 +16,27 @@ The recommendations below extend that base.
 
 ## Priority matrix
 
-| #  | Feature                                  | Impact | Effort | Premium fit |
-|----|------------------------------------------|--------|--------|-------------|
-| 1  | Daily streaks & achievements             | High   | Medium | No          |
-| 2  | Reading tags + advanced journal search   | High   | Medium | Partial     |
-| 3  | Compatibility / relationship readings    | High   | Medium | Yes         |
-| 4  | PWA + push notifications                 | High   | Medium | No          |
-| 5  | Public reading feed / community gallery  | Medium | Medium | No          |
-| 6  | Referral program                         | Medium | Low    | No          |
-| 7  | Weekly email digest                      | Medium | Low    | No          |
-| 8  | Personalized reader personas             | High   | Low    | Yes         |
-| 9  | Voice readings (TTS)                     | High   | Low    | Yes         |
-| 10 | Semantic journal search (embeddings)     | Medium | Medium | Yes         |
-| 11 | PDF export of readings                   | Medium | Low    | Partial     |
-| 12 | i18n (Vietnamese first)                  | Medium | Medium | No          |
-| 13 | Accessibility pass                       | Medium | Medium | No          |
-| 14 | Gift subscriptions / gift turns          | Medium | Low    | Yes         |
-| 15 | Tier-based rate limits                   | Low    | Low    | Yes         |
+| Status | #  | Feature                                  | Impact | Effort | Premium fit |
+|--------|----|------------------------------------------|--------|--------|-------------|
+| ✅     | 1  | Daily streaks & achievements             | High   | Medium | No          |
+| ✅     | 2  | Reading tags + advanced journal search   | High   | Medium | Partial     |
+| ✅     | 3  | Compatibility / relationship readings    | High   | Medium | Yes         |
+| ☐      | 4  | PWA + push notifications                 | High   | Medium | No          |
+| ☐      | 5  | Public reading feed / community gallery  | Medium | Medium | No          |
+| ☐      | 6  | Referral program                         | Medium | Low    | No          |
+| ☐      | 7  | Weekly email digest                      | Medium | Low    | No          |
+| ☐      | 8  | Personalized reader personas             | High   | Low    | Yes         |
+| ☐      | 9  | Voice readings (TTS)                     | High   | Low    | Yes         |
+| ☐      | 10 | Semantic journal search (embeddings)     | Medium | Medium | Yes         |
+| ☐      | 11 | PDF export of readings                   | Medium | Low    | Partial     |
+| ☐      | 12 | i18n (Vietnamese first)                  | Medium | Medium | No          |
+| ☐      | 13 | Accessibility pass                       | Medium | Medium | No          |
+| ☐      | 14 | Gift subscriptions / gift turns          | Medium | Low    | Yes         |
+| ☐      | 15 | Tier-based rate limits                   | Low    | Low    | Yes         |
 
 ---
 
-## 1. Daily streaks & achievements
+## 1. Daily streaks & achievements ✅ Shipped
 
 **Why.** Drives retention via a daily habit loop. Pairs with the existing `ReadingReminder` model and journal.
 
@@ -62,7 +62,7 @@ The recommendations below extend that base.
 
 ---
 
-## 2. Reading tags + advanced journal search
+## 2. Reading tags + advanced journal search ✅ Shipped
 
 **Why.** Journal grows unbounded; without filtering it loses value.
 
@@ -80,7 +80,7 @@ The recommendations below extend that base.
 
 ---
 
-## 3. Compatibility / relationship readings
+## 3. Compatibility / relationship readings ✅ Shipped
 
 **Why.** Highest-converting tarot vertical. Premium gating natural.
 
