@@ -346,6 +346,15 @@ export const tarot = {
         const response = await api.get(`/tarot/card-of-the-day`);
         return response.data;
     },
+
+    getLibraryCards: async (suit?: string, search?: string) => {
+        const params = new URLSearchParams();
+        if (suit) params.set('suit', suit);
+        if (search) params.set('search', search);
+        const query = params.toString() ? `?${params.toString()}` : '';
+        const response = await api.get(`/tarot/library${query}`);
+        return response.data;
+    },
 };
 
 // Sharing endpoints

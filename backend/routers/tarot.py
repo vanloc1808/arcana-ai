@@ -2,7 +2,8 @@ import random
 import time
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -12,6 +13,7 @@ from schemas import (
     CardOfTheDayResponse,
     CardResponse,
     FeaturedCardResponse,
+    LibraryCardResponse,
     ReadingRequest,
     SpreadListResponse,
     SpreadResponse,
@@ -336,3 +338,38 @@ async def get_spread(spread_id: int, db: Session = Depends(get_db)):
         positions=spread.get_positions(),
         created_at=spread.created_at,
     )
+
+
+@router.get("/library", response_model=list[LibraryCardResponse])
+async def get_library_cards(
+    suit: str | None = Query(None, description="Filter by suit (e.g. 'Major Arcana', 'Cups')"),
+    search: str | None = Query(None, description="Search by card name or rank"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return all cards for the Arcana Library, optionally filtered by suit or search term."""
+    deck_id = current_user.favorite_deck_id or DEFAULT_DECK_ID
+
+    query = db.query(Card).filter(Card.deck_id == deck_id)
+
+    if suit:
+        query = query.filter(Card.suit.ilike(f"%{suit}%"))
+    if search:
+        query = query.filter(
+            or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%"))
+        )
+
+    cards = query.order_by(Card.suit, Card.numerology.asc().nullslast(), Card.id).all()
+
+    # Fallback: if favorite deck has no cards, use any deck
+    if not cards:
+        query = db.query(Card)
+        if suit:
+            query = query.filter(Card.suit.ilike(f"%{suit}%"))
+        if search:
+            query = query.filter(
+                or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%"))
+            )
+        cards = query.order_by(Card.suit, Card.numerology.asc().nullslast(), Card.id).all()
+
+    return cards

@@ -568,6 +568,25 @@ class CardOfTheDayResponse(BaseModel):
     deck_id: int | None = None
 
 
+class LibraryCardResponse(BaseModel):
+    """Response schema for a card in the Arcana Library."""
+
+    id: int
+    name: str
+    suit: str | None = None
+    rank: str | None = None
+    image_url: str | None = None
+    description_short: str | None = None
+    description_upright: str | None = None
+    description_reversed: str | None = None
+    element: str | None = None
+    astrology: str | None = None
+    numerology: int | None = None
+
+    class Config:
+        from_attributes = True
+
+
 # Spread Models
 class SpreadBase(BaseModel):
     """Base schema for a tarot spread.
