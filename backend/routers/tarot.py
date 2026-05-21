@@ -16,6 +16,8 @@ from schemas import (
     SpreadListResponse,
     SpreadResponse,
 )
+from models import DailyCardPull
+from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
 from utils.error_handlers import TarotAPIException, ValidationError, logger
@@ -97,6 +99,25 @@ async def get_card_of_the_day(
     today = date.today()
     day_of_year = today.timetuple().tm_yday
     card = major_arcana[day_of_year % len(major_arcana)]
+
+    if current_user is not None:
+        try:
+            existing = (
+                db.query(DailyCardPull)
+                .filter(DailyCardPull.user_id == current_user.id, DailyCardPull.pull_date == today)
+                .first()
+            )
+            if existing is None:
+                db.add(DailyCardPull(user_id=current_user.id, pull_date=today, card_id=card.id))
+                db.flush()
+                record_streak_activity(db, current_user.id)
+            db.commit()
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            logger.logger.warning(
+                "Failed to record daily card pull",
+                extra={"error": str(exc), "user_id": current_user.id},
+            )
 
     return CardOfTheDayResponse(
         name=card.name,
@@ -263,6 +284,16 @@ async def get_reading(
         # Track successful reading
         duration = time.time() - start_time
         track_tarot_reading(reading_type, duration, "success")
+
+        try:
+            record_streak_activity(db, current_user.id)
+            db.commit()
+        except Exception as streak_exc:  # noqa: BLE001
+            db.rollback()
+            logger.logger.warning(
+                "Failed to record streak activity for reading",
+                extra={"error": str(streak_exc), "user_id": current_user.id},
+            )
 
         logger.logger.info(
             "Reading generated successfully",

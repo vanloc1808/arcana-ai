@@ -18,6 +18,7 @@ from schemas import (
     MessageRequest,
     MessageResponse,
 )
+from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
 from utils.error_handlers import (
@@ -851,6 +852,16 @@ async def create_message(
                 "message_id": user_message.id,
             },
         )
+
+        try:
+            record_streak_activity(db, current_user.id)
+            db.commit()
+        except Exception as streak_exc:
+            db.rollback()
+            logger.logger.warning(
+                "Failed to record streak activity",
+                extra={"error": str(streak_exc), "user_id": current_user.id},
+            )
 
         user_message_response = MessageResponse.from_orm(user_message)
 

@@ -1747,3 +1747,28 @@ class SupportTicketResponse(BaseModel):
     message: str
     ticket_id: str
     slack_message_id: Optional[str] = None
+
+
+# --- Streaks & Achievements ---
+
+
+class StreakResponse(BaseModel):
+    current_streak: int
+    longest_streak: int
+    total_active_days: int
+    last_activity_date: Optional[date] = None
+    is_active_today: bool
+
+
+class AchievementResponse(BaseModel):
+    code: str
+    title: str
+    description: str
+    unlocked: bool
+    unlocked_at: Optional[datetime] = None
+
+
+class StreakProgressResponse(BaseModel):
+    streak: StreakResponse
+    achievements: list[AchievementResponse]
+

@@ -970,3 +970,69 @@ class ReadingReminder(Base):
     )
 
 
+class UserStreak(Base):
+    """Daily-activity streak state for a user.
+
+    A user has one row. `current_streak` counts consecutive UTC days of qualifying
+    activity ending at `last_activity_date`; it is considered active if
+    `last_activity_date` is today or yesterday (UTC). `longest_streak` is the
+    all-time maximum.
+    """
+
+    __tablename__ = "user_streaks"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    current_streak = Column(Integer, nullable=False, default=0)
+    longest_streak = Column(Integer, nullable=False, default=0)
+    last_activity_date = Column(Date, nullable=True, index=True)
+    total_active_days = Column(Integer, nullable=False, default=0)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User")
+
+
+class UserAchievement(Base):
+    """An achievement unlocked by a user.
+
+    `code` is one of the constants in services.achievements. Rows are inserted
+    on unlock; the absence of a row means the achievement is still locked.
+    """
+
+    __tablename__ = "user_achievements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    code = Column(String(64), nullable=False, index=True)
+    unlocked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    progress = Column(JSON, nullable=True)
+
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "code", name="uq_user_achievement_code"),
+    )
+
+
+class DailyCardPull(Base):
+    """Records that a user viewed/pulled the card-of-the-day on a given UTC date.
+
+    Stateless before this model existed; rows only exist going forward from the
+    feature launch. Unique per user per date.
+    """
+
+    __tablename__ = "daily_card_pulls"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    pull_date = Column(Date, nullable=False, index=True)
+    card_id = Column(Integer, ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+    card = relationship("Card")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "pull_date", name="uq_daily_card_pull_per_day"),
+    )
+
+

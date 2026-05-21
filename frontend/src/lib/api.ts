@@ -601,4 +601,37 @@ export const journal = {
     },
 };
 
+export interface StreakSummary {
+    current_streak: number;
+    longest_streak: number;
+    total_active_days: number;
+    last_activity_date: string | null;
+    is_active_today: boolean;
+}
+
+export interface AchievementSummary {
+    code: string;
+    title: string;
+    description: string;
+    unlocked: boolean;
+    unlocked_at: string | null;
+}
+
+export interface StreakProgress {
+    streak: StreakSummary;
+    achievements: AchievementSummary[];
+}
+
+export const streaks = {
+    getMyProgress: async (): Promise<StreakProgress> => {
+        const response = await api.get("/api/streaks/me");
+        return response.data;
+    },
+
+    recompute: async (): Promise<StreakProgress> => {
+        const response = await api.post("/api/streaks/recompute");
+        return response.data;
+    },
+};
+
 export default api;

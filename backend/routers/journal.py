@@ -35,6 +35,7 @@ from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models import Card, ReadingReminder, User, UserCardMeaning, UserReadingJournal
 from routers.auth import get_current_user
+from services.streak_service import record_activity as record_streak_activity
 from schemas import (
     JournalAnalytics,
     JournalEntryCreate,
@@ -113,6 +114,9 @@ async def create_journal_entry(
         db.add(db_entry)
         db.commit()
         db.refresh(db_entry)
+
+        record_streak_activity(db, current_user.id)
+        db.commit()
 
         # Create follow-up reminder if specified
         if entry.follow_up_date:
