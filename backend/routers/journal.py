@@ -28,7 +28,7 @@ from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
-from sqlalchemy import String, and_, asc, cast, desc, func, or_
+from sqlalchemy import String, and_, asc, cast, desc, or_
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
@@ -214,9 +214,11 @@ async def get_journal_entries(
         if tags:
             tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
             if tag_list:
-                tag_conditions = [
-                    func.json_extract(UserReadingJournal.tags, "$").like(f'%"{tag}"%') for tag in tag_list
-                ]
+                # Match against the JSON text representation so the same query
+                # works on SQLite (local) and PostgreSQL/Supabase (prod), where
+                # json_extract() is unavailable. tags is stored like ["a","b"].
+                tags_text = cast(UserReadingJournal.tags, String)
+                tag_conditions = [tags_text.like(f'%"{tag}"%') for tag in tag_list]
                 combiner = or_ if (tags_match or "all").lower() == "any" else and_
                 query = query.filter(combiner(*tag_conditions))
 

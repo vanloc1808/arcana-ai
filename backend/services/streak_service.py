@@ -36,36 +36,41 @@ def _today_utc() -> date:
 
 
 def _collect_active_dates(db: Session, user_id: int) -> set[date]:
-    """Union of all historical activity dates for a user."""
+    """Union of all historical activity dates for a user.
+
+    Raw timestamps are fetched and bucketed to UTC dates in Python rather than
+    via a SQL ``date()`` call, so the logic is identical on SQLite (local) and
+    PostgreSQL/Supabase (production) regardless of server version.
+    """
     active: set[date] = set()
 
-    journal_dates = (
-        db.query(func.date(UserReadingJournal.created_at))
+    journal_ts = (
+        db.query(UserReadingJournal.created_at)
         .filter(UserReadingJournal.user_id == user_id)
         .all()
     )
-    for (d,) in journal_dates:
-        if d:
-            active.add(_as_date(d))
+    for (ts,) in journal_ts:
+        if ts:
+            active.add(_as_date(ts))
 
-    message_dates = (
-        db.query(func.date(Message.created_at))
+    message_ts = (
+        db.query(Message.created_at)
         .join(ChatSession, Message.chat_session_id == ChatSession.id)
         .filter(ChatSession.user_id == user_id, Message.role == "user")
         .all()
     )
-    for (d,) in message_dates:
-        if d:
-            active.add(_as_date(d))
+    for (ts,) in message_ts:
+        if ts:
+            active.add(_as_date(ts))
 
-    turn_dates = (
-        db.query(func.date(TurnUsageHistory.consumed_at))
+    turn_ts = (
+        db.query(TurnUsageHistory.consumed_at)
         .filter(TurnUsageHistory.user_id == user_id)
         .all()
     )
-    for (d,) in turn_dates:
-        if d:
-            active.add(_as_date(d))
+    for (ts,) in turn_ts:
+        if ts:
+            active.add(_as_date(ts))
 
     pull_dates = (
         db.query(DailyCardPull.pull_date)
