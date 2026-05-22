@@ -707,9 +707,13 @@ function HomeContent() {
                         <MessageContent content={message.content} />
                         {message.role === 'assistant' && message.cards && message.cards.length > 0 && (
                           <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
-                            {message.cards.map((card: Card) => {
+                            {message.cards.map((card: Card, cardIndex: number) => {
                               return (
-                                <div key={card.id || card.name} className="card-display-item tarot-card card-mystical card-shine group">
+                                <div
+                                  key={card.id || card.name}
+                                  className="card-display-item tarot-card card-mystical card-shine group animate-card-draw"
+                                  style={{ animationDelay: `${cardIndex * 160}ms` }}
+                                >
                                   <TarotCard
                                     card={card}
                                     size="small"

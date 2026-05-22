@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 import { FiArrowLeft, FiHeart } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -238,7 +239,25 @@ export default function CompatibilityReadingPage() {
                                 </div>
                             )}
                             {!isInterpreting && interpretation && (
-                                <p className="text-gray-200 whitespace-pre-line leading-relaxed">{interpretation}</p>
+                                <div className="text-gray-200 leading-relaxed space-y-3">
+                                    <ReactMarkdown
+                                        components={{
+                                            p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                                            strong: ({ children }) => (
+                                                <strong className="font-semibold text-purple-300">{children}</strong>
+                                            ),
+                                            em: ({ children }) => <em className="italic text-purple-200">{children}</em>,
+                                            h1: ({ children }) => <h3 className="text-lg font-semibold text-purple-300 mt-4 mb-2">{children}</h3>,
+                                            h2: ({ children }) => <h3 className="text-base font-semibold text-purple-300 mt-4 mb-2">{children}</h3>,
+                                            h3: ({ children }) => <h4 className="text-base font-semibold text-purple-300 mt-3 mb-1">{children}</h4>,
+                                            ul: ({ children }) => <ul className="list-disc ml-5 mb-3 space-y-1">{children}</ul>,
+                                            ol: ({ children }) => <ol className="list-decimal ml-5 mb-3 space-y-1">{children}</ol>,
+                                            li: ({ children }) => <li>{children}</li>,
+                                        }}
+                                    >
+                                        {interpretation}
+                                    </ReactMarkdown>
+                                </div>
                             )}
                             {!isInterpreting && !interpretation && (
                                 <button
