@@ -183,6 +183,13 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
                   <FiEye className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   Explore Reading Styles
                 </button>
+                <button
+                  onClick={() => window.location.href = '/reading/compatibility'}
+                  className="w-full sm:w-auto px-6 py-4 md:px-8 md:py-4 text-base md:text-lg border-2 border-pink-500 text-pink-300 rounded-xl hover:bg-pink-500/10 transition-all duration-200 flex items-center justify-center gap-3 group min-h-[56px] touch-manipulation"
+                >
+                  <FiHeart className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  Compatibility Reading
+                </button>
               </div>
             </div>
 
