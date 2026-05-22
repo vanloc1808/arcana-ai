@@ -958,6 +958,8 @@ class ReadingReminder(Base):
     message = Column(Text, nullable=True)
     is_sent = Column(Boolean, default=False, index=True)
     is_completed = Column(Boolean, default=False)
+    delivery_attempts = Column(Integer, nullable=False, default=0)
+    last_attempt_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

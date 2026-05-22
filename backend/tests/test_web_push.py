@@ -156,6 +156,88 @@ class TestProcessDueRemindersTask:
         assert overdue_row.is_sent is True
         assert not_yet_row.is_sent is False
 
+    def _run_task_with_result(self, db_session, sent, failed, pruned):
+        """Run the reminder task against the test DB with a stubbed delivery result."""
+        from sqlalchemy.orm import scoped_session, sessionmaker
+
+        from tasks import web_push_tasks
+
+        bind = db_session.get_bind()
+        TestSession = scoped_session(sessionmaker(bind=bind, expire_on_commit=False))
+        result_obj = type("R", (), {"sent": sent, "failed": failed, "pruned": pruned})()
+
+        with _enable_vapid(), patch.object(web_push_tasks, "SessionLocal", TestSession), \
+                patch.object(web_push_tasks, "send_push_to_user") as mock_send:
+            mock_send.return_value = result_obj
+            result = web_push_tasks.process_due_reading_reminders_task.run()
+        return result, mock_send
+
+    def _overdue_reminder(self, db_session, user_id, message="Reminder"):
+        entry = UserReadingJournal(user_id=user_id, reading_snapshot={"cards": []})
+        db_session.add(entry)
+        db_session.flush()
+        reminder = ReadingReminder(
+            user_id=user_id,
+            journal_entry_id=entry.id,
+            reminder_type="follow_up",
+            reminder_date=datetime.now(UTC) - timedelta(hours=2),
+            message=message,
+        )
+        db_session.add(reminder)
+        db_session.commit()
+        return reminder
+
+    def test_no_subscriptions_marks_sent_terminally(self, db_session, test_user):
+        """A user with no push subscriptions (0/0/0) should not be retried forever."""
+        reminder = self._overdue_reminder(db_session, test_user.id)
+        result, _ = self._run_task_with_result(db_session, sent=0, failed=0, pruned=0)
+
+        assert result["outcomes"].get("no_subscriptions") == 1
+        db_session.expire_all()
+        row = db_session.query(ReadingReminder).filter_by(id=reminder.id).one()
+        assert row.is_sent is True
+        assert row.delivery_attempts == 1
+
+    def test_transient_failure_is_retried_not_marked_sent(self, db_session, test_user):
+        """Subscriptions exist but delivery failed — leave for the next run."""
+        reminder = self._overdue_reminder(db_session, test_user.id)
+        result, _ = self._run_task_with_result(db_session, sent=0, failed=1, pruned=0)
+
+        assert result["outcomes"].get("retry") == 1
+        db_session.expire_all()
+        row = db_session.query(ReadingReminder).filter_by(id=reminder.id).one()
+        assert row.is_sent is False
+        assert row.delivery_attempts == 1
+        assert row.last_attempt_at is not None
+
+    def test_gives_up_after_max_attempts(self, db_session, test_user):
+        """After MAX_DELIVERY_ATTEMPTS soft failures the row is finalized."""
+        from tasks import web_push_tasks
+
+        reminder = self._overdue_reminder(db_session, test_user.id)
+        reminder.delivery_attempts = web_push_tasks.MAX_DELIVERY_ATTEMPTS - 1
+        db_session.commit()
+
+        result, _ = self._run_task_with_result(db_session, sent=0, failed=1, pruned=0)
+        assert result["outcomes"].get("gave_up") == 1
+        db_session.expire_all()
+        row = db_session.query(ReadingReminder).filter_by(id=reminder.id).one()
+        assert row.is_sent is True
+
+    def test_coalesces_multiple_reminders_per_user(self, db_session, test_user):
+        """Several due reminders for one user → a single push, all marked sent."""
+        r1 = self._overdue_reminder(db_session, test_user.id, message="One")
+        r2 = self._overdue_reminder(db_session, test_user.id, message="Two")
+
+        result, mock_send = self._run_task_with_result(db_session, sent=1, failed=0, pruned=0)
+
+        assert result["due_count"] == 2
+        assert mock_send.call_count == 1  # coalesced into one notification
+        assert result["users_notified"] == 1
+        db_session.expire_all()
+        for rid in (r1.id, r2.id):
+            assert db_session.query(ReadingReminder).filter_by(id=rid).one().is_sent is True
+
     def test_skips_when_not_configured(self, db_session, test_user):
         from tasks import web_push_tasks
 

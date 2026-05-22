@@ -43,6 +43,7 @@ Covers commits from 2026-05-19 through 2026-05-21 (ISO week 2026-W21).
 - Native date pickers (e.g. compatibility birthdates, journal filters) had an invisible calendar icon on the dark theme; they now use a dark color-scheme with a legible icon
 - Compatibility reading interpretation is now rendered as formatted Markdown instead of raw text
 - Card-draw reveal animation now also plays for cards in the chat reading (previously only the spread and compatibility pages), and degrades to a gentle fade under reduced-motion instead of being disabled
+- Reading reminder push delivery no longer marks a reminder as sent when nothing was actually delivered: a reminder is finalized only when delivered, when the user has no push subscriptions, or after a bounded number of attempts; transient failures are retried on the next run. Reminders for the same user in one run are coalesced into a single notification
 
 ### Security
 - Final pass on npm and Python dependency vulnerability remediation
