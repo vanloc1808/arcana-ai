@@ -22,6 +22,8 @@ Covers commits from 2026-05-19 through 2026-05-21 (ISO week 2026-W21).
 - `GET /api/journal/tags` and `GET /api/journal/spreads-used` endpoints powering the filter suggestions
 - Compatibility (relationship) readings: new five-card Relationship Cross spread (You / Them / Connection / Challenge / Outcome) and a dedicated `/reading/compatibility` page that takes two names and optional birthdates plus an optional focus question, reachable from a homepage hero button and the readings page header
 - `POST /tarot/compatibility` endpoint that draws the Relationship Cross spread with position labels personalized to the two people's names
+- AI-written interpretation for compatibility readings via `POST /tarot/compatibility/interpret`, shown beneath the drawn cards (does not consume an extra turn)
+- Animated card-draw reveal (staggered flip-in) when cards are dealt, on both the standard reading and compatibility pages, with a reduced-motion fallback
 - Progressive Web App support: expanded web manifest with PWA shortcuts, a service worker, theme color, and Apple web-app metadata so ArcanaAI installs to home screens on supported browsers
 - Web Push notifications: VAPID-based delivery infrastructure with `GET /api/web-push/vapid-public-key`, `POST /api/web-push/subscribe`, `POST /api/web-push/unsubscribe`, and `POST /api/web-push/test`; a new "Notifications" tab in the profile page lets the user enable/disable push and send a test notification to verify
 - Celery Beat job `process_due_reading_reminders` runs hourly to deliver pushes for overdue `ReadingReminder` rows and prune dead subscriptions

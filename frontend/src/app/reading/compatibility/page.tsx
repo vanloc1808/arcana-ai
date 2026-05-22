@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiHeart } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { tarot, CompatibilityReadingResponse } from '@/lib/api';
@@ -23,6 +23,8 @@ export default function CompatibilityReadingPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
     const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+    const [interpretation, setInterpretation] = useState<string | null>(null);
+    const [isInterpreting, setIsInterpreting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,20 +42,19 @@ export default function CompatibilityReadingPage() {
         }
 
         setIsLoading(true);
+        setInterpretation(null);
+        const payloadPeople = {
+            person_a: { name: personAName.trim(), birth_date: personADob || undefined },
+            person_b: { name: personBName.trim(), birth_date: personBDob || undefined },
+            focus: focus.trim() || undefined,
+        };
         try {
-            const data = await tarot.getCompatibilityReading({
-                person_a: {
-                    name: personAName.trim(),
-                    birth_date: personADob || undefined,
-                },
-                person_b: {
-                    name: personBName.trim(),
-                    birth_date: personBDob || undefined,
-                },
-                focus: focus.trim() || undefined,
-            });
+            const data = await tarot.getCompatibilityReading(payloadPeople);
             setResult(data);
             refreshData();
+            // Cards are shown immediately (with the draw animation); fetch the
+            // AI interpretation separately so the reveal isn't blocked on the LLM.
+            void fetchInterpretation(data);
         } catch (err: unknown) {
             const status = (err as { response?: { status?: number } })?.response?.status;
             if (status === 402) {
@@ -64,6 +65,29 @@ export default function CompatibilityReadingPage() {
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchInterpretation = async (data: CompatibilityReadingResponse) => {
+        setIsInterpreting(true);
+        try {
+            const res = await tarot.interpretCompatibilityReading({
+                person_a: data.person_a,
+                person_b: data.person_b,
+                focus: data.focus || undefined,
+                cards: data.cards.map((c) => ({
+                    name: c.name,
+                    orientation: c.orientation,
+                    position: c.position,
+                    meaning: c.meaning,
+                })),
+            });
+            setInterpretation(res.interpretation);
+        } catch (err: unknown) {
+            logError('Compatibility interpretation failed', err);
+            toast.error('Could not generate the reading interpretation.');
+        } finally {
+            setIsInterpreting(false);
         }
     };
 
@@ -174,7 +198,8 @@ export default function CompatibilityReadingPage() {
                             {result.cards.map((card, idx) => (
                                 <article
                                     key={`${card.name}-${idx}`}
-                                    className="bg-gray-800/60 border border-gray-700 rounded-xl p-4"
+                                    className="bg-gray-800/60 border border-gray-700 rounded-xl p-4 animate-card-draw"
+                                    style={{ animationDelay: `${idx * 160}ms` }}
                                 >
                                     <div className="text-xs uppercase tracking-wide text-purple-300 mb-2">
                                         {card.position}
@@ -198,6 +223,32 @@ export default function CompatibilityReadingPage() {
                                     <p className="text-sm text-gray-300">{card.meaning}</p>
                                 </article>
                             ))}
+                        </div>
+
+                        {/* AI interpretation */}
+                        <div className="mt-8 bg-gray-800/60 border border-purple-700/40 rounded-xl p-5">
+                            <div className="flex items-center gap-2 mb-3">
+                                <FiHeart className="w-5 h-5 text-pink-400" />
+                                <h3 className="text-lg font-serif">The Reader&apos;s Interpretation</h3>
+                            </div>
+                            {isInterpreting && (
+                                <div className="flex items-center gap-3 text-gray-300">
+                                    <span className="inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                                    Reading the cards for {result.person_a.name} &amp; {result.person_b.name}…
+                                </div>
+                            )}
+                            {!isInterpreting && interpretation && (
+                                <p className="text-gray-200 whitespace-pre-line leading-relaxed">{interpretation}</p>
+                            )}
+                            {!isInterpreting && !interpretation && (
+                                <button
+                                    type="button"
+                                    onClick={() => fetchInterpretation(result)}
+                                    className="text-sm text-purple-300 underline hover:text-purple-200"
+                                >
+                                    Retry interpretation
+                                </button>
+                            )}
                         </div>
                     </section>
                 )}

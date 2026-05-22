@@ -352,6 +352,13 @@ export const tarot = {
         const response = await api.post("/tarot/compatibility", payload);
         return response.data;
     },
+
+    interpretCompatibilityReading: async (
+        payload: CompatibilityInterpretRequest,
+    ): Promise<CompatibilityInterpretResponse> => {
+        const response = await api.post("/tarot/compatibility/interpret", payload);
+        return response.data;
+    },
 };
 
 export interface CompatibilityPerson {
@@ -383,6 +390,22 @@ export interface CompatibilityReadingResponse {
     remaining_free_turns: number;
     remaining_paid_turns: number;
     total_remaining_turns: number;
+}
+
+export interface CompatibilityInterpretRequest {
+    person_a: CompatibilityPerson;
+    person_b: CompatibilityPerson;
+    focus?: string;
+    cards: {
+        name: string;
+        orientation: string;
+        position?: string | null;
+        meaning?: string | null;
+    }[];
+}
+
+export interface CompatibilityInterpretResponse {
+    interpretation: string;
 }
 
 // Sharing endpoints

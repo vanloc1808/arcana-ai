@@ -6,11 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Card, Spread, User
+from models import Card, DailyCardPull, Spread, User
 from routers.auth import get_current_user, get_optional_current_user
 from schemas import (
     CardOfTheDayResponse,
     CardResponse,
+    CompatibilityInterpretRequest,
+    CompatibilityInterpretResponse,
     CompatibilityReadingRequest,
     CompatibilityReadingResponse,
     FeaturedCardResponse,
@@ -18,7 +20,6 @@ from schemas import (
     SpreadListResponse,
     SpreadResponse,
 )
-from models import DailyCardPull
 from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
@@ -455,6 +456,43 @@ async def get_compatibility_reading(
         )
     finally:
         active_users.dec()
+
+
+@router.post("/compatibility/interpret", response_model=CompatibilityInterpretResponse)
+@limiter.limit(RATE_LIMITS["tarot"])
+async def interpret_compatibility_reading(
+    request: Request,
+    request_data: CompatibilityInterpretRequest,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate the AI interpretation for an already-drawn compatibility reading.
+
+    Split from the draw endpoint so the client can render the cards (and the
+    draw animation) immediately, then stream/show the interpretation once it's
+    ready. Does not consume a turn — the turn was spent on the draw.
+    """
+    if not request_data.cards:
+        raise ValidationError(message="No cards provided for interpretation", details={})
+
+    try:
+        reader = TarotReader(db=db, deck_id=current_user.favorite_deck_id)
+        interpretation = await reader.create_compatibility_reading(
+            person_a=request_data.person_a.name,
+            person_b=request_data.person_b.name,
+            cards=[card.model_dump() for card in request_data.cards],
+            focus=request_data.focus,
+        )
+        return CompatibilityInterpretResponse(interpretation=interpretation)
+    except Exception as e:  # noqa: BLE001
+        logger.logger.error(
+            "Error interpreting compatibility reading",
+            extra={"user_id": current_user.id, "error": str(e)},
+        )
+        raise TarotAPIException(
+            message="Error interpreting compatibility reading", details={"error": str(e)}
+        )
 
 
 @router.get("/spreads", response_model=list[SpreadListResponse])

@@ -556,6 +556,34 @@ class CompatibilityReadingResponse(BaseModel):
     total_remaining_turns: int
 
 
+class CompatibilityInterpretCard(BaseModel):
+    """A single drawn card sent back for AI interpretation."""
+
+    name: str
+    orientation: str
+    position: str | None = None
+    meaning: str | None = None
+
+
+class CompatibilityInterpretRequest(BaseModel):
+    """Request to generate the AI interpretation of an already-drawn reading."""
+
+    person_a: RelationshipPerson
+    person_b: RelationshipPerson
+    focus: str | None = None
+    cards: list[CompatibilityInterpretCard]
+
+    @field_validator("focus")
+    def validate_focus(cls, v):
+        if v is None:
+            return v
+        return _sanitize_string(v, "Focus", min_length=1, max_length=500, allow_empty=True)
+
+
+class CompatibilityInterpretResponse(BaseModel):
+    interpretation: str
+
+
 class CardResponse(BaseModel):
     """Response schema for a card in a tarot reading.
 

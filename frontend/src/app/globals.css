@@ -1355,6 +1355,36 @@ html {
   }
 }
 
+/* Tarot card draw/flip reveal — a card lands and turns face-up */
+@keyframes cardDrawReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) rotateY(90deg) scale(0.92);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateY(0) rotateY(-8deg) scale(1.02);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotateY(0deg) scale(1);
+  }
+}
+
+.animate-card-draw {
+  animation: cardDrawReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  transform-origin: center center;
+  perspective: 800px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-card-draw {
+    animation: none;
+  }
+}
+
 /* Mobile-safe viewport units */
 .mobile-full-height {
   height: 100vh;

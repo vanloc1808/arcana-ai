@@ -120,3 +120,49 @@ class TestCompatibilityReading:
             headers=auth_headers,
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class TestCompatibilityInterpretation:
+    def _cards(self):
+        return [
+            {"name": "Four of Wands", "orientation": "upright", "position": "You — A", "meaning": "Harmony"},
+            {"name": "Queen of Cups", "orientation": "reversed", "position": "Them — B", "meaning": "Insecurity"},
+            {"name": "Four of Pentacles", "orientation": "upright", "position": "The Connection", "meaning": "Security"},
+            {"name": "Eight of Swords", "orientation": "upright", "position": "The Challenge", "meaning": "Restriction"},
+            {"name": "Eight of Pentacles", "orientation": "reversed", "position": "The Outcome", "meaning": "Perfectionism"},
+        ]
+
+    def test_interpret_returns_text(self, client, auth_headers, test_cards):
+        from unittest.mock import AsyncMock, patch
+
+        with patch("routers.tarot.TarotReader") as mock_reader_cls:
+            mock_reader_cls.return_value.create_compatibility_reading = AsyncMock(
+                return_value="A and B share a grounded, committed bond."
+            )
+            response = client.post(
+                "/tarot/compatibility/interpret",
+                json={
+                    "person_a": {"name": "A"},
+                    "person_b": {"name": "B"},
+                    "focus": "Are we ready to commit?",
+                    "cards": self._cards(),
+                },
+                headers=auth_headers,
+            )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["interpretation"].startswith("A and B")
+
+    def test_interpret_requires_cards(self, client, auth_headers, test_cards):
+        response = client.post(
+            "/tarot/compatibility/interpret",
+            json={"person_a": {"name": "A"}, "person_b": {"name": "B"}, "cards": []},
+            headers=auth_headers,
+        )
+        assert response.status_code >= 400
+
+    def test_interpret_requires_auth(self, client):
+        response = client.post(
+            "/tarot/compatibility/interpret",
+            json={"person_a": {"name": "A"}, "person_b": {"name": "B"}, "cards": self._cards()},
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
