@@ -5,19 +5,17 @@ This module contains unit tests for the journal background tasks,
 covering reminder processing, analytics generation, and cleanup operations.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
+from unittest.mock import Mock, patch
 
+from models import ReadingReminder, UserReadingAnalytics, UserReadingJournal
 from tasks.journal_tasks import (
-    send_reminder_email,
-    process_reading_reminders,
-    generate_monthly_analytics,
     cleanup_old_analytics,
+    generate_monthly_analytics,
+    process_reading_reminders,
+    send_reminder_email,
 )
-from models import ReadingReminder, User, UserReadingAnalytics, UserReadingJournal
-from tests.factories import UserFactory, JournalEntryFactory, ReminderFactory
+from tests.factories import JournalEntryFactory, ReminderFactory, UserFactory
 
 
 class TestSendReminderEmail:
@@ -229,38 +227,30 @@ class TestProcessReadingReminders:
             assert result == 0
             mock_session_local.assert_called_once()
 
-    @pytest.mark.skip(reason="Skip due to unstable behavior")
     def test_process_reading_reminders_database_error(self, db_session):
-        """Test processing reminders when database error occurs."""
-        # Create reminder in the past
+        """When commit fails, the function rolls back and returns 0 — but the
+        reminder email was still attempted before the commit failed."""
         past_time = datetime.utcnow() - timedelta(hours=1)
 
         user = UserFactory.create(db=db_session)
         journal_entry = JournalEntryFactory.create(db=db_session, user_id=user.id)
-
-        user = UserFactory.create(db=db_session)
-        journal_entry = JournalEntryFactory.create(db=db_session, user_id=user.id)
-
         reminder = ReminderFactory.create(
             db=db_session,
             user_id=user.id,
             journal_entry_id=journal_entry.id,
             reminder_date=past_time,
-            is_sent=False
+            is_sent=False,
         )
 
-        # Mock database commit to fail
         with patch.object(db_session, 'commit', side_effect=Exception("DB error")), \
              patch('tasks.journal_tasks.send_reminder_email') as mock_send_email:
-
             mock_send_email.return_value = True
-
-            # Should handle the error gracefully
             result = process_reading_reminders(db_session)
 
-            # Should still process the reminder
-            assert result == 1
-            mock_send_email.assert_called_once_with(reminder)
+        # Commit failed, so the function returns 0 (its error path).
+        assert result == 0
+        # But the email side-effect was already triggered before the commit attempt.
+        mock_send_email.assert_called_once_with(reminder)
 
 
 class TestGenerateMonthlyAnalytics:
