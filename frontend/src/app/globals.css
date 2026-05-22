@@ -1355,28 +1355,29 @@ html {
   }
 }
 
-/* Tarot card draw/flip reveal — a card lands and turns face-up */
+/* Tarot card draw/flip reveal — a card lands and turns face-up.
+   perspective() is part of the transform so the rotateY reads as a real
+   3D flip (the standalone `perspective` property only affects children). */
 @keyframes cardDrawReveal {
   0% {
     opacity: 0;
-    transform: translateY(28px) rotateY(90deg) scale(0.92);
+    transform: perspective(900px) translateY(28px) rotateY(85deg) scale(0.92);
   }
 
   60% {
     opacity: 1;
-    transform: translateY(0) rotateY(-8deg) scale(1.02);
+    transform: perspective(900px) translateY(0) rotateY(-8deg) scale(1.02);
   }
 
   100% {
     opacity: 1;
-    transform: translateY(0) rotateY(0deg) scale(1);
+    transform: perspective(900px) translateY(0) rotateY(0deg) scale(1);
   }
 }
 
 .animate-card-draw {
   animation: cardDrawReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
   transform-origin: center center;
-  perspective: 800px;
 }
 
 @keyframes cardFadeIn {
@@ -1396,7 +1397,9 @@ html {
   }
 }
 
-/* Make native date pickers legible on the dark UI (calendar icon + popup) */
+/* Make native date pickers legible on the dark UI (calendar icon + popup).
+   color-scheme: dark alone makes the browser render the picker indicator
+   light; do NOT also invert it or it goes dark again. */
 input[type="date"],
 input[type="datetime-local"],
 input[type="time"] {
@@ -1406,8 +1409,6 @@ input[type="time"] {
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.85);
-  opacity: 0.9;
   cursor: pointer;
 }
 
