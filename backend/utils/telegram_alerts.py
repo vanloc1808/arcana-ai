@@ -145,6 +145,71 @@ def send_500_error_alert(
     return send_telegram_alert(message, telegram_bot_token, chat_id)
 
 
+def send_user_error_alert(
+    username: str,
+    status_code: int,
+    request_method: str,
+    request_url: str,
+    error: Exception,
+    telegram_bot_token: str,
+    chat_id: str,
+    client_host: str | None = None,
+    request_payload: dict[str, Any] | None = None,
+) -> bool:
+    """
+    Send a Telegram alert for a VIP user that encountered a 4xx or 5xx error.
+
+    Args:
+        username: The username of the VIP user.
+        status_code: HTTP status code of the error response.
+        request_method: HTTP method of the request.
+        request_url: URL of the request.
+        error: The exception or error that occurred.
+        telegram_bot_token: Telegram bot token.
+        chat_id: Telegram chat ID.
+        client_host: Client IP address (optional).
+        request_payload: Request body/payload for debugging (optional).
+
+    Returns:
+        bool: True if alert was sent successfully, False otherwise.
+    """
+    if not telegram_bot_token or not chat_id:
+        return False
+
+    status_emoji = "🚨" if status_code >= 500 else "⚠️"
+    client_info = f"\n👤 **Client IP:** `{client_host}`" if client_host else ""
+
+    payload_info = ""
+    if request_payload:
+        try:
+            payload_str = json.dumps(request_payload, indent=2, default=str)
+            if len(payload_str) > 500:
+                payload_str = payload_str[:500] + "\n...(truncated)"
+            payload_info = f"\n📦 **Payload:**\n```json\n{payload_str}\n```"
+        except Exception:
+            payload_info = f"\n📦 **Payload:** `{str(request_payload)[:200]}...`"
+
+    traceback_info = ""
+    if status_code >= 500:
+        tb = traceback.format_exc()
+        if tb and tb.strip() not in ("NoneType: None", "None"):
+            if len(tb) > 1500:
+                tb = tb[:1500] + "\n...(truncated)"
+            traceback_info = f"\n📋 **Traceback:**\n```\n{tb}\n```"
+
+    message = (
+        f"🌟 **VIP User Error — @{username}**\n"
+        f"{get_context_header()}\n"
+        f"{status_emoji} **HTTP {status_code}**\n"
+        f"🔗 **Request:** `{request_method} {request_url}`{client_info}\n"
+        f"❌ **Error:** `{str(error)}`"
+        f"{payload_info}"
+        f"{traceback_info}"
+    )
+
+    return send_telegram_alert(message, telegram_bot_token, chat_id)
+
+
 def update_last_error_time(path: str):
     """Update the last error timestamp file"""
     try:

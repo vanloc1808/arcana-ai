@@ -6,10 +6,11 @@ from typing import Any
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from jose import JWTError, jwt
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from config import settings
-from utils.telegram_alerts import is_telegram_configured, send_500_error_alert
+from utils.telegram_alerts import is_telegram_configured, send_500_error_alert, send_user_error_alert
 
 
 # Configure structured logging
@@ -68,6 +69,64 @@ class StructuredLogger:
 
 # Initialize logger
 logger = StructuredLogger()
+
+# Username of the VIP user who receives alerts for all 4xx/5xx errors
+VIP_USERNAME = "msc.mon"
+
+
+def get_username_from_request(request: Request) -> str | None:
+    """Extract username from the JWT Bearer token in the Authorization header."""
+    try:
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return None
+        token = auth_header[7:]
+        # Decode without expiry verification so we can still identify the user
+        # even when the token has expired.
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            options={"verify_exp": False},
+        )
+        return payload.get("sub")
+    except Exception:
+        return None
+
+
+async def maybe_send_vip_error_alert(request: Request, status_code: int, error: Exception) -> None:
+    """Log the request payload and send a Telegram alert when the VIP user hits any error."""
+    if not is_telegram_configured(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID):
+        return
+    username = get_username_from_request(request)
+    if username != VIP_USERNAME:
+        return
+
+    request_payload = await extract_request_payload(request)
+
+    logger.logger.warning(
+        "VIP user error",
+        extra={
+            "username": username,
+            "status_code": status_code,
+            "method": request.method,
+            "url": str(request.url),
+            "payload": request_payload,
+            "error": str(error),
+        },
+    )
+
+    send_user_error_alert(
+        username=username,
+        status_code=status_code,
+        request_method=request.method,
+        request_url=str(request.url),
+        error=error,
+        telegram_bot_token=settings.TELEGRAM_BOT_TOKEN,
+        chat_id=settings.TELEGRAM_CHAT_ID,
+        client_host=request.client.host if request.client else None,
+        request_payload=request_payload,
+    )
 
 
 # Custom exceptions
@@ -271,6 +330,8 @@ async def tarot_exception_handler(request: Request, exc: TarotAPIException):
             request_headers=request_headers,
         )
 
+    await maybe_send_vip_error_alert(request, exc.status_code, exc)
+
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": exc.message, "details": exc.details},
@@ -279,6 +340,7 @@ async def tarot_exception_handler(request: Request, exc: TarotAPIException):
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     logger.log_request(request, error=exc)
+    await maybe_send_vip_error_alert(request, status.HTTP_422_UNPROCESSABLE_ENTITY, exc)
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
@@ -307,6 +369,8 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
             request_headers=request_headers,
         )
 
+    await maybe_send_vip_error_alert(request, status.HTTP_500_INTERNAL_SERVER_ERROR, exc)
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"error": "Database error", "details": str(exc)},
@@ -332,6 +396,8 @@ async def general_exception_handler(request: Request, exc: Exception):
             request_headers=request_headers,
         )
 
+    await maybe_send_vip_error_alert(request, status.HTTP_500_INTERNAL_SERVER_ERROR, exc)
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"error": "Internal server error", "details": str(exc)},
@@ -341,6 +407,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 # Additional exception handlers
 async def integrity_error_handler(request: Request, exc: IntegrityError):
     logger.log_request(request, error=exc)
+    await maybe_send_vip_error_alert(request, status.HTTP_409_CONFLICT, exc)
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"error": "Database integrity error", "details": str(exc)},
@@ -349,6 +416,7 @@ async def integrity_error_handler(request: Request, exc: IntegrityError):
 
 async def operational_error_handler(request: Request, exc: OperationalError):
     logger.log_request(request, error=exc)
+    await maybe_send_vip_error_alert(request, status.HTTP_503_SERVICE_UNAVAILABLE, exc)
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         content={"error": "Database operational error", "details": str(exc)},
