@@ -46,6 +46,7 @@ def build_admin_user_response(user: User, base_url: str = "") -> AdminUserRespon
         is_active=user.is_active,
         is_admin=user.is_admin or False,
         is_specialized_premium=user.is_specialized_premium or False,
+        is_vip=user.is_vip or False,
         favorite_deck_id=user.favorite_deck_id,
         # Subscription and turn fields (read-only)
         subscription_status=user.subscription_status or "none",
