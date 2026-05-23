@@ -70,9 +70,6 @@ class StructuredLogger:
 # Initialize logger
 logger = StructuredLogger()
 
-# Username of the VIP user who receives alerts for all 4xx/5xx errors
-VIP_USERNAME = "msc.mon"
-
 
 def get_username_from_request(request: Request) -> str | None:
     """Extract username from the JWT Bearer token in the Authorization header."""
@@ -94,12 +91,33 @@ def get_username_from_request(request: Request) -> str | None:
         return None
 
 
+def _should_receive_error_alerts(username: str) -> bool:
+    """Return True if the user has receive_error_alerts set in the database.
+
+    Runs inside the error-handling path (including database error handlers), so any
+    failure here is swallowed to avoid masking the original error being reported.
+    """
+    # Lazy imports avoid a circular dependency: database.py imports logger from this module.
+    from database import SessionLocal
+    from models import User
+
+    try:
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.username == username).first()
+            return bool(user and user.receive_error_alerts)
+        finally:
+            db.close()
+    except Exception:
+        return False
+
+
 async def maybe_send_vip_error_alert(request: Request, status_code: int, error: Exception) -> None:
-    """Log the request payload and send a Telegram alert when the VIP user hits any error."""
+    """Log the request payload and send a Telegram alert when the user hits any error."""
     if not is_telegram_configured(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID):
         return
     username = get_username_from_request(request)
-    if username != VIP_USERNAME:
+    if not username or not _should_receive_error_alerts(username):
         return
 
     request_payload = await extract_request_payload(request)
