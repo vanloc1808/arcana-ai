@@ -359,6 +359,52 @@ export const tarot = {
         const response = await api.post("/tarot/compatibility/interpret", payload);
         return response.data;
     },
+
+    streamCompatibilityInterpretation: async (
+        payload: CompatibilityInterpretRequest,
+        onChunk: (chunk: string) => void,
+        onDone: () => void,
+        onError: (error: string) => void,
+    ): Promise<void> => {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/tarot/compatibility/interpret/stream`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok || !response.body) {
+            onError(`HTTP error: ${response.status}`);
+            return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let idx: number;
+            while ((idx = buffer.indexOf('\n\n')) !== -1) {
+                const raw = buffer.slice(0, idx);
+                buffer = buffer.slice(idx + 2);
+                if (!raw.startsWith('data: ')) continue;
+                try {
+                    const data = JSON.parse(raw.slice(6));
+                    if (data.type === 'content_chunk') onChunk(data.content);
+                    else if (data.type === 'done') onDone();
+                    else if (data.type === 'error') onError(data.error);
+                } catch { /* ignore parse errors on partial frames */ }
+            }
+        }
+        onDone();
+    },
 };
 
 export interface CompatibilityPerson {

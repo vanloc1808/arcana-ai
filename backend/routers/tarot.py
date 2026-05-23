@@ -1,8 +1,10 @@
+import json
 import random
 import time
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -493,6 +495,48 @@ async def interpret_compatibility_reading(
         raise TarotAPIException(
             message="Error interpreting compatibility reading", details={"error": str(e)}
         )
+
+
+@router.post("/compatibility/interpret/stream")
+@limiter.limit(RATE_LIMITS["tarot"])
+async def stream_compatibility_interpretation(
+    request: Request,
+    request_data: CompatibilityInterpretRequest,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Stream the AI interpretation for an already-drawn compatibility reading via SSE."""
+    if not request_data.cards:
+        raise ValidationError(message="No cards provided for interpretation", details={})
+
+    async def generate():
+        try:
+            reader = TarotReader(db=db, deck_id=current_user.favorite_deck_id)
+            async for chunk in reader.stream_compatibility_reading(
+                person_a=request_data.person_a.name,
+                person_b=request_data.person_b.name,
+                cards=[card.model_dump() for card in request_data.cards],
+                focus=request_data.focus,
+            ):
+                yield f"data: {json.dumps({'type': 'content_chunk', 'content': chunk})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        except Exception as e:
+            logger.logger.error(
+                "Error streaming compatibility interpretation",
+                extra={"user_id": current_user.id, "error": str(e)},
+            )
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
 
 
 @router.get("/spreads", response_model=list[SpreadListResponse])
