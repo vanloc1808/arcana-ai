@@ -1,7 +1,7 @@
 """add user streaks, achievements, and daily card pulls + backfill from history
 
-Revision ID: b2c3d4e5f6a7
-Revises: a1b2c3d4e5f6
+Revision ID: f7a8b9c0d1e2
+Revises: b2c3d4e5f6a7
 Create Date: 2026-05-21 01:00:00.000000+00:00
 
 Creates three new tables and backfills streak state and earned achievements
@@ -18,8 +18,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import inspect as sa_inspect
 
-revision: str = "b2c3d4e5f6a7"
-down_revision: Union[str, None] = "a1b2c3d4e5f6"
+revision: str = "f7a8b9c0d1e2"
+down_revision: Union[str, None] = "b2c3d4e5f6a7"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -1,7 +1,7 @@
 """add Relationship Cross spread for compatibility readings
 
 Revision ID: c3d4e5f6a7b8
-Revises: b2c3d4e5f6a7
+Revises: f7a8b9c0d1e2
 Create Date: 2026-05-21 02:00:00.000000+00:00
 
 Inserts a 5-card relationship-focused spread. Idempotent: skips if a
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "c3d4e5f6a7b8"
-down_revision: Union[str, None] = "b2c3d4e5f6a7"
+down_revision: Union[str, None] = "f7a8b9c0d1e2"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
