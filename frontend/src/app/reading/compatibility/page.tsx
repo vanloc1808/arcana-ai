@@ -9,6 +9,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { tarot, CompatibilityReadingResponse } from '@/lib/api';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { TurnCounter } from '@/components/TurnCounter';
+import { DrawnCardReveal } from '@/components/DrawnCardReveal';
 import { toast } from 'react-hot-toast';
 import { logError } from '@/lib/logger';
 
@@ -218,10 +219,10 @@ export default function CompatibilityReadingPage() {
                         <section className="mt-4 space-y-4" aria-live="polite">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {result.cards.map((card, idx) => (
-                                    <article
+                                    <DrawnCardReveal
                                         key={`${card.name}-${idx}`}
-                                        className="bg-gray-800/60 border border-gray-700 rounded-xl p-4 animate-card-draw"
-                                        style={{ animationDelay: `${idx * 160}ms` }}
+                                        index={idx}
+                                        className="bg-gray-800/60 border border-gray-700 rounded-xl p-4"
                                     >
                                         <div className="text-sm uppercase tracking-wide text-purple-300 mb-2 font-medium">
                                             {card.position}
@@ -243,7 +244,7 @@ export default function CompatibilityReadingPage() {
                                         <h3 className="text-lg font-semibold">{card.name}</h3>
                                         <div className="text-sm text-gray-400 mb-2 capitalize">{card.orientation}</div>
                                         <p className="text-base text-gray-300 leading-relaxed">{card.meaning}</p>
-                                    </article>
+                                    </DrawnCardReveal>
                                 ))}
                             </div>
 

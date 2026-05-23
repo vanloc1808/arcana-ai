@@ -2,6 +2,7 @@
 
 import { Card, Spread } from '@/types/tarot';
 import Image from 'next/image';
+import { DrawnCardReveal } from '@/components/DrawnCardReveal';
 
 interface SpreadLayoutProps {
     cards: Card[];
@@ -282,7 +283,6 @@ const CardComponent: React.FC<{
     index?: number;
 }> = ({ card, brokenImages, onImageError, size = 'medium', showDetails = true, index = 0 }) => {
     const isBroken = card.image_url && brokenImages.has(card.image_url);
-    const drawStyle = { animationDelay: `${index * 160}ms` };
 
     // Mobile-first responsive card dimensions
     const dimensions = {
@@ -307,9 +307,9 @@ const CardComponent: React.FC<{
 
     return (
         <div className="flex flex-col items-center text-center touch-manipulation">
-            <div
-                className={`${currentDimensions.container} mb-2 md:mb-3 relative transition-transform duration-200 hover:scale-105 active:scale-95 animate-card-draw`}
-                style={drawStyle}
+            <DrawnCardReveal
+                index={index}
+                className={`${currentDimensions.container} mb-2 md:mb-3 relative transition-transform duration-200 hover:scale-105 active:scale-95`}
             >
                 {card.image_url && !isBroken ? (
                     <>
@@ -353,7 +353,7 @@ const CardComponent: React.FC<{
                         )}
                     </div>
                 )}
-            </div>
+            </DrawnCardReveal>
 
             {showDetails && (
                 <div className="space-y-1 md:space-y-2 w-full max-w-full">

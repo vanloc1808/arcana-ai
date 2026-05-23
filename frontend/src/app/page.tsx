@@ -11,6 +11,7 @@ import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { MysticalSidebar } from '@/components/MysticalSidebar';
 import { TarotCard } from '@/components/TarotCard';
+import { DrawnCardReveal } from '@/components/DrawnCardReveal';
 import { tarot } from '@/lib/api';
 import { getDailyCard, type DailyCard } from '@/lib/dailyCard';
 
@@ -709,10 +710,10 @@ function HomeContent() {
                           <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
                             {message.cards.map((card: Card, cardIndex: number) => {
                               return (
-                                <div
+                                <DrawnCardReveal
                                   key={card.id || card.name}
-                                  className="card-display-item tarot-card card-mystical card-shine group animate-card-draw"
-                                  style={{ animationDelay: `${cardIndex * 160}ms` }}
+                                  index={cardIndex}
+                                  className="card-display-item tarot-card card-mystical card-shine group"
                                 >
                                   <TarotCard
                                     card={card}
@@ -721,7 +722,7 @@ function HomeContent() {
                                     className="p-3 md:p-4"
                                     compact={true}
                                   />
-                                </div>
+                                </DrawnCardReveal>
                               );
                             })}
                           </div>
