@@ -18,6 +18,7 @@ interface AdminUser {
     created_at: string;
     is_active: boolean;
     is_specialized_premium: boolean;
+    receive_error_alerts: boolean;
     favorite_deck_id: number;
     chat_sessions_count: number;
     shared_readings_count: number;
@@ -209,6 +210,7 @@ export default function AdminUsersPage() {
                                                                 full_name: fd.get('full_name'),
                                                                 is_active: fd.get('is_active') === 'on',
                                                                 is_specialized_premium: fd.get('is_specialized_premium') === 'on',
+                                                                receive_error_alerts: fd.get('receive_error_alerts') === 'on',
                                                                 favorite_deck_id: parseInt(fd.get('favorite_deck_id') as string),
                                                             });
                                                             loadData();
@@ -233,8 +235,9 @@ export default function AdminUsersPage() {
                                                     ))}
                                                     <div className="flex flex-col gap-3">
                                                         {[
-                                                            { name: 'is_active',              label: 'Active User',               checked: u.is_active              },
-                                                            { name: 'is_specialized_premium', label: 'VIP Access (Unlimited Turns)', checked: u.is_specialized_premium },
+                                                            { name: 'is_active',              label: 'Active User',                  checked: u.is_active              },
+                                                            { name: 'is_specialized_premium', label: 'VIP Access (Unlimited Turns)',   checked: u.is_specialized_premium },
+                                                            { name: 'receive_error_alerts',   label: 'Error Alert Monitoring',        checked: u.receive_error_alerts   },
                                                         ].map(ck => (
                                                             <label key={ck.name} className="flex items-center gap-2 cursor-pointer">
                                                                 <input

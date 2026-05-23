@@ -1,4 +1,4 @@
-"""add is_vip field to user
+"""add receive_error_alerts field to user
 
 Revision ID: b2c3d4e5f6a7
 Revises: a1b2c3d4e5f6
@@ -18,10 +18,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column("users", sa.Column("is_vip", sa.Boolean(), nullable=True))
-    op.execute("UPDATE users SET is_vip = false WHERE is_vip IS NULL")
-    op.execute("UPDATE users SET is_vip = true WHERE username = 'msc.mon'")
+    op.add_column("users", sa.Column("receive_error_alerts", sa.Boolean(), nullable=True))
+    op.execute("UPDATE users SET receive_error_alerts = false WHERE receive_error_alerts IS NULL")
+    op.execute("UPDATE users SET receive_error_alerts = true WHERE username = 'msc.mon'")
 
 
 def downgrade() -> None:
-    op.drop_column("users", "is_vip")
+    op.drop_column("users", "receive_error_alerts")

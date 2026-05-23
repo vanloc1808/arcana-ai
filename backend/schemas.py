@@ -723,7 +723,7 @@ class AdminUserResponse(BaseModel):
     is_active: bool
     is_admin: bool = False
     is_specialized_premium: bool = False
-    is_vip: bool = False
+    receive_error_alerts: bool = False
     favorite_deck_id: int | None = None
     # Subscription and turn fields (read-only)
     subscription_status: str = "none"
@@ -749,7 +749,7 @@ class AdminUserUpdate(BaseModel):
     full_name: str | None = None
     is_active: bool | None = None
     is_specialized_premium: bool | None = None
-    is_vip: bool | None = None
+    receive_error_alerts: bool | None = None
     favorite_deck_id: int | None = None
 
     @field_validator("username")

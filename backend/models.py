@@ -58,8 +58,7 @@ class User(Base):
     # Specialized premium access (for acquaintances/VIP users)
     is_specialized_premium = Column(Boolean, default=False)
 
-    # VIP flag: receives Telegram alerts for all errors (not just 500s)
-    is_vip = Column(Boolean, default=False)
+    receive_error_alerts = Column(Boolean, default=False)
 
     # Avatar storage
     avatar_filename = Column(String, nullable=True)  # Stores the filename of the avatar
