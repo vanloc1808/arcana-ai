@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 from pathlib import Path
@@ -30,6 +31,11 @@ from utils.error_handlers import (
 from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+# How long the frontend plays the card-drawing animation. The stream waits this
+# long after signalling a draw before revealing cards and streaming the reading,
+# so the reading starts streaming only once the animation finishes.
+CARD_DRAW_ANIMATION_SECONDS = 5
 
 # Initialize TarotReader
 reader = TarotReader()
@@ -924,6 +930,11 @@ async def create_message(
                         )
 
                         if tool_result["success"]:
+                            # Let the card-drawing animation play out before revealing
+                            # the cards and streaming the reading, so the reading only
+                            # starts once the animation finishes.
+                            await asyncio.sleep(CARD_DRAW_ANIMATION_SECONDS)
+
                             # Send cards to frontend (using cards_for_display)
                             cards_data = {
                                 "type": "cards",
