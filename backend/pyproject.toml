@@ -69,6 +69,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.27",
+    "pywebpush>=2.0.0",
     "pyyaml>=6.0.2",
     "redis>=6.2.0",
     "regex>=2024.11.6",

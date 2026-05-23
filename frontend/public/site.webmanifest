@@ -3,14 +3,46 @@
     "short_name": "ArcanaAI",
     "description": "AI-powered tarot readings with mystical wisdom",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
+    "orientation": "portrait-primary",
     "background_color": "#1e1b4b",
     "theme_color": "#7c3aed",
+    "categories": ["lifestyle", "entertainment", "education"],
     "icons": [
         {
             "src": "/favicon.svg",
             "sizes": "any",
-            "type": "image/svg+xml"
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/favicon.ico",
+            "sizes": "32x32 48x48",
+            "type": "image/x-icon"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Daily Card",
+            "short_name": "Daily Card",
+            "description": "Pull today's tarot card",
+            "url": "/?source=pwa-shortcut",
+            "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+        },
+        {
+            "name": "Reading",
+            "short_name": "Reading",
+            "description": "Start a new tarot reading",
+            "url": "/reading?source=pwa-shortcut",
+            "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+        },
+        {
+            "name": "Journal",
+            "short_name": "Journal",
+            "description": "Open your reading journal",
+            "url": "/journal?source=pwa-shortcut",
+            "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
         }
     ]
 }

@@ -1,21 +1,28 @@
+import json
 import random
 import time
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Card, Spread, User
+from models import Card, DailyCardPull, Spread, User
 from routers.auth import get_current_user, get_optional_current_user
 from schemas import (
     CardOfTheDayResponse,
     CardResponse,
+    CompatibilityInterpretRequest,
+    CompatibilityInterpretResponse,
+    CompatibilityReadingRequest,
+    CompatibilityReadingResponse,
     FeaturedCardResponse,
     ReadingRequest,
     SpreadListResponse,
     SpreadResponse,
 )
+from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
 from utils.error_handlers import TarotAPIException, ValidationError, logger
@@ -97,6 +104,25 @@ async def get_card_of_the_day(
     today = date.today()
     day_of_year = today.timetuple().tm_yday
     card = major_arcana[day_of_year % len(major_arcana)]
+
+    if current_user is not None:
+        try:
+            existing = (
+                db.query(DailyCardPull)
+                .filter(DailyCardPull.user_id == current_user.id, DailyCardPull.pull_date == today)
+                .first()
+            )
+            if existing is None:
+                db.add(DailyCardPull(user_id=current_user.id, pull_date=today, card_id=card.id))
+                db.flush()
+                record_streak_activity(db, current_user.id)
+            db.commit()
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            logger.logger.warning(
+                "Failed to record daily card pull",
+                extra={"error": str(exc), "user_id": current_user.id},
+            )
 
     return CardOfTheDayResponse(
         name=card.name,
@@ -264,6 +290,16 @@ async def get_reading(
         duration = time.time() - start_time
         track_tarot_reading(reading_type, duration, "success")
 
+        try:
+            record_streak_activity(db, current_user.id)
+            db.commit()
+        except Exception as streak_exc:  # noqa: BLE001
+            db.rollback()
+            logger.logger.warning(
+                "Failed to record streak activity for reading",
+                extra={"error": str(streak_exc), "user_id": current_user.id},
+            )
+
         logger.logger.info(
             "Reading generated successfully",
             extra={
@@ -292,6 +328,215 @@ async def get_reading(
     finally:
         # Decrement active users
         active_users.dec()
+
+
+COMPATIBILITY_SPREAD_NAME = "Relationship Cross"
+_PERSON_A_POSITION_INDEX = 0
+_PERSON_B_POSITION_INDEX = 1
+
+
+def _personalize_position(position_name: str, person_a_name: str, person_b_name: str, index: int) -> str:
+    if index == _PERSON_A_POSITION_INDEX:
+        return f"{position_name} — {person_a_name}"
+    if index == _PERSON_B_POSITION_INDEX:
+        return f"{position_name} — {person_b_name}"
+    return position_name
+
+
+@router.post("/compatibility", response_model=CompatibilityReadingResponse)
+@limiter.limit(RATE_LIMITS["tarot"])
+async def get_compatibility_reading(
+    request: Request,
+    request_data: CompatibilityReadingRequest,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Draw a relationship-focused tarot reading for two people.
+
+    Uses the Relationship Cross spread (You / Them / Connection / Challenge /
+    Outcome). The two person-position labels are personalized with the
+    provided names. Consumes one turn (same as a standard reading).
+    """
+    start_time = time.time()
+    reading_type = "compatibility"
+
+    spread = db.query(Spread).filter(Spread.name == COMPATIBILITY_SPREAD_NAME).first()
+    if not spread:
+        raise TarotAPIException(
+            message="Compatibility spread is not configured",
+            details={"spread_name": COMPATIBILITY_SPREAD_NAME},
+        )
+
+    try:
+        subscription_service = SubscriptionService()
+        turn_result = subscription_service.consume_user_turn(db, current_user, usage_context="reading")
+
+        if not turn_result.success and current_user.is_specialized_premium:
+            logger.logger.warning(
+                "Turn consumption failed but user is specialized premium – proceeding",
+                extra={"user_id": current_user.id},
+            )
+        elif not turn_result.success:
+            track_tarot_reading(reading_type, time.time() - start_time, "insufficient_turns")
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail={
+                    "message": "No turns available",
+                    "remaining_free_turns": turn_result.remaining_free_turns,
+                    "remaining_paid_turns": turn_result.remaining_paid_turns,
+                    "total_remaining_turns": turn_result.total_remaining_turns,
+                },
+            )
+
+        active_users.inc()
+        reader = TarotReader(db=db, deck_id=current_user.favorite_deck_id)
+        drawn = reader.shuffle_and_draw(spread.num_cards, spread=spread)
+
+        person_a_name = request_data.person_a.name
+        person_b_name = request_data.person_b.name
+        response_cards = []
+        for i, card in enumerate(drawn):
+            position_name = card.get("position", f"Card {i + 1}")
+            personalized = _personalize_position(position_name, person_a_name, person_b_name, i)
+            track_card_drawn(card["name"], position_name)
+            response_cards.append(
+                CardResponse(
+                    name=card["name"],
+                    orientation=card["orientation"],
+                    meaning=card["meaning"],
+                    image_url=card.get("image_url"),
+                    position=personalized,
+                    position_index=card.get("position_index", i),
+                )
+            )
+
+        duration = time.time() - start_time
+        track_tarot_reading(reading_type, duration, "success")
+
+        try:
+            record_streak_activity(db, current_user.id)
+            db.commit()
+        except Exception as streak_exc:  # noqa: BLE001
+            db.rollback()
+            logger.logger.warning(
+                "Failed to record streak activity for compatibility reading",
+                extra={"error": str(streak_exc), "user_id": current_user.id},
+            )
+
+        logger.logger.info(
+            "Compatibility reading generated",
+            extra={
+                "user_id": current_user.id,
+                "person_a": person_a_name,
+                "person_b": person_b_name,
+                "duration": duration,
+            },
+        )
+
+        return CompatibilityReadingResponse(
+            person_a=request_data.person_a,
+            person_b=request_data.person_b,
+            focus=request_data.focus,
+            spread_name=spread.name,
+            cards=response_cards,
+            remaining_free_turns=turn_result.remaining_free_turns,
+            remaining_paid_turns=turn_result.remaining_paid_turns,
+            total_remaining_turns=turn_result.total_remaining_turns,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        track_tarot_reading(reading_type, time.time() - start_time, "error")
+        logger.logger.error(
+            "Error generating compatibility reading",
+            extra={"user_id": current_user.id, "error": str(e)},
+        )
+        raise TarotAPIException(
+            message="Error generating compatibility reading", details={"error": str(e)}
+        )
+    finally:
+        active_users.dec()
+
+
+@router.post("/compatibility/interpret", response_model=CompatibilityInterpretResponse)
+@limiter.limit(RATE_LIMITS["tarot"])
+async def interpret_compatibility_reading(
+    request: Request,
+    request_data: CompatibilityInterpretRequest,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate the AI interpretation for an already-drawn compatibility reading.
+
+    Split from the draw endpoint so the client can render the cards (and the
+    draw animation) immediately, then stream/show the interpretation once it's
+    ready. Does not consume a turn — the turn was spent on the draw.
+    """
+    if not request_data.cards:
+        raise ValidationError(message="No cards provided for interpretation", details={})
+
+    try:
+        reader = TarotReader(db=db, deck_id=current_user.favorite_deck_id)
+        interpretation = await reader.create_compatibility_reading(
+            person_a=request_data.person_a.name,
+            person_b=request_data.person_b.name,
+            cards=[card.model_dump() for card in request_data.cards],
+            focus=request_data.focus,
+        )
+        return CompatibilityInterpretResponse(interpretation=interpretation)
+    except Exception as e:  # noqa: BLE001
+        logger.logger.error(
+            "Error interpreting compatibility reading",
+            extra={"user_id": current_user.id, "error": str(e)},
+        )
+        raise TarotAPIException(
+            message="Error interpreting compatibility reading", details={"error": str(e)}
+        )
+
+
+@router.post("/compatibility/interpret/stream")
+@limiter.limit(RATE_LIMITS["tarot"])
+async def stream_compatibility_interpretation(
+    request: Request,
+    request_data: CompatibilityInterpretRequest,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Stream the AI interpretation for an already-drawn compatibility reading via SSE."""
+    if not request_data.cards:
+        raise ValidationError(message="No cards provided for interpretation", details={})
+
+    async def generate():
+        try:
+            reader = TarotReader(db=db, deck_id=current_user.favorite_deck_id)
+            async for chunk in reader.stream_compatibility_reading(
+                person_a=request_data.person_a.name,
+                person_b=request_data.person_b.name,
+                cards=[card.model_dump() for card in request_data.cards],
+                focus=request_data.focus,
+            ):
+                yield f"data: {json.dumps({'type': 'content_chunk', 'content': chunk})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        except Exception as e:
+            logger.logger.error(
+                "Error streaming compatibility interpretation",
+                extra={"user_id": current_user.id, "error": str(e)},
+            )
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
 
 
 @router.get("/spreads", response_model=list[SpreadListResponse])

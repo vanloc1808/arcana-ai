@@ -518,6 +518,72 @@ class ReadingRequest(BaseModel):
         return _sanitize_string(v, "Concern", min_length=2, max_length=2000)
 
 
+class RelationshipPerson(BaseModel):
+    """One person in a compatibility reading."""
+
+    name: str
+    birth_date: date | None = None
+
+    @field_validator("name")
+    def validate_name(cls, v):
+        return _sanitize_string(v, "Name", min_length=1, max_length=80)
+
+
+class CompatibilityReadingRequest(BaseModel):
+    """Schema for requesting a compatibility (relationship) reading."""
+
+    person_a: RelationshipPerson
+    person_b: RelationshipPerson
+    focus: str | None = None
+
+    @field_validator("focus")
+    def validate_focus(cls, v):
+        if v is None:
+            return v
+        return _sanitize_string(v, "Focus", min_length=1, max_length=500, allow_empty=True)
+
+
+class CompatibilityReadingResponse(BaseModel):
+    """Schema for the response of a compatibility reading."""
+
+    person_a: RelationshipPerson
+    person_b: RelationshipPerson
+    focus: str | None
+    spread_name: str
+    cards: list["CardResponse"]
+    remaining_free_turns: int
+    remaining_paid_turns: int
+    total_remaining_turns: int
+
+
+class CompatibilityInterpretCard(BaseModel):
+    """A single drawn card sent back for AI interpretation."""
+
+    name: str
+    orientation: str
+    position: str | None = None
+    meaning: str | None = None
+
+
+class CompatibilityInterpretRequest(BaseModel):
+    """Request to generate the AI interpretation of an already-drawn reading."""
+
+    person_a: RelationshipPerson
+    person_b: RelationshipPerson
+    focus: str | None = None
+    cards: list[CompatibilityInterpretCard]
+
+    @field_validator("focus")
+    def validate_focus(cls, v):
+        if v is None:
+            return v
+        return _sanitize_string(v, "Focus", min_length=1, max_length=500, allow_empty=True)
+
+
+class CompatibilityInterpretResponse(BaseModel):
+    interpretation: str
+
+
 class CardResponse(BaseModel):
     """Response schema for a card in a tarot reading.
 
@@ -1749,3 +1815,62 @@ class SupportTicketResponse(BaseModel):
     message: str
     ticket_id: str
     slack_message_id: Optional[str] = None
+
+
+# --- Streaks & Achievements ---
+
+
+class StreakResponse(BaseModel):
+    current_streak: int
+    longest_streak: int
+    total_active_days: int
+    last_activity_date: Optional[date] = None
+    is_active_today: bool
+
+
+class AchievementResponse(BaseModel):
+    code: str
+    title: str
+    description: str
+    unlocked: bool
+    unlocked_at: Optional[datetime] = None
+
+
+class StreakProgressResponse(BaseModel):
+    streak: StreakResponse
+    achievements: list[AchievementResponse]
+
+
+# --- Web Push ---
+
+
+class WebPushKeys(BaseModel):
+    p256dh: str = Field(..., min_length=8, max_length=255)
+    auth: str = Field(..., min_length=8, max_length=255)
+
+
+class WebPushSubscribeRequest(BaseModel):
+    endpoint: str = Field(..., min_length=8, max_length=2000)
+    keys: WebPushKeys
+    user_agent: Optional[str] = Field(None, max_length=255)
+
+
+class WebPushSubscribeResponse(BaseModel):
+    id: int
+    endpoint: str
+
+
+class WebPushUnsubscribeRequest(BaseModel):
+    endpoint: str = Field(..., min_length=8, max_length=2000)
+
+
+class WebPushPublicKeyResponse(BaseModel):
+    public_key: str
+    configured: bool
+
+
+class WebPushTestResponse(BaseModel):
+    sent: int
+    failed: int
+    pruned: int
+

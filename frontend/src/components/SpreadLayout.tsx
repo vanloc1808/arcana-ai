@@ -2,6 +2,7 @@
 
 import { Card, Spread } from '@/types/tarot';
 import Image from 'next/image';
+import { DrawnCardReveal } from '@/components/DrawnCardReveal';
 
 interface SpreadLayoutProps {
     cards: Card[];
@@ -50,7 +51,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                                 )}
                                             </div>
                                             <CardComponent
-                                                card={card}
+                                                card={card} index={index}
                                                 brokenImages={brokenImages}
                                                 onImageError={onImageError}
                                                 compact={false}
@@ -80,7 +81,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                                 )}
                                             </div>
                                             <CardComponent
-                                                card={card}
+                                                card={card} index={index}
                                                 brokenImages={brokenImages}
                                                 onImageError={onImageError}
                                                 compact={false}
@@ -112,7 +113,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                                     )}
                                                 </div>
                                                 <CardComponent
-                                                    card={card}
+                                                    card={card} index={index}
                                                     brokenImages={brokenImages}
                                                     onImageError={onImageError}
                                                     compact={false}
@@ -147,7 +148,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                                     </p>
                                                 </div>
                                                 <CardComponent
-                                                    card={card}
+                                                    card={card} index={index}
                                                     brokenImages={brokenImages}
                                                     onImageError={onImageError}
                                                     compact={true}
@@ -178,7 +179,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                                 )}
                                             </div>
                                             <CardComponent
-                                                card={card}
+                                                card={card} index={index}
                                                 brokenImages={brokenImages}
                                                 onImageError={onImageError}
                                                 compact={true}
@@ -209,7 +210,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                     <div className="flex items-center space-x-3 md:space-x-4">
                                         <div className="flex-shrink-0">
                                             <CardComponent
-                                                card={card}
+                                                card={card} index={index}
                                                 brokenImages={brokenImages}
                                                 onImageError={onImageError}
                                                 compact={true}
@@ -260,7 +261,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                 {cards.map((card, index) => (
                     <CardComponent
                         key={index}
-                        card={card}
+                        card={card} index={index}
                         brokenImages={brokenImages}
                         onImageError={onImageError}
                         compact={false}
@@ -279,7 +280,8 @@ const CardComponent: React.FC<{
     compact: boolean;
     size?: 'small' | 'medium' | 'large';
     showDetails?: boolean;
-}> = ({ card, brokenImages, onImageError, size = 'medium', showDetails = true }) => {
+    index?: number;
+}> = ({ card, brokenImages, onImageError, size = 'medium', showDetails = true, index = 0 }) => {
     const isBroken = card.image_url && brokenImages.has(card.image_url);
 
     // Mobile-first responsive card dimensions
@@ -305,7 +307,10 @@ const CardComponent: React.FC<{
 
     return (
         <div className="flex flex-col items-center text-center touch-manipulation">
-            <div className={`${currentDimensions.container} mb-2 md:mb-3 relative transition-transform duration-200 hover:scale-105 active:scale-95`}>
+            <DrawnCardReveal
+                index={index}
+                className={`${currentDimensions.container} mb-2 md:mb-3 relative transition-transform duration-200 hover:scale-105 active:scale-95`}
+            >
                 {card.image_url && !isBroken ? (
                     <>
                         {/* Mobile Image */}
@@ -348,7 +353,7 @@ const CardComponent: React.FC<{
                         )}
                     </div>
                 )}
-            </div>
+            </DrawnCardReveal>
 
             {showDetails && (
                 <div className="space-y-1 md:space-y-2 w-full max-w-full">

@@ -1,7 +1,7 @@
-from fastapi import status
 from unittest.mock import patch
-import pytest
 
+import pytest
+from fastapi import status
 
 # Remove old tests for endpoints that don't exist
 # The current tarot API only has /tarot/reading endpoint
@@ -357,35 +357,26 @@ def test_tarot_reading_special_characters_concern(client, auth_headers, test_car
 
 
 # Tarot Reading Tests - Performance and Edge Cases
-@pytest.mark.skip(reason="Skipping concurrent requests test due to unstability")
+@pytest.mark.skip(
+    reason="Concurrent requests against TestClient share a single SQLAlchemy session, "
+    "which is not thread-safe (IllegalStateChangeError). Repeated-request coverage is "
+    "provided by test_tarot_reading_repeated_requests."
+)
 def test_tarot_reading_concurrent_requests(client, auth_headers, test_cards, mock_tarot_reader):
-    """Test multiple concurrent tarot reading requests"""
-    import threading
-    import time
+    """True concurrency is not exercisable with the in-memory shared test session."""
+    from concurrent.futures import ThreadPoolExecutor
 
-    results = []
-
-    def make_request():
-        response = client.post(
+    def make_request(_i):
+        return client.post(
             "/tarot/reading",
             json={"concern": "Concurrent test", "num_cards": 3},
-            headers=auth_headers
-        )
-        results.append(response.status_code)
+            headers=auth_headers,
+        ).status_code
 
-    # Create multiple threads
-    threads = []
-    for _ in range(5):
-        thread = threading.Thread(target=make_request)
-        threads.append(thread)
-        thread.start()
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        statuses = list(pool.map(make_request, range(5)))
 
-    # Wait for all threads to complete
-    for thread in threads:
-        thread.join()
-
-    # All requests should succeed
-    assert all(status_code == status.HTTP_200_OK for status_code in results)
+    assert all(code == status.HTTP_200_OK for code in statuses)
 
 
 def test_tarot_reading_repeated_requests(client, auth_headers, test_cards, mock_tarot_reader):

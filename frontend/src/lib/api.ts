@@ -25,6 +25,7 @@ import {
     Reminder,
     ReminderCreate,
     JournalFilters,
+    TagUsage,
 } from "@/types/tarot";
 
 // Callback function to be set by AuthProvider
@@ -346,7 +347,112 @@ export const tarot = {
         const response = await api.get(`/tarot/card-of-the-day`);
         return response.data;
     },
+
+    getCompatibilityReading: async (payload: CompatibilityReadingRequest): Promise<CompatibilityReadingResponse> => {
+        const response = await api.post("/tarot/compatibility", payload);
+        return response.data;
+    },
+
+    interpretCompatibilityReading: async (
+        payload: CompatibilityInterpretRequest,
+    ): Promise<CompatibilityInterpretResponse> => {
+        const response = await api.post("/tarot/compatibility/interpret", payload);
+        return response.data;
+    },
+
+    streamCompatibilityInterpretation: async (
+        payload: CompatibilityInterpretRequest,
+        onChunk: (chunk: string) => void,
+        onDone: () => void,
+        onError: (error: string) => void,
+    ): Promise<void> => {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/tarot/compatibility/interpret/stream`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok || !response.body) {
+            onError(`HTTP error: ${response.status}`);
+            return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let idx: number;
+            while ((idx = buffer.indexOf('\n\n')) !== -1) {
+                const raw = buffer.slice(0, idx);
+                buffer = buffer.slice(idx + 2);
+                if (!raw.startsWith('data: ')) continue;
+                try {
+                    const data = JSON.parse(raw.slice(6));
+                    if (data.type === 'content_chunk') onChunk(data.content);
+                    else if (data.type === 'done') onDone();
+                    else if (data.type === 'error') onError(data.error);
+                } catch { /* ignore parse errors on partial frames */ }
+            }
+        }
+        onDone();
+    },
 };
+
+export interface CompatibilityPerson {
+    name: string;
+    birth_date?: string;
+}
+
+export interface CompatibilityReadingRequest {
+    person_a: CompatibilityPerson;
+    person_b: CompatibilityPerson;
+    focus?: string;
+}
+
+export interface CompatibilityCard {
+    name: string;
+    orientation: string;
+    meaning: string;
+    image_url?: string | null;
+    position?: string | null;
+    position_index?: number | null;
+}
+
+export interface CompatibilityReadingResponse {
+    person_a: CompatibilityPerson;
+    person_b: CompatibilityPerson;
+    focus: string | null;
+    spread_name: string;
+    cards: CompatibilityCard[];
+    remaining_free_turns: number;
+    remaining_paid_turns: number;
+    total_remaining_turns: number;
+}
+
+export interface CompatibilityInterpretRequest {
+    person_a: CompatibilityPerson;
+    person_b: CompatibilityPerson;
+    focus?: string;
+    cards: {
+        name: string;
+        orientation: string;
+        position?: string | null;
+        meaning?: string | null;
+    }[];
+}
+
+export interface CompatibilityInterpretResponse {
+    interpretation: string;
+}
 
 // Sharing endpoints
 export const sharing = {
@@ -507,12 +613,15 @@ export const journal = {
         if (filters.skip !== undefined) params.append('skip', filters.skip.toString());
         if (filters.limit !== undefined) params.append('limit', filters.limit.toString());
         if (filters.tags) params.append('tags', filters.tags);
+        if (filters.tags_match) params.append('tags_match', filters.tags_match);
         if (filters.favorite_only !== undefined) params.append('favorite_only', filters.favorite_only.toString());
         if (filters.start_date) params.append('start_date', filters.start_date);
         if (filters.end_date) params.append('end_date', filters.end_date);
         if (filters.mood_min !== undefined) params.append('mood_min', filters.mood_min.toString());
         if (filters.mood_max !== undefined) params.append('mood_max', filters.mood_max.toString());
         if (filters.search_notes) params.append('search_notes', filters.search_notes);
+        if (filters.card_name) params.append('card_name', filters.card_name);
+        if (filters.spread_name) params.append('spread_name', filters.spread_name);
         if (filters.sort_by) params.append('sort_by', filters.sort_by);
         if (filters.sort_order) params.append('sort_order', filters.sort_order);
 
@@ -559,6 +668,17 @@ export const journal = {
         await api.delete(`/api/journal/card-meanings/${cardId}`);
     },
 
+    // Discovery
+    getUsedTags: async (): Promise<TagUsage[]> => {
+        const response = await api.get("/api/journal/tags");
+        return response.data;
+    },
+
+    getUsedSpreads: async (): Promise<string[]> => {
+        const response = await api.get("/api/journal/spreads-used");
+        return response.data;
+    },
+
     // Analytics
     getAnalytics: async (): Promise<JournalAnalytics> => {
         const response = await api.get("/api/journal/analytics/summary");
@@ -598,6 +718,71 @@ export const journal = {
 
     deleteReminder: async (id: number): Promise<void> => {
         await api.delete(`/api/journal/reminders/${id}`);
+    },
+};
+
+export interface StreakSummary {
+    current_streak: number;
+    longest_streak: number;
+    total_active_days: number;
+    last_activity_date: string | null;
+    is_active_today: boolean;
+}
+
+export interface AchievementSummary {
+    code: string;
+    title: string;
+    description: string;
+    unlocked: boolean;
+    unlocked_at: string | null;
+}
+
+export interface StreakProgress {
+    streak: StreakSummary;
+    achievements: AchievementSummary[];
+}
+
+export const streaks = {
+    getMyProgress: async (): Promise<StreakProgress> => {
+        const response = await api.get("/api/streaks/me");
+        return response.data;
+    },
+
+    recompute: async (): Promise<StreakProgress> => {
+        const response = await api.post("/api/streaks/recompute");
+        return response.data;
+    },
+};
+
+export interface VapidPublicKeyResponse {
+    public_key: string;
+    configured: boolean;
+}
+
+export interface WebPushSubscribePayload {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+    user_agent?: string;
+}
+
+export const webPush = {
+    getVapidPublicKey: async (): Promise<VapidPublicKeyResponse> => {
+        const response = await api.get("/api/web-push/vapid-public-key");
+        return response.data;
+    },
+
+    subscribe: async (payload: WebPushSubscribePayload) => {
+        const response = await api.post("/api/web-push/subscribe", payload);
+        return response.data;
+    },
+
+    unsubscribe: async (endpoint: string) => {
+        await api.post("/api/web-push/unsubscribe", { endpoint });
+    },
+
+    sendTest: async (): Promise<{ sent: number; failed: number; pruned: number }> => {
+        const response = await api.post("/api/web-push/test");
+        return response.data;
     },
 };
 

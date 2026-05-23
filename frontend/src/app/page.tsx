@@ -11,6 +11,8 @@ import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { MysticalSidebar } from '@/components/MysticalSidebar';
 import { TarotCard } from '@/components/TarotCard';
+import { DrawnCardReveal } from '@/components/DrawnCardReveal';
+import { CardDrawingAnimation } from '@/components/CardDrawingAnimation';
 import { tarot } from '@/lib/api';
 import { getDailyCard, type DailyCard } from '@/lib/dailyCard';
 
@@ -182,6 +184,13 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
                 >
                   <FiEye className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   Explore Reading Styles
+                </button>
+                <button
+                  onClick={() => window.location.href = '/reading/compatibility'}
+                  className="w-full sm:w-auto px-6 py-4 md:px-8 md:py-4 text-base md:text-lg border-2 border-pink-500 text-pink-300 rounded-xl hover:bg-pink-500/10 transition-all duration-200 flex items-center justify-center gap-3 group min-h-[56px] touch-manipulation"
+                >
+                  <FiHeart className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  Compatibility Reading
                 </button>
               </div>
             </div>
@@ -373,6 +382,7 @@ function HomeContent() {
     loading,
     error,
     streamingContent,
+    isDrawingCards,
     setCurrentSession,
     createSession,
     deleteSession,
@@ -700,9 +710,13 @@ function HomeContent() {
                         <MessageContent content={message.content} />
                         {message.role === 'assistant' && message.cards && message.cards.length > 0 && (
                           <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
-                            {message.cards.map((card: Card) => {
+                            {message.cards.map((card: Card, cardIndex: number) => {
                               return (
-                                <div key={card.id || card.name} className="card-display-item tarot-card card-mystical card-shine group">
+                                <DrawnCardReveal
+                                  key={card.id || card.name}
+                                  index={cardIndex}
+                                  className="card-display-item tarot-card card-mystical card-shine group"
+                                >
                                   <TarotCard
                                     card={card}
                                     size="small"
@@ -710,7 +724,7 @@ function HomeContent() {
                                     className="p-3 md:p-4"
                                     compact={true}
                                   />
-                                </div>
+                                </DrawnCardReveal>
                               );
                             })}
                           </div>
@@ -721,8 +735,12 @@ function HomeContent() {
 
 
 
-                  {/* Display streaming content */}
-                  {streamingContent && (
+                  {/* Card-drawing suspense animation (plays for ~5s once the
+                      backend signals a draw, before cards/reading are revealed) */}
+                  {isDrawingCards && <CardDrawingAnimation />}
+
+                  {/* Display streaming content (held back while the draw animation plays) */}
+                  {!isDrawingCards && streamingContent && (
                     <div className="flex justify-start">
                       <div className="max-w-full md:max-w-2xl p-4 md:p-6 rounded-2xl card-mystical shadow-lg">
                         <div className="flex items-center gap-3 mb-3">

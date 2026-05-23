@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 from pathlib import Path
@@ -18,6 +19,7 @@ from schemas import (
     MessageRequest,
     MessageResponse,
 )
+from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
 from utils.error_handlers import (
@@ -29,6 +31,11 @@ from utils.error_handlers import (
 from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+# How long the frontend plays the card-drawing animation. The stream waits this
+# long after signalling a draw before revealing cards and streaming the reading,
+# so the reading starts streaming only once the animation finishes.
+CARD_DRAW_ANIMATION_SECONDS = 5
 
 # Initialize TarotReader
 reader = TarotReader()
@@ -852,6 +859,16 @@ async def create_message(
             },
         )
 
+        try:
+            record_streak_activity(db, current_user.id)
+            db.commit()
+        except Exception as streak_exc:
+            db.rollback()
+            logger.logger.warning(
+                "Failed to record streak activity",
+                extra={"error": str(streak_exc), "user_id": current_user.id},
+            )
+
         user_message_response = MessageResponse.from_orm(user_message)
 
         async def generate_streaming_response():
@@ -903,12 +920,21 @@ async def create_message(
                         user_question = args.get("user_question", message_request.content)
                         num_cards_to_draw = args.get("num_cards", 3)
 
+                        # Signal the frontend that a draw is happening so it can play
+                        # the card-drawing animation before the cards are revealed.
+                        yield f"data: {json.dumps({'type': 'drawing', 'num_cards': num_cards_to_draw})}\n\n"
+
                         # Pass the db session and user to the tool executor
                         tool_result = execute_draw_cards_tool(
                             user_question, num_cards_to_draw, db=db, current_user=current_user
                         )
 
                         if tool_result["success"]:
+                            # Let the card-drawing animation play out before revealing
+                            # the cards and streaming the reading, so the reading only
+                            # starts once the animation finishes.
+                            await asyncio.sleep(CARD_DRAW_ANIMATION_SECONDS)
+
                             # Send cards to frontend (using cards_for_display)
                             cards_data = {
                                 "type": "cards",

@@ -32,6 +32,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TurnCounter, TurnCounterCompact } from '@/components/TurnCounter';
+import { StreakBadge } from '@/components/StreakBadge';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { TarotCardIcon, TarotAgentLogo } from '@/components/icons';
 import { FiMessageCircle } from 'react-icons/fi';
@@ -183,6 +184,9 @@ export function EnhancedNavigation() {
 
                     {/* Actions - Mobile-first layout */}
                     <div className="flex items-center space-x-2 md:space-x-3">
+                        {/* Streak Badge */}
+                        <StreakBadge />
+
                         {/* Turn Counter - Desktop/Tablet */}
                         <div className="hidden md:block">
                             <TurnCounter

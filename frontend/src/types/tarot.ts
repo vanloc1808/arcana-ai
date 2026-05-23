@@ -373,12 +373,20 @@ export interface JournalFilters {
     skip?: number;
     limit?: number;
     tags?: string;
+    tags_match?: 'all' | 'any';
     favorite_only?: boolean;
     start_date?: string;
     end_date?: string;
     mood_min?: number;
     mood_max?: number;
     search_notes?: string;
+    card_name?: string;
+    spread_name?: string;
     sort_by?: string;
     sort_order?: 'asc' | 'desc';
+}
+
+export interface TagUsage {
+    tag: string;
+    count: number;
 }

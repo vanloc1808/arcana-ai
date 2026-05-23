@@ -5,14 +5,14 @@ This module contains comprehensive unit tests for the SubscriptionService class,
 covering checkout URL creation, webhook processing, turn consumption, and payment handling.
 """
 
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
-from datetime import datetime, timedelta, UTC
 from sqlalchemy.exc import SQLAlchemyError
 
+from models import CheckoutSession, PaymentTransaction, SubscriptionEvent, TurnUsageHistory
 from services.subscription_service import SubscriptionService
-from models import User, CheckoutSession, SubscriptionEvent, PaymentTransaction, TurnUsageHistory
-from schemas import TurnConsumptionResult
 from tests.factories import UserFactory
 
 
@@ -151,47 +151,48 @@ class TestSubscriptionService:
 
     @patch('services.subscription_service.settings')
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="API integration test requires external service")
     async def test_create_checkout_url_success(self, mock_settings, db_session):
         """Test successful checkout URL creation."""
-        # Setup mocks
+        from unittest.mock import MagicMock
+
         mock_settings.LEMON_SQUEEZY_API_KEY = "test_key"
         mock_settings.LEMON_SQUEEZY_STORE_ID = "test_store"
         mock_settings.LEMON_SQUEEZY_PRODUCT_ID_10_TURNS = "prod_10"
+        mock_settings.LEMON_SQUEEZY_PRODUCT_ID_20_TURNS = "prod_20"
+        mock_settings.LEMON_SQUEEZY_WEBHOOK_SECRET = "secret"
+        mock_settings.LEMON_SQUEEZY_ENABLE_TEST_MODE = False
 
         service = SubscriptionService()
         user = UserFactory.create(db=db_session)
 
-        # Mock HTTP response
-        mock_response = AsyncMock()
+        # The service does `async with httpx.AsyncClient() as client: response = await client.post(...)`.
+        # We mock the context manager and the awaitable post() call.
+        mock_response = MagicMock()
         mock_response.status_code = 201
         mock_response.json.return_value = {
             "data": {
                 "id": "checkout_123",
-                "attributes": {
-                    "url": "https://checkout.lemonsqueezy.com/123"
-                }
+                "attributes": {"url": "https://checkout.lemonsqueezy.com/123"},
             }
         }
 
-        with patch('httpx.AsyncClient') as mock_client_class:
-            mock_client = mock_client_class.return_value
-            mock_client.post.return_value = mock_response
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
 
+        with patch('services.subscription_service.httpx.AsyncClient', return_value=mock_client):
             result = await service.create_checkout_url(user, "10_turns", db_session)
 
-            assert result == "https://checkout.lemonsqueezy.com/123"
-
-            # Verify checkout session was created
-            checkout_session = db_session.query(CheckoutSession).filter(
-                CheckoutSession.user_id == user.id
-            ).first()
-
-            assert checkout_session is not None
-            assert checkout_session.checkout_id == "checkout_123"
-            assert checkout_session.checkout_url == "https://checkout.lemonsqueezy.com/123"
-            assert checkout_session.product_variant == "10_turns"
-            assert checkout_session.status == "pending"
+        assert result == "https://checkout.lemonsqueezy.com/123"
+        checkout_session = (
+            db_session.query(CheckoutSession).filter(CheckoutSession.user_id == user.id).first()
+        )
+        assert checkout_session is not None
+        assert checkout_session.checkout_id == "checkout_123"
+        assert checkout_session.checkout_url == "https://checkout.lemonsqueezy.com/123"
+        assert checkout_session.product_variant == "10_turns"
+        assert checkout_session.status == "pending"
 
     @patch('services.subscription_service.settings')
     @pytest.mark.asyncio
@@ -364,7 +365,6 @@ class TestSubscriptionService:
             # Verify handler was called
             mock_handler.assert_called_once()
 
-    @pytest.mark.skip(reason="Customer ID assignment varies by implementation")
     def test_handle_subscription_created_updated_10_turns(self, db_session):
         """Test handling subscription created/updated event for 10 turns."""
         service = SubscriptionService()
@@ -379,16 +379,14 @@ class TestSubscriptionService:
         custom_data = {"product_variant": "10_turns"}
 
         turns_added = service._handle_subscription_created_updated(user, attributes, custom_data, db_session)
+        db_session.commit()
 
         assert turns_added == 10
 
-        # Verify user was updated
         db_session.refresh(user)
-        # The exact turn count may vary depending on implementation
-        assert user.number_of_paid_turns >= 0
+        assert user.number_of_paid_turns >= 10  # 5 initial + 10 added
         assert user.lemon_squeezy_customer_id == "cust_123"
-        # The subscription status may vary depending on implementation
-        assert user.subscription_status is not None
+        assert user.subscription_status == "active"
 
         # Verify payment transaction was created
         transaction = db_session.query(PaymentTransaction).filter(
@@ -422,7 +420,6 @@ class TestSubscriptionService:
         # The exact turn count may vary depending on implementation
         assert user.number_of_paid_turns >= 0
 
-    @pytest.mark.skip(reason="Customer ID assignment varies by implementation")
     def test_handle_order_created_with_checkout_session(self, db_session):
         """Test handling order created event with checkout session."""
         service = SubscriptionService()
@@ -446,13 +443,12 @@ class TestSubscriptionService:
         data = {"id": "order_123"}
 
         turns_added = service._handle_order_created(user, attributes, data, db_session, checkout_session)
+        db_session.commit()
 
         assert turns_added == 10
 
-        # Verify user was updated
         db_session.refresh(user)
-        # The exact turn count may vary depending on implementation
-        assert user.number_of_paid_turns >= 0
+        assert user.number_of_paid_turns >= 10  # 5 initial + 10 added
         assert user.lemon_squeezy_customer_id == "cust_123"
 
         # Verify payment transaction was created
@@ -543,7 +539,6 @@ class TestSubscriptionService:
         assert usage_record.turn_type == "unlimited"
         assert usage_record.usage_context == "reading"
 
-    @pytest.mark.skip(reason="Turn consumption logic varies by implementation")
     def test_consume_user_turn_free_turn_available(self, db_session):
         """Test turn consumption when free turns are available."""
         service = SubscriptionService()
@@ -551,19 +546,20 @@ class TestSubscriptionService:
             db=db_session,
             is_specialized_premium=False,
             number_of_free_turns=3,
-            number_of_paid_turns=0
+            number_of_paid_turns=0,
+            last_free_turns_reset=datetime.now(UTC),
         )
 
-        result = service.consume_user_turn(db_session, user, "reading")
+        # The service opens its own session via next(get_db()); point it at the test session.
+        with patch('services.subscription_service.get_db', return_value=iter([db_session])):
+            result = service.consume_user_turn(db_session, user, "reading")
 
-        # The success may vary depending on implementation
-        assert isinstance(result.success, bool)
+        assert result.success is True
         assert result.is_specialized_premium is False
-        assert result.total_remaining_turns == 2  # 2 free + 0 paid
         assert result.turn_type_consumed == "free"
-        # The exact turn count may vary depending on implementation
-        assert hasattr(result, 'remaining_free_turns')
+        assert result.remaining_free_turns == 2
         assert result.remaining_paid_turns == 0
+        assert result.total_remaining_turns == 2
 
     def test_consume_user_turn_paid_turn_available(self, db_session):
         """Test turn consumption when only paid turns are available."""
@@ -589,7 +585,6 @@ class TestSubscriptionService:
         # The exact turn count may vary depending on implementation
         assert hasattr(result, 'remaining_paid_turns')
 
-    @pytest.mark.skip(reason="Turn consumption logic varies by implementation")
     def test_consume_user_turn_no_turns_available(self, db_session):
         """Test turn consumption when no turns are available."""
         service = SubscriptionService()
@@ -597,10 +592,12 @@ class TestSubscriptionService:
             db=db_session,
             is_specialized_premium=False,
             number_of_free_turns=0,
-            number_of_paid_turns=0
+            number_of_paid_turns=0,
+            last_free_turns_reset=datetime.now(UTC),
         )
 
-        result = service.consume_user_turn(db_session, user, "reading")
+        with patch('services.subscription_service.get_db', return_value=iter([db_session])):
+            result = service.consume_user_turn(db_session, user, "reading")
 
         assert result.success is False
         assert result.is_specialized_premium is False
@@ -631,21 +628,21 @@ class TestSubscriptionService:
         # The exact turn count may vary depending on implementation
         assert hasattr(result, 'remaining_paid_turns')
 
-    @pytest.mark.skip(reason="Turn consumption logic varies by implementation")
     def test_consume_user_turn_invalid_context(self, db_session):
-        """Test turn consumption with invalid usage context."""
+        """Test turn consumption with invalid usage context falls back to 'other'."""
         service = SubscriptionService()
         user = UserFactory.create(
             db=db_session,
             is_specialized_premium=False,
-            number_of_free_turns=1
+            number_of_free_turns=1,
+            number_of_paid_turns=0,
+            last_free_turns_reset=datetime.now(UTC),
         )
 
-        result = service.consume_user_turn(db_session, user, "invalid_context")
+        with patch('services.subscription_service.get_db', return_value=iter([db_session])):
+            result = service.consume_user_turn(db_session, user, "invalid_context")
 
-        # Should default to 'other' context but still work
-        # The success may vary depending on implementation
-        assert isinstance(result.success, bool)
+        assert result.success is True
         assert result.turn_type_consumed == "free"
 
     @patch('services.subscription_service.get_db')
@@ -693,7 +690,6 @@ class TestSubscriptionService:
         # The exact turn count may vary depending on implementation
         assert hasattr(user, 'number_of_free_turns')
 
-    @pytest.mark.skip(reason="Turn consumption logic varies by implementation")
     def test_check_and_reset_free_turns_not_needed(self, db_session):
         """Test free turns reset when not needed."""
         service = SubscriptionService()
@@ -702,9 +698,9 @@ class TestSubscriptionService:
             number_of_free_turns=2
         )
 
-        # Set last reset to this month
-        this_month = datetime.now(UTC) - timedelta(days=10)
-        user.last_free_turns_reset = this_month
+        # Set last reset to the same month as now so should_reset_free_turns() is False.
+        user.last_free_turns_reset = datetime.now(UTC).replace(day=1)
+        db_session.commit()
 
         result = service.check_and_reset_free_turns(db_session, user)
 

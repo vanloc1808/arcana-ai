@@ -5,19 +5,18 @@ This module contains unit tests for the notification background tasks,
 covering reminder processing, system notifications, and cleanup operations.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
+
+import pytest
 
 from tasks.notification_tasks import (
-    send_reading_reminder_task,
-    process_daily_reminders_task,
-    send_system_notification_task,
     cleanup_old_tasks_task,
+    process_daily_reminders_task,
     reset_monthly_free_turns_task,
+    send_reading_reminder_task,
+    send_system_notification_task,
 )
-from models import ChatSession, User
-from tests.factories import UserFactory
 
 
 class TestSendReadingReminderTask:
@@ -69,7 +68,6 @@ class TestSendReadingReminderTask:
 
     @patch('tasks.notification_tasks.SessionLocal')
     @patch('tasks.notification_tasks.current_task')
-    @pytest.mark.skip(reason="Redis connection required for this test")
     def test_send_reading_reminder_no_recent_session_daily(self, mock_current_task, mock_session_local):
         """Test sending daily reminder when user has no recent chat session."""
         # Mock database session
@@ -95,7 +93,7 @@ class TestSendReadingReminderTask:
         # Mock current task
         mock_current_task.request.id = "task_123"
 
-        with patch('tasks.notification_tasks.send_reading_reminder_task.delay') as mock_delay:
+        with patch('tasks.email_tasks.send_reminder_email_task.delay') as mock_delay:
             mock_delay.return_value = Mock()
             mock_delay.return_value.id = "email_task_456"
 
@@ -163,7 +161,6 @@ class TestSendReadingReminderTask:
 
     @patch('tasks.notification_tasks.SessionLocal')
     @patch('tasks.notification_tasks.current_task')
-    @pytest.mark.skip(reason="Redis connection required for this test")
     def test_send_reading_reminder_old_session_weekly(self, mock_current_task, mock_session_local):
         """Test sending weekly reminder when user's last session is old."""
         # Mock database session
@@ -192,13 +189,11 @@ class TestSendReadingReminderTask:
         # Mock current task
         mock_current_task.request.id = "task_123"
 
-        with patch('tasks.notification_tasks.send_reading_reminder_task.delay') as mock_delay:
+        with patch('tasks.email_tasks.send_reminder_email_task.delay') as mock_delay:
             mock_delay.return_value = Mock()
             mock_delay.return_value.id = "email_task_456"
 
-            # Mock Redis to avoid connection issues
-            with patch('celery.backends.redis.RedisBackend'):
-                result = send_reading_reminder_task(1, "weekly")
+            result = send_reading_reminder_task(1, "weekly")
 
         expected = {
             "status": "success",
@@ -413,23 +408,19 @@ class TestSendSystemNotificationTask:
         # Mock current task
         mock_current_task.request.id = "task_123"
 
-        # Skip test if function doesn't exist
-        try:
-            with patch('tasks.notification_tasks.send_system_notification_email_task.delay') as mock_delay:
-                mock_delay.return_value = Mock()
-                mock_delay.return_value.id = "email_task_456"
+        with patch('tasks.email_tasks.send_system_notification_email_task.delay') as mock_delay:
+            mock_delay.return_value = Mock()
+            mock_delay.return_value.id = "email_task_456"
 
-                data = {"features": ["New card spreads", "Enhanced readings"]}
-                result = send_system_notification_task("feature_update", data)
+            data = {"features": ["New card spreads", "Enhanced readings"]}
+            send_system_notification_task("feature_update", data)
 
-            # Verify email task was called with feature update content
-            mock_delay.assert_called_once()
-            call_args = mock_delay.call_args
-            assert "New Features Available" in call_args[1]["subject"]
-            assert "New card spreads" in call_args[1]["html_body"]
-            assert "Enhanced readings" in call_args[1]["html_body"]
-        except AttributeError:
-            pytest.skip("send_system_notification_email_task function not implemented yet")
+        # Verify email task was called with feature update content
+        mock_delay.assert_called_once()
+        call_args = mock_delay.call_args
+        assert "New Features Available" in call_args[1]["subject"]
+        assert "New card spreads" in call_args[1]["html_body"]
+        assert "Enhanced readings" in call_args[1]["html_body"]
 
     @patch('tasks.notification_tasks.SessionLocal')
     @patch('tasks.notification_tasks.current_task')
@@ -450,25 +441,20 @@ class TestSendSystemNotificationTask:
         # Mock current task
         mock_current_task.request.id = "task_123"
 
-        # Skip test if function doesn't exist
-        try:
-            with patch('tasks.notification_tasks.send_system_notification_email_task.delay') as mock_delay:
-                mock_delay.return_value = Mock()
-                mock_delay.return_value.id = "email_task_456"
+        with patch('tasks.email_tasks.send_system_notification_email_task.delay') as mock_delay:
+            mock_delay.return_value = Mock()
+            mock_delay.return_value.id = "email_task_456"
 
-                data = {
-                    "subject": "Custom Notification",
-                    "html_body": "<p>Custom message</p>",
-                    "text_body": "Custom message"
-                }
-                result = send_system_notification_task("custom", data)
+            data = {
+                "subject": "Custom Notification",
+                "html_body": "<p>Custom message</p>",
+                "text_body": "Custom message",
+            }
+            send_system_notification_task("custom", data)
 
-            # Verify email task was called with custom content
-            mock_delay.assert_called_once()
-            call_args = mock_delay.call_args
-            assert call_args[1]["subject"] == "Custom Notification"
-        except AttributeError:
-            pytest.skip("send_system_notification_email_task function not implemented yet")
+        mock_delay.assert_called_once()
+        call_args = mock_delay.call_args
+        assert call_args[1]["subject"] == "Custom Notification"
         assert call_args[1]["html_body"] == "<p>Custom message</p>"
         assert call_args[1]["text_body"] == "Custom message"
 

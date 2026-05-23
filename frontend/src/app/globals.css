@@ -1355,6 +1355,22 @@ html {
   }
 }
 
+
+/* Make native date pickers legible on the dark UI (calendar icon + popup).
+   color-scheme: dark alone makes the browser render the picker indicator
+   light; do NOT also invert it or it goes dark again. */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
 /* Mobile-safe viewport units */
 .mobile-full-height {
   height: 100vh;
