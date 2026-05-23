@@ -37,12 +37,16 @@ export interface Card {
 }
 
 interface StreamResponse {
-    type: 'user_message' | 'assistant_message' | 'cards' | 'content_start' | 'content_chunk' | 'error';
+    type: 'user_message' | 'assistant_message' | 'cards' | 'content_start' | 'content_chunk' | 'error' | 'drawing';
     message?: Message;
     cards?: Card[];
     content?: string;
     error?: string;
+    num_cards?: number;
 }
+
+// How long the card-drawing animation plays before cards/reading are revealed.
+export const CARD_DRAW_ANIMATION_MS = 5000;
 
 export const useChatSessions = () => {
     const { token, logout } = useAuth();
@@ -54,7 +58,22 @@ export const useChatSessions = () => {
     const [error, setError] = useState<string | null>(null);
     const [currentCards, setCurrentCards] = useState<Card[]>([]);
     const [streamingContent, setStreamingContent] = useState<string>('');
+    // True while the card-drawing animation should play (between the backend's
+    // 'drawing' signal and CARD_DRAW_ANIMATION_MS elapsing).
+    const [isDrawingCards, setIsDrawingCards] = useState(false);
+    const drawingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasAttemptedFetch = useRef(false);
+
+    const beginDrawingAnimation = useCallback(() => {
+        if (drawingTimerRef.current) {
+            clearTimeout(drawingTimerRef.current);
+        }
+        setIsDrawingCards(true);
+        drawingTimerRef.current = setTimeout(() => {
+            setIsDrawingCards(false);
+            drawingTimerRef.current = null;
+        }, CARD_DRAW_ANIMATION_MS);
+    }, []);
 
     const handleUnauthorized = useCallback(() => {
         logout();
@@ -214,6 +233,9 @@ export const useChatSessions = () => {
                                                 return [...filtered, data.message!];
                                             });
                                         }
+                                        if (data.type === 'drawing') {
+                                            beginDrawingAnimation();
+                                        }
                                         if (data.type === 'cards' && data.cards) {
                                             logDebug('Received cards from stream (final buffer)', { hook: 'useChatSessions', cardCount: data.cards.length });
                                             setCurrentCards(data.cards);
@@ -277,6 +299,10 @@ export const useChatSessions = () => {
                                             const filtered = prev.filter(msg => msg.id !== tempUserMessage.id);
                                             return [...filtered, parsedData.message!];
                                         });
+                                    }
+
+                                    if (parsedData.type === 'drawing') {
+                                        beginDrawingAnimation();
                                     }
 
                                     if (parsedData.type === 'cards' && parsedData.cards) {
@@ -402,6 +428,7 @@ export const useChatSessions = () => {
         error,
         currentCards,
         streamingContent,
+        isDrawingCards,
         setCurrentSession,
         createSession,
         deleteSession,

@@ -914,6 +914,10 @@ async def create_message(
                         user_question = args.get("user_question", message_request.content)
                         num_cards_to_draw = args.get("num_cards", 3)
 
+                        # Signal the frontend that a draw is happening so it can play
+                        # the card-drawing animation before the cards are revealed.
+                        yield f"data: {json.dumps({'type': 'drawing', 'num_cards': num_cards_to_draw})}\n\n"
+
                         # Pass the db session and user to the tool executor
                         tool_result = execute_draw_cards_tool(
                             user_question, num_cards_to_draw, db=db, current_user=current_user

@@ -12,6 +12,7 @@ import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { MysticalSidebar } from '@/components/MysticalSidebar';
 import { TarotCard } from '@/components/TarotCard';
 import { DrawnCardReveal } from '@/components/DrawnCardReveal';
+import { CardDrawingAnimation } from '@/components/CardDrawingAnimation';
 import { tarot } from '@/lib/api';
 import { getDailyCard, type DailyCard } from '@/lib/dailyCard';
 
@@ -381,6 +382,7 @@ function HomeContent() {
     loading,
     error,
     streamingContent,
+    isDrawingCards,
     setCurrentSession,
     createSession,
     deleteSession,
@@ -733,8 +735,12 @@ function HomeContent() {
 
 
 
-                  {/* Display streaming content */}
-                  {streamingContent && (
+                  {/* Card-drawing suspense animation (plays for ~5s once the
+                      backend signals a draw, before cards/reading are revealed) */}
+                  {isDrawingCards && <CardDrawingAnimation />}
+
+                  {/* Display streaming content (held back while the draw animation plays) */}
+                  {!isDrawingCards && streamingContent && (
                     <div className="flex justify-start">
                       <div className="max-w-full md:max-w-2xl p-4 md:p-6 rounded-2xl card-mystical shadow-lg">
                         <div className="flex items-center gap-3 mb-3">
