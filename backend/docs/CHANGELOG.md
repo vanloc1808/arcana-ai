@@ -44,6 +44,7 @@ Covers commits from 2026-05-19 through 2026-05-21 (ISO week 2026-W21).
 - Compatibility reading interpretation is now rendered as formatted Markdown instead of raw text
 - Card-draw reveal animation (a staggered 3D flip-in) now plays whenever cards are dealt — chat reading, the spread reading page, and compatibility readings. Reimplemented with framer-motion so it runs reliably on mount and is no longer silently suppressed by the OS "reduce motion" setting
 - Chat readings now stream a `drawing` signal when the draw_cards tool fires, so the frontend plays a ~5-second card-shuffling suspense animation before revealing the drawn cards and the reading
+- Compatibility readings play the same ~5-second card-shuffling animation after "Draw the Relationship Cross" is clicked, before the cards and interpretation are revealed
 - Reading reminder push delivery no longer marks a reminder as sent when nothing was actually delivered: a reminder is finalized only when delivered, when the user has no push subscriptions, or after a bounded number of attempts; transient failures are retried on the next run. Reminders for the same user in one run are coalesced into a single notification
 
 ### Security

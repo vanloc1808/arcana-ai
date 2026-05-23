@@ -10,8 +10,12 @@ import { tarot, CompatibilityReadingResponse } from '@/lib/api';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { TurnCounter } from '@/components/TurnCounter';
 import { DrawnCardReveal } from '@/components/DrawnCardReveal';
+import { CardDrawingAnimation } from '@/components/CardDrawingAnimation';
 import { toast } from 'react-hot-toast';
 import { logError } from '@/lib/logger';
+
+// Minimum time the card-drawing animation plays before the reading is revealed.
+const DRAW_ANIMATION_MS = 5000;
 
 export default function CompatibilityReadingPage() {
     const { isAuthenticated } = useAuth();
@@ -27,6 +31,7 @@ export default function CompatibilityReadingPage() {
     const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
     const [interpretation, setInterpretation] = useState<string>('');
     const [isInterpreting, setIsInterpreting] = useState(false);
+    const [isDrawing, setIsDrawing] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,6 +49,8 @@ export default function CompatibilityReadingPage() {
         }
 
         setIsLoading(true);
+        setIsDrawing(true);
+        setResult(null);
         setInterpretation('');
         const payloadPeople = {
             person_a: { name: personAName.trim(), birth_date: personADob || undefined },
@@ -51,7 +58,12 @@ export default function CompatibilityReadingPage() {
             focus: focus.trim() || undefined,
         };
         try {
-            const data = await tarot.getCompatibilityReading(payloadPeople);
+            // Play the card-drawing animation for at least DRAW_ANIMATION_MS while
+            // the cards are fetched, then reveal — matching the chat reading.
+            const [data] = await Promise.all([
+                tarot.getCompatibilityReading(payloadPeople),
+                new Promise((resolve) => setTimeout(resolve, DRAW_ANIMATION_MS)),
+            ]);
             setResult(data);
             refreshData();
             void streamInterpretation(data);
@@ -64,6 +76,7 @@ export default function CompatibilityReadingPage() {
                 toast.error('Unable to draw the reading. Please try again.');
             }
         } finally {
+            setIsDrawing(false);
             setIsLoading(false);
         }
     };
@@ -190,7 +203,13 @@ export default function CompatibilityReadingPage() {
                     </button>
                 </form>
 
-                {result && (
+                {isDrawing && (
+                    <div className="mt-6">
+                        <CardDrawingAnimation count={5} />
+                    </div>
+                )}
+
+                {result && !isDrawing && (
                     <>
                         {/* Sticky context bar */}
                         <div className="sticky top-0 z-10 mt-6 bg-gray-900/95 backdrop-blur border border-purple-700/40 rounded-xl px-5 py-3 flex flex-wrap items-center gap-x-6 gap-y-1 shadow-lg">
