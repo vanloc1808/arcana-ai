@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300;400;600;700&family=Cormorant+Garamond:wght@300;400;600;700&family=Inter:wght@300;400;600;700&family=Source+Sans+Pro:wght@300;400;600;700&family=Cinzel:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300;400;600;700&family=Cormorant+Garamond:wght@300;400;500;600;700&family=Inter:wght@300;400;600;700&family=Source+Sans+Pro:wght@300;400;600;700&family=Cinzel:wght@400;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -1353,6 +1353,22 @@ html {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+
+/* Make native date pickers legible on the dark UI (calendar icon + popup).
+   color-scheme: dark alone makes the browser render the picker indicator
+   light; do NOT also invert it or it goes dark again. */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
 }
 
 /* Mobile-safe viewport units */

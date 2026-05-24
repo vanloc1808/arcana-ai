@@ -5,15 +5,15 @@ This module contains unit tests for the AvatarManager class,
 covering file validation, image processing, and storage operations.
 """
 
-import os
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
 from io import BytesIO
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
+from fastapi import HTTPException, UploadFile
 from PIL import Image
 
 from utils.avatar_utils import AvatarManager
-from fastapi import HTTPException, UploadFile
 
 
 class TestAvatarManager:
@@ -52,31 +52,26 @@ class TestAvatarManager:
 
         assert manager.upload_dir == Path(custom_dir)
 
-    @patch('utils.avatar_utils.Image.open')
-    @pytest.mark.skip(reason="Skip due to unstable behavior")
-    def test_validate_file_valid_image(self, mock_image_open):
-        """Test file validation with valid image."""
-        with patch('pathlib.Path.mkdir'):  # Mock mkdir to avoid filesystem issues
+    def test_validate_file_valid_extensions(self, tmp_path):
+        """validate_file accepts known image extensions and rejects unknown ones."""
+        with patch('pathlib.Path.mkdir'):
             manager = AvatarManager()
+        manager.upload_dir = tmp_path
 
-        # Create mock image
-        mock_img = Mock()
-        mock_img.format = "JPEG"
-        mock_img.size = (800, 600)
-        mock_image_open.return_value = mock_img
+        for ext in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+            mock_file = Mock(spec=UploadFile)
+            mock_file.filename = f"avatar{ext}"
+            mock_file.size = 1024
+            mock_file.file = BytesIO(b"")
+            manager.validate_file(mock_file)  # Should not raise
 
-        # Create mock file with proper file attribute for validation
-        mock_upload_file_obj = Mock()
-        mock_file = Mock(spec=UploadFile)
-        mock_file.filename = "test.jpg"
-        mock_file.size = 1024 * 500  # 500KB
-        mock_file.file = mock_upload_file_obj  # Add the file attribute
-
-        # Should not raise exception
-        manager.validate_file(mock_file)
-
-        # Verify Image.open was called (exact arguments may vary)
-        mock_image_open.assert_called_once()
+        bad = Mock(spec=UploadFile)
+        bad.filename = "avatar.bmp"
+        bad.size = 1024
+        bad.file = BytesIO(b"")
+        with pytest.raises(HTTPException) as exc:
+            manager.validate_file(bad)
+        assert exc.value.status_code == 400
 
     def test_validate_file_invalid_extension(self):
         """Test file validation with invalid file extension."""
@@ -142,104 +137,50 @@ class TestAvatarManager:
             assert e.status_code == 400
             assert "Invalid image file" in str(e.detail)
 
-    @patch('utils.avatar_utils.Image.open')
-    @patch('utils.avatar_utils.ImageOps.fit')
-    @patch('builtins.open')
-    @pytest.mark.skip(reason="Skip due to unstable behavior")
-    def test_save_avatar_success(self, mock_open, mock_fit, mock_image_open):
-        """Test successful avatar saving."""
-        manager = AvatarManager()
+    def test_save_avatar_writes_jpeg_named_after_user(self, tmp_path):
+        """save_avatar writes a JPEG named `<username>_<timestamp>.jpg`."""
+        with patch('pathlib.Path.mkdir'):
+            manager = AvatarManager()
+        manager.upload_dir = tmp_path
 
-        # Create mock image
-        mock_img = Mock()
-        mock_img.format = "JPEG"
-        mock_img.size = (800, 600)
-        mock_image_open.return_value = mock_img
-
-        # Create mock processed image
-        mock_processed_img = Mock()
-        mock_fit.return_value = mock_processed_img
-
-        # Mock file operations
-        mock_open_file_obj = Mock()
-        mock_open.return_value.__enter__.return_value = mock_open_file_obj
-
-        # Create mock file with proper file attribute that supports file-like operations
-        mock_upload_file_obj = Mock()
-        mock_upload_file_obj.read.return_value = b"fake_image_data"
-        mock_upload_file_obj.seek.return_value = None
-        mock_upload_file_obj.__iter__ = Mock(return_value=iter([]))  # Make it iterable for file operations
-
+        buffer = BytesIO()
+        Image.new("RGB", (800, 600), color="red").save(buffer, "JPEG")
+        buffer.seek(0)
         mock_file = Mock(spec=UploadFile)
         mock_file.filename = "test.jpg"
-        mock_file.size = 1024 * 500
-        mock_file.file = mock_upload_file_obj  # Add the file attribute that the method expects
+        mock_file.size = buffer.getbuffer().nbytes
+        mock_file.file = buffer
 
-        # Mock the image processing to avoid file operations
-        mock_processed_img = Mock()
-        mock_fit.return_value = mock_processed_img
-        mock_processed_img.save = Mock()
+        filename = manager.save_avatar(mock_file, "user123")
 
-        username = "user123"
-        result = manager.save_avatar(mock_file, username)
+        assert filename.startswith("user123_")
+        assert filename.endswith(".jpg")
+        written_path = tmp_path / filename
+        assert written_path.exists()
+        with Image.open(written_path) as written:
+            assert written.format == "JPEG"
+            assert written.size == manager.avatar_size
 
-        # Verify result contains expected filename pattern
-        assert "user123_" in result
-        assert result.endswith(".jpg")
+    def test_save_avatar_custom_filename(self, tmp_path):
+        """save_avatar normalises PNG input to JPG output named after the username."""
+        with patch('pathlib.Path.mkdir'):
+            manager = AvatarManager()
+        manager.upload_dir = tmp_path
 
-        # Verify image processing was called
-        mock_fit.assert_called_once_with(mock_img, (400, 400), Image.Resampling.LANCZOS)
-
-        # Verify file was saved
-        mock_file_obj.write.assert_called_once()
-
-    @patch('utils.avatar_utils.Image.open')
-    @patch('utils.avatar_utils.ImageOps.fit')
-    @patch('builtins.open')
-    @pytest.mark.skip(reason="Skip due to unstable behavior")
-    def test_save_avatar_custom_filename(self, mock_open, mock_fit, mock_image_open):
-        """Test avatar saving with custom filename."""
-        manager = AvatarManager()
-
-        # Create mock image
-        mock_img = Mock()
-        mock_img.format = "PNG"
-        mock_img.size = (600, 400)
-        mock_image_open.return_value = mock_img
-
-        # Create mock processed image
-        mock_processed_img = Mock()
-        mock_fit.return_value = mock_processed_img
-
-        # Mock file operations
-        mock_file_obj = Mock()
-        mock_open.return_value.__enter__.return_value = mock_file_obj
-
-        # Create mock file with proper file attribute
-        mock_upload_file_obj = Mock()
-        mock_upload_file_obj.read.return_value = b"fake_image_data"
-        mock_upload_file_obj.seek.return_value = None
-        mock_upload_file_obj.__iter__ = Mock(return_value=iter([]))  # Make it iterable
-
+        buffer = BytesIO()
+        Image.new("RGBA", (600, 400), color=(0, 128, 255, 200)).save(buffer, "PNG")
+        buffer.seek(0)
         mock_file = Mock(spec=UploadFile)
         mock_file.filename = "avatar.png"
-        mock_file.size = 1024 * 300
-        mock_file.file = mock_upload_file_obj  # Add the file attribute that the method expects
+        mock_file.size = buffer.getbuffer().nbytes
+        mock_file.file = buffer
 
-        # Mock the image processing
-        mock_processed_img = Mock()
-        mock_fit.return_value = mock_processed_img
-        mock_processed_img.save = Mock()
+        filename = manager.save_avatar(mock_file, "user456")
 
-        username = "user456"
-        result = manager.save_avatar(mock_file, username)
-
-        # Verify result contains expected filename pattern
-        assert "user456_" in result
-        assert result.endswith(".jpg")  # Always converted to JPG
-
-        # Verify image was processed to correct size
-        mock_fit.assert_called_once_with(mock_img, (400, 400), Image.Resampling.LANCZOS)
+        assert filename.startswith("user456_")
+        assert filename.endswith(".jpg")  # Always converted to JPG
+        with Image.open(tmp_path / filename) as written:
+            assert written.format == "JPEG"
 
     @patch('utils.avatar_utils.Image.open')
     def test_save_avatar_validation_fails(self, mock_image_open):
@@ -372,32 +313,21 @@ class TestAvatarManager:
 
         assert result is None
 
-    @patch('pathlib.Path.iterdir')
-    @pytest.mark.skip(reason="Skip due to unstable behavior")
-    def test_find_user_avatars(self, mock_iterdir):
-        """Test finding user avatars."""
-        with patch('pathlib.Path.mkdir'):  # Mock mkdir to avoid filesystem issues
+    def test_find_user_avatars_returns_only_matching_jpgs(self, tmp_path):
+        """find_user_avatars returns only `<username>_*.jpg` files."""
+        with patch('pathlib.Path.mkdir'):
             manager = AvatarManager()
+        manager.upload_dir = tmp_path
 
-        # Mock directory contents - glob only finds .jpg files
-        mock_files = [
-            Mock(is_file=Mock(return_value=True), name="user123_001.jpg"),
-            Mock(is_file=Mock(return_value=True), name="user123_002.png"),  # This won't be found by .jpg glob
-            Mock(is_file=Mock(return_value=True), name="user456_001.jpg"),
-            Mock(is_file=Mock(return_value=True), name="other_file.txt"),
-            Mock(is_file=Mock(return_value=False), name="subdir"),  # Directory
-        ]
+        (tmp_path / "user123_001.jpg").write_bytes(b"a")
+        (tmp_path / "user123_002.jpg").write_bytes(b"b")
+        (tmp_path / "user123_003.png").write_bytes(b"c")  # Not .jpg
+        (tmp_path / "user456_001.jpg").write_bytes(b"d")  # Different user
+        (tmp_path / "other.txt").write_bytes(b"e")
 
-        # Mock the glob method properly
-        mock_glob_result = [manager.upload_dir / "user123_001.jpg"]
-        with patch.object(manager.upload_dir, 'glob', return_value=mock_glob_result):
-
-            username = "user123"
-            result = manager.find_user_avatars(username)
-
-            # Should return Path objects (only .jpg files)
-            assert len(result) == 1
-            assert all(isinstance(p, type(manager.upload_dir / "test")) for p in result)
+        result = manager.find_user_avatars("user123")
+        names = sorted(p.name for p in result)
+        assert names == ["user123_001.jpg", "user123_002.jpg"]
 
     @patch('pathlib.Path.iterdir')
     def test_find_user_avatars_empty(self, mock_iterdir):

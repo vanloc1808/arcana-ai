@@ -7,6 +7,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { TurnCounter } from '@/components/TurnCounter';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { SubscriptionHistory } from '@/components/SubscriptionHistory';
+import { PushNotificationToggle } from '@/components/PushNotificationToggle';
 import { useSubscription } from '@/hooks/useSubscription';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { useRouter } from 'next/navigation';
@@ -18,7 +19,7 @@ export default function ProfilePage() {
     const { profile, fetchProfile, updateFullName } = useUserProfile();
     const { getSubscriptionStatusText, isPremium } = useSubscription();
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<'profile' | 'decks' | 'subscription' | 'history'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'decks' | 'subscription' | 'history' | 'notifications'>('profile');
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
     const [isEditingFullName, setIsEditingFullName] = useState(false);
     const [fullNameValue, setFullNameValue] = useState('');
@@ -164,6 +165,15 @@ export default function ProfilePage() {
                                         }`}
                                 >
                                     History
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('notifications')}
+                                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'notifications'
+                                        ? 'border-purple-500 text-purple-400'
+                                        : 'border-transparent text-gray-400 hover:text-gray-200'
+                                        }`}
+                                >
+                                    Notifications
                                 </button>
                             </nav>
                         </div>
@@ -353,6 +363,20 @@ export default function ProfilePage() {
 
                         {activeTab === 'history' && (
                             <SubscriptionHistory />
+                        )}
+
+                        {activeTab === 'notifications' && (
+                            <div className="space-y-6">
+                                <div>
+                                    <h2 className="text-2xl font-semibold text-white">Notifications</h2>
+                                    <p className="text-sm text-gray-400 mt-1">
+                                        Control how ArcanaAI reaches you on this device.
+                                    </p>
+                                </div>
+                                <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/40">
+                                    <PushNotificationToggle />
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

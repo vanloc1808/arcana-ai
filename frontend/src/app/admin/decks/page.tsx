@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import AdminLayout, { AdminCard, SectionHeader, AdminLoadingScreen, tableHeadStyle, tableCellStyle } from "@/components/AdminLayout";
+import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
+import { PageHeader, Pill, Icon } from "@/components/admin/AdminUI";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import api from "@/lib/api";
 
@@ -15,16 +16,14 @@ interface AdminDeck {
     cards_count: number;
 }
 
-const inputStyle: React.CSSProperties = {
-    width: '100%', marginTop: '4px', padding: '8px 12px',
-    background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(180,140,255,0.2)',
-    borderRadius: '8px', color: '#f0e6ff', fontSize: '14px', outline: 'none',
-};
-
-const labelStyle: React.CSSProperties = {
-    fontSize: '11px', fontFamily: "'Cinzel', serif", letterSpacing: '0.12em',
-    textTransform: 'uppercase' as const, color: 'rgba(160,140,200,0.5)',
-};
+const COVER_GRADIENTS = [
+    "linear-gradient(135deg, #3a2f5e 0%, #6b4d8b 100%)",
+    "linear-gradient(135deg, #4a2c2c 0%, #8b3a3a 100%)",
+    "linear-gradient(135deg, #2c3e4a 0%, #4a6b8b 100%)",
+    "linear-gradient(135deg, #1f3a2e 0%, #3a6b4d 100%)",
+    "linear-gradient(135deg, #4a2f3a 0%, #8b4d6b 100%)",
+    "linear-gradient(135deg, #2f3a4a 0%, #4d5b8b 100%)",
+];
 
 export default function AdminDecksPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
@@ -61,77 +60,54 @@ export default function AdminDecksPage() {
         }
     };
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading Decks…" />;
+    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading decks…" />;
     if (!user.is_admin) return null;
     if (loading) return <AdminLoadingScreen label="Summoning deck records…" />;
 
     return (
-        <AdminLayout activePath="/admin/decks" breadcrumb="Decks" username={user.username ?? 'Admin'}>
-            <SectionHeader title="Decks Management" />
+        <AdminLayout activePath="/admin/decks" breadcrumb="Decks" username={user.username ?? "Admin"}>
+            <div className="view">
+                <PageHeader kicker="Content" title="Decks" subtitle="The card collections users can read with." />
 
-            <AdminCard>
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[480px]">
-                        <thead>
-                            <tr>
-                                {['ID', 'Name', 'Description', 'Cards', 'Created', 'Actions'].map(h => (
-                                    <th key={h} style={tableHeadStyle}>{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {decks.map((deck) => (
-                                <tr
-                                    key={deck.id}
-                                    style={{ transition: 'background 0.15s' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,92,246,0.04)')}
-                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <td style={{ ...tableCellStyle, color: 'rgba(160,140,200,0.4)', fontSize: '12px' }}>#{deck.id}</td>
-                                    <td style={{ ...tableCellStyle, color: '#f0e6ff', fontWeight: 500 }}>{deck.name}</td>
-                                    <td style={{ ...tableCellStyle, maxWidth: '240px' }}>
-                                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }}>
-                                            {deck.description || '—'}
-                                        </div>
-                                    </td>
-                                    <td style={{ ...tableCellStyle, color: '#a78bfa' }}>{deck.cards_count}</td>
-                                    <td style={{ ...tableCellStyle, fontSize: '12px', color: 'rgba(160,140,200,0.4)' }}>
-                                        {new Date(deck.created_at).toLocaleDateString()}
-                                    </td>
-                                    <td style={tableCellStyle}>
-                                        <div className="flex gap-2">
+                {decks.length === 0 ? (
+                    <div className="card table-empty">No decks found.</div>
+                ) : (
+                    <div className="deck-grid">
+                        {decks.map((d) => (
+                            <div key={d.id} className="card deck-card">
+                                <div className="deck-cover" style={{ background: COVER_GRADIENTS[d.id % COVER_GRADIENTS.length] }}>
+                                    <div className="deck-cover-mark">
+                                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                                            <path d="M12 2L13.8 8.2L20 10L13.8 11.8L12 18L10.2 11.8L4 10L10.2 8.2L12 2Z" fill="white" fillOpacity="0.85" />
+                                        </svg>
+                                    </div>
+                                    <div className="deck-cover-name">{d.name}</div>
+                                </div>
+                                <div className="deck-body">
+                                    <div className="deck-meta-row">
+                                        <Pill tone="info" dot>Active</Pill>
+                                        <span className="deck-meta-count">{d.cards_count} cards</span>
+                                    </div>
+                                    <p className="deck-desc">{d.description || "No description."}</p>
+                                    <div className="deck-foot">
+                                        <span className="muted">Added {new Date(d.created_at).toLocaleDateString()}</span>
+                                        <div className="row-actions">
                                             <Dialog>
                                                 <DialogTrigger asChild>
-                                                    <button
-                                                        style={{
-                                                            padding: '5px 12px', borderRadius: '7px', fontSize: '12px',
-                                                            fontFamily: "'Cinzel', serif", letterSpacing: '0.06em',
-                                                            background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)',
-                                                            color: '#a78bfa', cursor: 'pointer',
-                                                        }}
-                                                    >
-                                                        Edit
-                                                    </button>
+                                                    <button className="row-action" title="Edit"><Icon name="edit" size={14} /></button>
                                                 </DialogTrigger>
-                                                <DialogContent
-                                                    style={{
-                                                        background: '#0d0d1a', border: '1px solid rgba(180,140,255,0.2)',
-                                                        borderRadius: '16px', color: '#f0e6ff',
-                                                    }}
-                                                >
+                                                <DialogContent className="admin-dialog">
                                                     <DialogHeader>
-                                                        <DialogTitle style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.1em', color: '#f0e6ff', fontSize: '16px' }}>
-                                                            Edit Deck
-                                                        </DialogTitle>
+                                                        <DialogTitle className="admin-dialog-title">Edit deck</DialogTitle>
                                                     </DialogHeader>
                                                     <form
                                                         onSubmit={async (e) => {
                                                             e.preventDefault();
                                                             const fd = new FormData(e.currentTarget);
                                                             try {
-                                                                await api.put(`/admin/decks/${deck.id}`, {
-                                                                    name: fd.get('name'),
-                                                                    description: fd.get('description'),
+                                                                await api.put(`/admin/decks/${d.id}`, {
+                                                                    name: fd.get("name"),
+                                                                    description: fd.get("description"),
                                                                 });
                                                                 loadDecks();
                                                             } catch { alert("Failed to update deck."); }
@@ -139,53 +115,28 @@ export default function AdminDecksPage() {
                                                         className="space-y-4 mt-2"
                                                     >
                                                         <div>
-                                                            <label style={labelStyle}>Name</label>
-                                                            <input name="name" defaultValue={deck.name} required style={inputStyle} />
+                                                            <label className="admin-field-label">Name</label>
+                                                            <input name="name" defaultValue={d.name} required className="admin-input" />
                                                         </div>
                                                         <div>
-                                                            <label style={labelStyle}>Description</label>
-                                                            <input name="description" defaultValue={deck.description} style={inputStyle} />
+                                                            <label className="admin-field-label">Description</label>
+                                                            <input name="description" defaultValue={d.description} className="admin-input" />
                                                         </div>
-                                                        <button
-                                                            type="submit"
-                                                            style={{
-                                                                width: '100%', padding: '10px', borderRadius: '10px',
-                                                                fontFamily: "'Cinzel', serif", letterSpacing: '0.1em', fontSize: '13px',
-                                                                background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(139,92,246,0.15))',
-                                                                border: '1px solid rgba(139,92,246,0.4)', color: '#a78bfa', cursor: 'pointer',
-                                                            }}
-                                                        >
-                                                            Save Changes
-                                                        </button>
+                                                        <button type="submit" className="admin-dialog-submit">Save changes</button>
                                                     </form>
                                                 </DialogContent>
                                             </Dialog>
-                                            <button
-                                                onClick={() => handleDelete(deck.id)}
-                                                style={{
-                                                    padding: '5px 12px', borderRadius: '7px', fontSize: '12px',
-                                                    fontFamily: "'Cinzel', serif", letterSpacing: '0.06em',
-                                                    background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)',
-                                                    color: '#fb7185', cursor: 'pointer',
-                                                }}
-                                            >
-                                                Delete
+                                            <button className="row-action danger" title="Delete" onClick={() => handleDelete(d.id)}>
+                                                <Icon name="trash" size={14} />
                                             </button>
                                         </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {decks.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} style={{ ...tableCellStyle, textAlign: 'center', padding: '48px', color: 'rgba(160,140,200,0.3)', fontStyle: 'italic' }}>
-                                        No decks found
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </AdminCard>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </AdminLayout>
     );
 }

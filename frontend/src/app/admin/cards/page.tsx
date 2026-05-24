@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import AdminLayout, { AdminCard, SectionHeader, AdminLoadingScreen, tableHeadStyle, tableCellStyle } from "@/components/AdminLayout";
+import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
+import { PageHeader, StatCard, SearchInput, Icon, Table, type Column } from "@/components/admin/AdminUI";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import api from "@/lib/api";
@@ -24,21 +25,25 @@ interface AdminCard {
     deck_name: string;
 }
 
-interface AdminDeck {
-    id: number;
-    name: string;
-}
+interface AdminDeck { id: number; name: string; }
 
-const inputStyle: React.CSSProperties = {
-    width: '100%', marginTop: '4px', padding: '8px 12px',
-    background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(180,140,255,0.2)',
-    borderRadius: '8px', color: '#f0e6ff', fontSize: '14px', outline: 'none',
+const SUIT_COLORS: Record<string, string> = {
+    "Major Arcana": "#a78bfa",
+    "Cups": "#5eead4",
+    "Wands": "#fcd34d",
+    "Swords": "#93c5fd",
+    "Pentacles": "#fca5a5",
 };
+const DEFAULT_SUIT_COLOR = "#a78bfa";
 
-const labelStyle: React.CSSProperties = {
-    fontSize: '11px', fontFamily: "'Cinzel', serif", letterSpacing: '0.12em',
-    textTransform: 'uppercase' as const, color: 'rgba(160,140,200,0.5)',
-};
+const COLUMNS: Column[] = [
+    { label: "Card", width: "30%" },
+    { label: "Suit", width: "16%" },
+    { label: "Rank", width: "10%" },
+    { label: "Deck", width: "22%" },
+    { label: "Element", width: "16%" },
+    { label: "", width: "6%", align: "right" },
+];
 
 export default function AdminCardsPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
@@ -46,6 +51,8 @@ export default function AdminCardsPage() {
     const [cards, setCards] = useState<AdminCard[]>([]);
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
+    const [q, setQ] = useState("");
+    const [deckFilter, setDeckFilter] = useState<string>("all");
 
     useEffect(() => {
         if (isAuthLoading) return;
@@ -80,179 +87,157 @@ export default function AdminCardsPage() {
         }
     };
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading Cards…" />;
+    const deckName = (c: AdminCard) => decks.find((d) => d.id === c.deck_id)?.name ?? c.deck_name ?? String(c.deck_id);
+
+    const filtered = useMemo(() => {
+        const s = q.toLowerCase().trim();
+        return cards.filter((c) => {
+            if (deckFilter !== "all" && String(c.deck_id) !== deckFilter) return false;
+            if (!s) return true;
+            return c.name.toLowerCase().includes(s) || (c.suit ?? "").toLowerCase().includes(s);
+        });
+    }, [cards, q, deckFilter, decks]);
+
+    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading cards…" />;
     if (!user.is_admin) return null;
     if (loading) return <AdminLoadingScreen label="Shuffling the arcana…" />;
 
+    const distinctDecks = [...new Set(cards.map((c) => c.deck_id))].length;
+    const distinctSuits = [...new Set(cards.map((c) => c.suit).filter(Boolean))].length;
+
     return (
-        <AdminLayout activePath="/admin/cards" breadcrumb="Cards" username={user.username ?? 'Admin'}>
-            <SectionHeader title="Cards Management" />
+        <AdminLayout activePath="/admin/cards" breadcrumb="Cards" username={user.username ?? "Admin"}>
+            <div className="view">
+                <PageHeader kicker="Content" title="Cards" subtitle="The full catalog across every deck." />
 
-            {/* Quick stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-                {[
-                    { label: 'Total Cards', value: cards.length,                                              color: '#5eead4' },
-                    { label: 'Decks',       value: [...new Set(cards.map(c => c.deck_id))].length,           color: '#e8cc82' },
-                    { label: 'Suits',       value: [...new Set(cards.map(c => c.suit).filter(Boolean))].length, color: '#a78bfa' },
-                ].map(({ label, value, color }) => (
-                    <AdminCard key={label} style={{ padding: '18px 20px', textAlign: 'center' }}>
-                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '26px', fontWeight: 600, color, marginBottom: '4px' }}>
-                            {value}
-                        </div>
-                        <div style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(160,140,200,0.4)' }}>
-                            {label}
-                        </div>
-                    </AdminCard>
-                ))}
-            </div>
-
-            <AdminCard>
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[560px]">
-                        <thead>
-                            <tr>
-                                {['ID', 'Name', 'Suit', 'Rank', 'Deck', 'Actions'].map(h => (
-                                    <th key={h} style={tableHeadStyle}>{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {cards.map((card) => (
-                                <tr
-                                    key={card.id}
-                                    style={{ transition: 'background 0.15s' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,92,246,0.04)')}
-                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <td style={{ ...tableCellStyle, color: 'rgba(160,140,200,0.4)', fontSize: '12px' }}>#{card.id}</td>
-                                    <td style={{ ...tableCellStyle, color: '#f0e6ff', fontWeight: 500 }}>{card.name}</td>
-                                    <td style={tableCellStyle}>{card.suit || '—'}</td>
-                                    <td style={tableCellStyle}>{card.rank || '—'}</td>
-                                    <td style={{ ...tableCellStyle, color: '#a78bfa' }}>
-                                        {decks.find(d => d.id === card.deck_id)?.name ?? card.deck_name ?? String(card.deck_id)}
-                                    </td>
-                                    <td style={tableCellStyle}>
-                                        <div className="flex gap-2">
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <button
-                                                        style={{
-                                                            padding: '5px 12px', borderRadius: '7px', fontSize: '12px',
-                                                            fontFamily: "'Cinzel', serif", letterSpacing: '0.06em',
-                                                            background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)',
-                                                            color: '#a78bfa', cursor: 'pointer',
-                                                        }}
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                </DialogTrigger>
-                                                <DialogContent
-                                                    style={{
-                                                        background: '#0d0d1a', border: '1px solid rgba(180,140,255,0.2)',
-                                                        borderRadius: '16px', color: '#f0e6ff', maxHeight: '90vh', overflowY: 'auto',
-                                                    }}
-                                                >
-                                                    <DialogHeader>
-                                                        <DialogTitle style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.1em', color: '#f0e6ff', fontSize: '16px' }}>
-                                                            Edit Card
-                                                        </DialogTitle>
-                                                    </DialogHeader>
-                                                    <form
-                                                        onSubmit={async (e) => {
-                                                            e.preventDefault();
-                                                            const fd = new FormData(e.currentTarget);
-                                                            try {
-                                                                await api.put(`/admin/cards/${card.id}`, {
-                                                                    name: fd.get('name'),
-                                                                    suit: fd.get('suit'),
-                                                                    rank: fd.get('rank'),
-                                                                    description_short: fd.get('description_short'),
-                                                                    description_upright: fd.get('description_upright'),
-                                                                    description_reversed: fd.get('description_reversed'),
-                                                                    element: fd.get('element'),
-                                                                    astrology: fd.get('astrology'),
-                                                                    numerology: Number(fd.get('numerology')),
-                                                                    deck_id: fd.get('deck_id'),
-                                                                });
-                                                                loadData();
-                                                            } catch { alert("Failed to update card."); }
-                                                        }}
-                                                        className="space-y-3 mt-2"
-                                                    >
-                                                        {[
-                                                            { name: 'name',                label: 'Name',                val: card.name,                required: true },
-                                                            { name: 'suit',                label: 'Suit',                val: card.suit,                required: false },
-                                                            { name: 'rank',                label: 'Rank',                val: card.rank,                required: false },
-                                                            { name: 'description_short',   label: 'Short Description',   val: card.description_short,   required: false },
-                                                            { name: 'description_upright', label: 'Upright Description', val: card.description_upright, required: false },
-                                                            { name: 'description_reversed',label: 'Reversed Description',val: card.description_reversed, required: false },
-                                                            { name: 'element',             label: 'Element',             val: card.element,             required: false },
-                                                            { name: 'astrology',           label: 'Astrology',           val: card.astrology,           required: false },
-                                                        ].map(f => (
-                                                            <div key={f.name}>
-                                                                <label style={labelStyle}>{f.label}</label>
-                                                                <input name={f.name} defaultValue={f.val ?? ''} required={f.required} style={inputStyle} />
-                                                            </div>
-                                                        ))}
-                                                        <div>
-                                                            <label style={labelStyle}>Numerology</label>
-                                                            <input name="numerology" type="number" defaultValue={card.numerology} style={inputStyle} />
-                                                        </div>
-                                                        <div>
-                                                            <label style={labelStyle}>Deck</label>
-                                                            <div className="mt-1">
-                                                                <Select name="deck_id" defaultValue={String(card.deck_id)}>
-                                                                    <SelectTrigger style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(180,140,255,0.2)', borderRadius: '8px', color: '#f0e6ff' }}>
-                                                                        <SelectValue placeholder="Select a deck" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent style={{ background: '#0d0d1a', border: '1px solid rgba(180,140,255,0.2)' }}>
-                                                                        {decks.map(d => (
-                                                                            <SelectItem key={d.id} value={String(d.id)} style={{ color: '#f0e6ff' }}>{d.name}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            type="submit"
-                                                            style={{
-                                                                width: '100%', padding: '10px', borderRadius: '10px', marginTop: '4px',
-                                                                fontFamily: "'Cinzel', serif", letterSpacing: '0.1em', fontSize: '13px',
-                                                                background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(139,92,246,0.15))',
-                                                                border: '1px solid rgba(139,92,246,0.4)', color: '#a78bfa', cursor: 'pointer',
-                                                            }}
-                                                        >
-                                                            Save Changes
-                                                        </button>
-                                                    </form>
-                                                </DialogContent>
-                                            </Dialog>
-                                            <button
-                                                onClick={() => handleDelete(card.id)}
-                                                style={{
-                                                    padding: '5px 12px', borderRadius: '7px', fontSize: '12px',
-                                                    fontFamily: "'Cinzel', serif", letterSpacing: '0.06em',
-                                                    background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)',
-                                                    color: '#fb7185', cursor: 'pointer',
-                                                }}
-                                            >
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {cards.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} style={{ ...tableCellStyle, textAlign: 'center', padding: '48px', color: 'rgba(160,140,200,0.3)', fontStyle: 'italic' }}>
-                                        No cards found
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className="stats-grid stats-grid-3">
+                    <StatCard label="Total cards" value={cards.length.toLocaleString()} caption="across all decks" accent="violet" />
+                    <StatCard label="Decks" value={distinctDecks} caption="with cards" accent="teal" />
+                    <StatCard label="Suits" value={distinctSuits} caption="distinct suits" accent="amber" />
                 </div>
-            </AdminCard>
+
+                <div className="toolbar">
+                    <SearchInput value={q} onChange={setQ} placeholder="Search cards by name or suit…" />
+                    <div className="filter-group">
+                        <button className={`filter-chip ${deckFilter === "all" ? "is-active" : ""}`} onClick={() => setDeckFilter("all")}>All decks</button>
+                        {decks.map((d) => (
+                            <button key={d.id} className={`filter-chip ${deckFilter === String(d.id) ? "is-active" : ""}`} onClick={() => setDeckFilter(String(d.id))}>
+                                {d.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <Table
+                    columns={COLUMNS}
+                    rows={filtered}
+                    empty="No cards match your filters."
+                    renderRow={(c: AdminCard) => {
+                        const color = SUIT_COLORS[c.suit] ?? DEFAULT_SUIT_COLOR;
+                        return (
+                            <tr key={c.id}>
+                                <td>
+                                    <div className="cell-card">
+                                        <div className="card-thumb" style={{ background: `linear-gradient(135deg, ${color}30, ${color}08)`, borderColor: `${color}40` }}>
+                                            <span style={{ color }}>{c.rank || "—"}</span>
+                                        </div>
+                                        <div>
+                                            <div className="cell-card-name">{c.name}</div>
+                                            <div className="cell-card-id">CARD-{String(c.id).padStart(4, "0")}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {c.suit ? (
+                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color, fontWeight: 500, fontSize: 13 }}>
+                                            <span style={{ width: 6, height: 6, borderRadius: 99, background: color }} />
+                                            {c.suit}
+                                        </span>
+                                    ) : <span className="muted">—</span>}
+                                </td>
+                                <td className="mono">{c.rank || "—"}</td>
+                                <td className="muted">{deckName(c)}</td>
+                                <td className="muted">{c.element || "—"}</td>
+                                <td style={{ textAlign: "right" }}>
+                                    <div className="row-actions">
+                                        <Dialog>
+                                            <DialogTrigger asChild>
+                                                <button className="row-action" title="Edit"><Icon name="edit" size={14} /></button>
+                                            </DialogTrigger>
+                                            <DialogContent className="admin-dialog">
+                                                <DialogHeader>
+                                                    <DialogTitle className="admin-dialog-title">Edit card</DialogTitle>
+                                                </DialogHeader>
+                                                <form
+                                                    onSubmit={async (e) => {
+                                                        e.preventDefault();
+                                                        const fd = new FormData(e.currentTarget);
+                                                        try {
+                                                            await api.put(`/admin/cards/${c.id}`, {
+                                                                name: fd.get("name"),
+                                                                suit: fd.get("suit"),
+                                                                rank: fd.get("rank"),
+                                                                description_short: fd.get("description_short"),
+                                                                description_upright: fd.get("description_upright"),
+                                                                description_reversed: fd.get("description_reversed"),
+                                                                element: fd.get("element"),
+                                                                astrology: fd.get("astrology"),
+                                                                numerology: Number(fd.get("numerology")),
+                                                                deck_id: fd.get("deck_id"),
+                                                            });
+                                                            loadData();
+                                                        } catch { alert("Failed to update card."); }
+                                                    }}
+                                                    className="space-y-3 mt-2"
+                                                >
+                                                    {[
+                                                        { name: "name", label: "Name", val: c.name, required: true },
+                                                        { name: "suit", label: "Suit", val: c.suit, required: false },
+                                                        { name: "rank", label: "Rank", val: c.rank, required: false },
+                                                        { name: "description_short", label: "Short description", val: c.description_short, required: false },
+                                                        { name: "description_upright", label: "Upright description", val: c.description_upright, required: false },
+                                                        { name: "description_reversed", label: "Reversed description", val: c.description_reversed, required: false },
+                                                        { name: "element", label: "Element", val: c.element, required: false },
+                                                        { name: "astrology", label: "Astrology", val: c.astrology, required: false },
+                                                    ].map((f) => (
+                                                        <div key={f.name}>
+                                                            <label className="admin-field-label">{f.label}</label>
+                                                            <input name={f.name} defaultValue={f.val ?? ""} required={f.required} className="admin-input" />
+                                                        </div>
+                                                    ))}
+                                                    <div>
+                                                        <label className="admin-field-label">Numerology</label>
+                                                        <input name="numerology" type="number" defaultValue={c.numerology} className="admin-input" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="admin-field-label">Deck</label>
+                                                        <div className="mt-1.5">
+                                                            <Select name="deck_id" defaultValue={String(c.deck_id)}>
+                                                                <SelectTrigger className="admin-input">
+                                                                    <SelectValue placeholder="Select a deck" />
+                                                                </SelectTrigger>
+                                                                <SelectContent style={{ background: "#181b27", border: "1px solid rgba(167,160,200,0.18)", color: "#eceaf4" }}>
+                                                                    {decks.map((d) => (
+                                                                        <SelectItem key={d.id} value={String(d.id)} style={{ color: "#eceaf4" }}>{d.name}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+                                                    <button type="submit" className="admin-dialog-submit">Save changes</button>
+                                                </form>
+                                            </DialogContent>
+                                        </Dialog>
+                                        <button className="row-action danger" title="Delete" onClick={() => handleDelete(c.id)}>
+                                            <Icon name="trash" size={14} />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    }}
+                />
+            </div>
         </AdminLayout>
     );
 }

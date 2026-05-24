@@ -134,6 +134,13 @@ export default function ReadingPage() {
                             </div>
                             <div className="flex items-center space-x-2 sm:space-x-4">
                                 <Link
+                                    href="/reading/compatibility"
+                                    className="btn-mystical flex items-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
+                                >
+                                    <span className="hidden xs:inline">Compatibility Reading</span>
+                                    <span className="xs:hidden">Compat.</span>
+                                </Link>
+                                <Link
                                     href="/"
                                     className="btn-mystical flex items-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
                                 >

@@ -238,6 +238,108 @@ class TarotReader:
 
         logger.info("Reading generation completed")
 
+    async def stream_compatibility_reading(
+        self,
+        person_a: str,
+        person_b: str,
+        cards: list[dict],
+        focus: str | None = None,
+    ):
+        """Stream a relationship reading for two people chunk by chunk."""
+        position_labels = ["You", "Them", "The Connection", "The Challenge", "The Outcome"]
+        cards_text = ""
+        for i, card in enumerate(cards):
+            position = card.get("position") or (position_labels[i] if i < len(position_labels) else f"Card {i + 1}")
+            cards_text += f"{i + 1}. [{position}] {card['name']} ({card.get('orientation', 'Upright')})\n"
+            cards_text += f"   Meaning: {card.get('meaning', '')}\n"
+
+        focus_line = f"Their question: {focus}\n\n" if focus else ""
+
+        template = (
+            "You are an experienced, compassionate Tarot reader specializing in relationships. "
+            "Create a CONCISE compatibility reading (maximum 1000 words) for two people: "
+            "{person_a} and {person_b}.\n\n"
+            "{focus_line}"
+            "The cards were drawn in a Relationship Cross spread:\n{cards}\n\n"
+            "Format the reading in Markdown:\n"
+            "- Start each of the five positions with its own '### ' heading, e.g. "
+            "'### You — {person_a}: <Card Name> (<Orientation>)'\n"
+            "- Under each heading, write 1-2 short paragraphs interpreting that card in its "
+            "relationship position, referring to the people by name and accounting for reversals\n"
+            "- End with a '### Summary' section that names the central strength and the central "
+            "challenge of the bond and offers 1-2 practical, kind suggestions\n\n"
+            "Always write 'Tarot', not 'tarot'. Respond in the same language as the question if one is given.\n\n"
+            "Compatibility Reading:"
+        )
+
+        prompt = ChatPromptTemplate.from_template(template)
+        chain = prompt | self.llm | self.output_parser
+        async for chunk in chain.astream(
+            {
+                "person_a": person_a,
+                "person_b": person_b,
+                "focus_line": focus_line,
+                "cards": cards_text,
+            }
+        ):
+            yield chunk
+            await asyncio.sleep(0)
+
+    async def create_compatibility_reading(
+        self,
+        person_a: str,
+        person_b: str,
+        cards: list[dict],
+        focus: str | None = None,
+    ) -> str:
+        """Generate a relationship reading for two people and return the full text.
+
+        Unlike create_reading (which streams), this returns the complete
+        interpretation in one string so the compatibility endpoint can respond
+        with a single JSON payload. Cards are expected in Relationship Cross
+        order: You, Them, The Connection, The Challenge, The Outcome.
+        """
+        logger.info("Creating compatibility reading...")
+
+        position_labels = ["You", "Them", "The Connection", "The Challenge", "The Outcome"]
+        cards_text = ""
+        for i, card in enumerate(cards):
+            position = card.get("position") or (position_labels[i] if i < len(position_labels) else f"Card {i + 1}")
+            cards_text += f"{i + 1}. [{position}] {card['name']} ({card.get('orientation', 'Upright')})\n"
+            cards_text += f"   Meaning: {card.get('meaning', '')}\n"
+
+        focus_line = f"Their question: {focus}\n\n" if focus else ""
+
+        template = (
+            "You are an experienced, compassionate Tarot reader specializing in relationships. "
+            "Create a CONCISE compatibility reading (maximum 1000 words) for two people: "
+            "{person_a} and {person_b}.\n\n"
+            "{focus_line}"
+            "The cards were drawn in a Relationship Cross spread:\n{cards}\n\n"
+            "Format the reading in Markdown:\n"
+            "- Start each of the five positions with its own '### ' heading, e.g. "
+            "'### You — {person_a}: <Card Name> (<Orientation>)'\n"
+            "- Under each heading, write 1-2 short paragraphs interpreting that card in its "
+            "relationship position, referring to the people by name and accounting for reversals\n"
+            "- End with a '### Summary' section that names the central strength and the central "
+            "challenge of the bond and offers 1-2 practical, kind suggestions\n\n"
+            "Always write 'Tarot', not 'tarot'. Respond in the same language as the question if one is given.\n\n"
+            "Compatibility Reading:"
+        )
+
+        prompt = ChatPromptTemplate.from_template(template)
+        chain = prompt | self.llm | self.output_parser
+        result = await chain.ainvoke(
+            {
+                "person_a": person_a,
+                "person_b": person_b,
+                "focus_line": focus_line,
+                "cards": cards_text,
+            }
+        )
+        logger.info("Compatibility reading generation completed")
+        return result
+
 
 def main():
     reader = TarotReader()

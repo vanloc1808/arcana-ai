@@ -1,20 +1,70 @@
 "use client";
 
-import { useState } from "react";
-import { JournalFilters } from "@/types/tarot";
+import { useEffect, useState } from "react";
+import { JournalFilters, TagUsage } from "@/types/tarot";
+import { journal } from "@/lib/api";
+import { logDebug } from "@/lib/logger";
 
 interface JournalFiltersProps {
     filters: JournalFilters;
     onFilterChange: (filters: JournalFilters) => void;
 }
 
+function parseTagInput(value: string): string[] {
+    return value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+}
+
 export default function JournalFiltersComponent({ filters, onFilterChange }: JournalFiltersProps) {
     const [localFilters, setLocalFilters] = useState<JournalFilters>(filters);
+    const [tagUsage, setTagUsage] = useState<TagUsage[]>([]);
+    const [spreadOptions, setSpreadOptions] = useState<string[]>([]);
+
+    useEffect(() => {
+        setLocalFilters(filters);
+    }, [filters]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const [tags, spreads] = await Promise.all([
+                    journal.getUsedTags(),
+                    journal.getUsedSpreads(),
+                ]);
+                if (!cancelled) {
+                    setTagUsage(tags);
+                    setSpreadOptions(spreads);
+                }
+            } catch (err) {
+                logDebug("Failed to load journal filter suggestions", { error: String(err) });
+            }
+        };
+        load();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const handleFilterChange = (key: keyof JournalFilters, value: string | number | boolean | undefined) => {
         const newFilters = { ...localFilters, [key]: value };
         setLocalFilters(newFilters);
         onFilterChange(newFilters);
+    };
+
+    const activeTagSet = new Set(parseTagInput(localFilters.tags || ""));
+
+    const toggleTag = (tag: string) => {
+        const next = new Set(activeTagSet);
+        if (next.has(tag)) {
+            next.delete(tag);
+        } else {
+            next.add(tag);
+        }
+        const nextValue = Array.from(next).join(", ");
+        handleFilterChange("tags", nextValue || undefined);
     };
 
     const clearFilters = () => {
@@ -59,9 +109,55 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         type="text"
                         value={localFilters.tags || ""}
                         onChange={(e) => handleFilterChange("tags", e.target.value || undefined)}
-                        placeholder="Enter tags (comma-separated)"
+                        placeholder="career, growth"
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     />
+                </div>
+
+                {/* Tags match mode */}
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Tag Match
+                    </label>
+                    <select
+                        value={localFilters.tags_match || "all"}
+                        onChange={(e) => handleFilterChange("tags_match", e.target.value as "all" | "any")}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
+                    >
+                        <option value="all">Match all (AND)</option>
+                        <option value="any">Match any (OR)</option>
+                    </select>
+                </div>
+
+                {/* Card filter */}
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Card
+                    </label>
+                    <input
+                        type="text"
+                        value={localFilters.card_name || ""}
+                        onChange={(e) => handleFilterChange("card_name", e.target.value || undefined)}
+                        placeholder="e.g. The Fool"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
+                    />
+                </div>
+
+                {/* Spread filter */}
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Spread
+                    </label>
+                    <select
+                        value={localFilters.spread_name || ""}
+                        onChange={(e) => handleFilterChange("spread_name", e.target.value || undefined)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
+                    >
+                        <option value="">Any spread</option>
+                        {spreadOptions.map((spread) => (
+                            <option key={spread} value={spread}>{spread}</option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Date Range */}
@@ -154,6 +250,34 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                     </select>
                 </div>
             </div>
+
+            {/* Tag chips */}
+            {tagUsage.length > 0 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Your tags</div>
+                    <div className="flex flex-wrap gap-2">
+                        {tagUsage.map(({ tag, count }) => {
+                            const active = activeTagSet.has(tag);
+                            return (
+                                <button
+                                    key={tag}
+                                    type="button"
+                                    onClick={() => toggleTag(tag)}
+                                    aria-pressed={active}
+                                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                                        active
+                                            ? "bg-purple-600 text-white"
+                                            : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                                    }`}
+                                >
+                                    <span>{tag}</span>
+                                    <span className={active ? "text-purple-100" : "text-gray-500 dark:text-gray-400"}>×{count}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Toggles */}
             <div className="flex items-center space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">

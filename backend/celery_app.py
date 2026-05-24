@@ -19,7 +19,7 @@ celery_app = Celery(
     "tarot_tasks",
     broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
     backend=os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0"),
-    include=["tasks.email_tasks", "tasks.notification_tasks", "tasks.journal_tasks"],
+    include=["tasks.email_tasks", "tasks.notification_tasks", "tasks.journal_tasks", "tasks.web_push_tasks"],
 )
 
 # Celery configuration
@@ -38,17 +38,23 @@ celery_app.conf.update(
     task_routes={
         "tasks.email_tasks.*": {"queue": "email"},
         "tasks.notification_tasks.*": {"queue": "notifications"},
+        "tasks.web_push_tasks.*": {"queue": "notifications"},
     },
     # Task retry configuration
     task_default_retry_delay=60,  # 1 minute
     task_max_retries=3,
     # Task discovery
-    imports=("tasks.email_tasks", "tasks.notification_tasks", "tasks.journal_tasks"),
+    imports=("tasks.email_tasks", "tasks.notification_tasks", "tasks.journal_tasks", "tasks.web_push_tasks"),
     # Periodic task schedule
     beat_schedule={
         "reset-monthly-free-turns": {
             "task": "reset_monthly_free_turns",
             "schedule": crontab(hour=0, minute=1, day_of_month=1),  # 1st of every month at 00:01 UTC
+            "options": {"queue": "notifications"},
+        },
+        "process-due-reading-reminders": {
+            "task": "process_due_reading_reminders",
+            "schedule": crontab(minute=0),  # Top of every hour
             "options": {"queue": "notifications"},
         },
     },

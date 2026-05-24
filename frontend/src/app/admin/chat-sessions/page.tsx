@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import AdminLayout, { AdminCard, SectionHeader, AdminLoadingScreen, tableHeadStyle, tableCellStyle } from "@/components/AdminLayout";
+import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
+import { PageHeader, StatCard, Icon, Table, type Column } from "@/components/admin/AdminUI";
 import api from "@/lib/api";
 
 interface AdminChatSession {
@@ -14,6 +15,13 @@ interface AdminChatSession {
     username: string;
     messages_count: number;
 }
+
+const COLUMNS: Column[] = [
+    { label: "Title", width: "40%" },
+    { label: "User", width: "22%" },
+    { label: "Messages", width: "14%", align: "right" },
+    { label: "Started", width: "24%" },
+];
 
 export default function AdminChatSessionsPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
@@ -40,78 +48,43 @@ export default function AdminChatSessionsPage() {
         }
     };
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading Sessions…" />;
+    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading sessions…" />;
     if (!user.is_admin) return null;
     if (loading) return <AdminLoadingScreen label="Consulting the ether…" />;
 
     const totalMessages = sessions.reduce((sum, s) => sum + s.messages_count, 0);
+    const avgMessages = sessions.length ? (totalMessages / sessions.length).toFixed(1) : "0";
 
     return (
-        <AdminLayout activePath="/admin/chat-sessions" breadcrumb="Chat Sessions" username={user.username ?? 'Admin'}>
-            <SectionHeader title="Chat Sessions" />
+        <AdminLayout activePath="/admin/chat-sessions" breadcrumb="Chat Sessions" username={user.username ?? "Admin"}>
+            <div className="view">
+                <PageHeader kicker="Conversations" title="Chat sessions" subtitle="Reading conversations between users and the Arcana oracle." />
 
-            {/* Quick stats */}
-            <div className="grid grid-cols-2 gap-4 mb-6 sm:max-w-sm">
-                {[
-                    { label: 'Total Sessions',  value: sessions.length, color: '#5eead4' },
-                    { label: 'Total Messages',  value: totalMessages,    color: '#a78bfa' },
-                ].map(({ label, value, color }) => (
-                    <AdminCard key={label} style={{ padding: '18px 20px', textAlign: 'center' }}>
-                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '26px', fontWeight: 600, color, marginBottom: '4px' }}>
-                            {value.toLocaleString()}
-                        </div>
-                        <div style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(160,140,200,0.4)' }}>
-                            {label}
-                        </div>
-                    </AdminCard>
-                ))}
-            </div>
-
-            <AdminCard>
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[480px]">
-                        <thead>
-                            <tr>
-                                {['ID', 'Title', 'User', 'Messages', 'Created'].map(h => (
-                                    <th key={h} style={tableHeadStyle}>{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sessions.map((s) => (
-                                <tr
-                                    key={s.id}
-                                    style={{ transition: 'background 0.15s' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,92,246,0.04)')}
-                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <td style={{ ...tableCellStyle, color: 'rgba(160,140,200,0.4)', fontSize: '12px' }}>#{s.id}</td>
-                                    <td style={{ ...tableCellStyle, color: '#f0e6ff', maxWidth: '220px' }}>
-                                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
-                                            {s.title || '—'}
-                                        </div>
-                                    </td>
-                                    <td style={tableCellStyle}>
-                                        <div style={{ color: '#a78bfa' }}>{s.username}</div>
-                                        <div style={{ fontSize: '11px', color: 'rgba(160,140,200,0.4)' }}>#{s.user_id}</div>
-                                    </td>
-                                    <td style={{ ...tableCellStyle, color: '#5eead4' }}>{s.messages_count}</td>
-                                    <td style={{ ...tableCellStyle, fontSize: '12px', color: 'rgba(160,140,200,0.4)' }}>
-                                        {new Date(s.created_at).toLocaleDateString()}
-                                    </td>
-                                </tr>
-                            ))}
-                            {sessions.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} style={{ ...tableCellStyle, textAlign: 'center', padding: '48px', color: 'rgba(160,140,200,0.3)', fontStyle: 'italic' }}>
-                                        No chat sessions found
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className="stats-grid stats-grid-3">
+                    <StatCard label="Total sessions" value={sessions.length.toLocaleString()} caption="all recorded sessions" accent="teal" />
+                    <StatCard label="Total messages" value={totalMessages.toLocaleString()} caption="across all sessions" accent="violet" />
+                    <StatCard label="Avg. messages" value={avgMessages} caption="per session" accent="amber" />
                 </div>
-            </AdminCard>
+
+                <Table
+                    columns={COLUMNS}
+                    rows={sessions}
+                    empty="No chat sessions found."
+                    renderRow={(s: AdminChatSession) => (
+                        <tr key={s.id}>
+                            <td>
+                                <div className="cell-session">
+                                    <div className="session-icon"><Icon name="chat" size={14} /></div>
+                                    <span className="cell-session-title">{s.title || "Untitled session"}</span>
+                                </div>
+                            </td>
+                            <td className="muted">@{s.username} <span style={{ color: "var(--text-4)" }}>#{s.user_id}</span></td>
+                            <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{s.messages_count}</td>
+                            <td className="muted">{new Date(s.created_at).toLocaleString()}</td>
+                        </tr>
+                    )}
+                />
+            </div>
         </AdminLayout>
     );
 }

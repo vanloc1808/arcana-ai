@@ -264,6 +264,23 @@ def seed_spreads():
                 {"index": 4, "name": "Career Outcome", "description": "Where your career is heading", "x": 50, "y": 20},
             ],
         },
+        {
+            "name": "Relationship Cross",
+            "description": (
+                "A five-card spread for compatibility readings. Each card illuminates one "
+                "facet of the bond between two people: their individual presences in the "
+                "relationship, the connection that links them, the challenge that tests "
+                "them, and where the relationship is headed."
+            ),
+            "num_cards": 5,
+            "positions": [
+                {"index": 0, "name": "You", "description": "How the first person shows up in the relationship", "x": 25, "y": 50},
+                {"index": 1, "name": "Them", "description": "How the second person shows up in the relationship", "x": 75, "y": 50},
+                {"index": 2, "name": "The Connection", "description": "What binds you — the shared current between you", "x": 50, "y": 25},
+                {"index": 3, "name": "The Challenge", "description": "What tests the bond — friction, blind spot, or growth edge", "x": 50, "y": 75},
+                {"index": 4, "name": "The Outcome", "description": "Where the relationship is heading if the current course holds", "x": 50, "y": 50},
+            ],
+        },
     ]
 
     db = SessionLocal()

@@ -15,9 +15,23 @@ Covers commits from 2026-05-19 through 2026-05-21 (ISO week 2026-W21).
 - Card of the Day sourced from the user's favorite deck and shared between the hero and sidebar
 - Reseed migration for databases stuck without the Thoth/Marseille decks, rerunning updates only for freshly-seeded decks
 - `AGENTS.md` with an instruction to keep the changelog in sync with user-facing changes
+- Daily activity streaks and achievements: per-user streak counter (flame badge in the navigation header) and unlockable achievements (first reading, first journal, streak milestones at 3/7/30/100 days, journal milestones, Major Arcana completion, card-of-the-day pulls). Streaks and earned achievements are backfilled from each user's existing journal entries, chat messages, turn-usage history, and card associations on first migration.
+- `GET /api/streaks/me` and `POST /api/streaks/recompute` endpoints for client display and manual rebuild from history
+- Journal advanced search: filter entries by card name, spread name, AND/OR tag-match mode in addition to the existing date, mood, notes, and favorites filters
+- Journal filter UI now shows the user's previously-used tags as clickable chips with usage counts, and the spread filter populates from spreads the user has actually used
+- `GET /api/journal/tags` and `GET /api/journal/spreads-used` endpoints powering the filter suggestions
+- Compatibility (relationship) readings: new five-card Relationship Cross spread (You / Them / Connection / Challenge / Outcome) and a dedicated `/reading/compatibility` page that takes two names and optional birthdates plus an optional focus question, reachable from a homepage hero button and the readings page header
+- `POST /tarot/compatibility` endpoint that draws the Relationship Cross spread with position labels personalized to the two people's names
+- AI-written interpretation for compatibility readings via `POST /tarot/compatibility/interpret`, shown beneath the drawn cards (does not consume an extra turn)
+- Animated card-draw reveal (staggered flip-in) when cards are dealt, on both the standard reading and compatibility pages, with a reduced-motion fallback
+- Progressive Web App support: expanded web manifest with PWA shortcuts, a service worker, theme color, and Apple web-app metadata so ArcanaAI installs to home screens on supported browsers
+- Web Push notifications: VAPID-based delivery infrastructure with `GET /api/web-push/vapid-public-key`, `POST /api/web-push/subscribe`, `POST /api/web-push/unsubscribe`, and `POST /api/web-push/test`; a new "Notifications" tab in the profile page lets the user enable/disable push and send a test notification to verify
+- Celery Beat job `process_due_reading_reminders` runs hourly to deliver pushes for overdue `ReadingReminder` rows and prune dead subscriptions
 
 ### Changed
 - Tarot deck seeding migration made PostgreSQL-compatible and restricted to the two new decks
+- Admin portal redesigned for readability: replaced the low-contrast gold-on-black cosmic theme with a cool-slate console (Manrope/Cormorant Garamond/JetBrains Mono type, single violet accent, high-contrast text). All sections rebuilt — Overview (real stat cards, recent activity feed, cards-by-deck distribution, quick links), Users (searchable/filterable table with status & plan pills and pagination), Decks and Spreads as card grids, and redesigned Cards, Chat Sessions, and Shared Readings tables
+- Admin portal gains an appearance switcher (gear icon, top-right): Dark / Light / High-contrast themes plus an accent color picker; the default follows the operating-system theme and the choice is remembered per browser
 
 ### Removed
 - Header search icon button
@@ -28,6 +42,12 @@ Covers commits from 2026-05-19 through 2026-05-21 (ISO week 2026-W21).
 ### Fixed
 - SQLite migration failure caused by an unnamed `UniqueConstraint` on `cards.name`
 - Multiple Alembic heads after the tarot deck migrations
+- Native date pickers (e.g. compatibility birthdates, journal filters) had an invisible calendar icon on the dark theme; they now use a dark color-scheme with a legible icon
+- Compatibility reading interpretation is now rendered as formatted Markdown instead of raw text
+- Card-draw reveal animation (a staggered 3D flip-in) now plays whenever cards are dealt — chat reading, the spread reading page, and compatibility readings. Reimplemented with framer-motion so it runs reliably on mount and is no longer silently suppressed by the OS "reduce motion" setting
+- Chat readings now stream a `drawing` signal when the draw_cards tool fires, so the frontend plays a ~5-second card-shuffling suspense animation before revealing the drawn cards and the reading
+- Compatibility readings play the same ~5-second card-shuffling animation after "Draw the Relationship Cross" is clicked, before the cards and interpretation are revealed
+- Reading reminder push delivery no longer marks a reminder as sent when nothing was actually delivered: a reminder is finalized only when delivered, when the user has no push subscriptions, or after a bounded number of attempts; transient failures are retried on the next run. Reminders for the same user in one run are coalesced into a single notification
 
 ### Security
 - Final pass on npm and Python dependency vulnerability remediation

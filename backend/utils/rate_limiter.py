@@ -49,6 +49,8 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+from utils.error_handlers import maybe_send_vip_error_alert
+
 # Create a limiter instance with IP-based rate limiting
 # Uses the remote address of the client as the key for rate limiting
 limiter = Limiter(key_func=get_remote_address)
@@ -104,4 +106,5 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
         The detail field contains the rate limit configuration that was exceeded,
         helping clients understand the limitation and adjust their request patterns.
     """
+    await maybe_send_vip_error_alert(request, 429, exc)
     return JSONResponse(status_code=429, content={"error": "Rate limit exceeded", "detail": str(exc)})
