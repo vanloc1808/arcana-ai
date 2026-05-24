@@ -21,6 +21,9 @@ interface DashboardStats {
     total_messages?: number;
 }
 
+type SortField = "created_at" | "username" | "title" | "messages_count";
+type SortDirection = "asc" | "desc";
+
 const COLUMNS: Column[] = [
     { label: "Title", width: "40%" },
     { label: "User", width: "22%" },
@@ -35,6 +38,8 @@ export default function AdminChatSessionsPage() {
     const router = useRouter();
     const [sessions, setSessions] = useState<AdminChatSession[]>([]);
     const [stats, setStats] = useState<DashboardStats>({});
+    const [sortField, setSortField] = useState<SortField>("created_at");
+    const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -42,13 +47,15 @@ export default function AdminChatSessionsPage() {
         if (!isAuthenticated) { router.push("/login"); return; }
         if (!user?.is_admin) { router.push("/"); return; }
         loadSessions();
-    }, [isAuthenticated, user, router, isAuthLoading]);
+    }, [isAuthenticated, user, router, isAuthLoading, sortField, sortDirection]);
 
     const loadSessions = async () => {
         try {
             setLoading(true);
             const [sessionsRes, dashRes] = await Promise.all([
-                api.get("/admin/chat-sessions?limit=100"),
+                api.get("/admin/chat-sessions", {
+                    params: { limit: 100, sort_by: sortField, sort_direction: sortDirection },
+                }),
                 api.get("/admin/dashboard"),
             ]);
             setSessions(sessionsRes.data ?? []);
@@ -100,7 +107,26 @@ export default function AdminChatSessionsPage() {
     return (
         <AdminLayout activePath="/admin/chat-sessions" breadcrumb="Chat Sessions" username={user.username ?? "Admin"}>
             <div className="view">
-                <PageHeader kicker="Conversations" title="Chat sessions" subtitle="Engagement metrics across reading conversations with the Arcana oracle." />
+                <PageHeader
+                    kicker="Conversations"
+                    title="Chat sessions"
+                    subtitle="Engagement metrics across reading conversations with the Arcana oracle."
+                    actions={(
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <label className="muted" style={{ fontSize: 12 }}>Sort by</label>
+                            <select className="btn btn-sm btn-secondary" value={sortField} onChange={(e) => setSortField(e.target.value as SortField)}>
+                                <option value="created_at">Started</option>
+                                <option value="username">User</option>
+                                <option value="title">Title</option>
+                                <option value="messages_count">Messages</option>
+                            </select>
+                            <select className="btn btn-sm btn-secondary" value={sortDirection} onChange={(e) => setSortDirection(e.target.value as SortDirection)}>
+                                <option value="desc">Descending</option>
+                                <option value="asc">Ascending</option>
+                            </select>
+                        </div>
+                    )}
+                />
 
                 <div className="stats-grid stats-grid-4">
                     <StatCard label="Total sessions" value={metrics.totalSessions.toLocaleString()} caption="all recorded sessions" accent="teal" />
