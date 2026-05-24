@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPBearer
-from sqlalchemy import desc, func, or_
+from sqlalchemy import asc, desc, func, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -380,11 +380,31 @@ async def delete_user(user_id: int, db: Session = Depends(get_db), admin_user: U
 async def list_chat_sessions(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    sort_by: str = Query("created_at", pattern="^(created_at|username|title|messages_count)$"),
+    sort_direction: str = Query("desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user),
 ):
     """List all chat sessions with pagination"""
-    sessions = db.query(ChatSession).join(User).offset(skip).limit(limit).all()
+    messages_count = func.count(Message.id).label("messages_count")
+    order_fn = asc if sort_direction == "asc" else desc
+    sort_map = {
+        "created_at": ChatSession.created_at,
+        "username": User.username,
+        "title": ChatSession.title,
+        "messages_count": messages_count,
+    }
+
+    sessions = (
+        db.query(ChatSession, messages_count)
+        .join(User)
+        .outerjoin(Message, Message.chat_session_id == ChatSession.id)
+        .group_by(ChatSession.id, User.id)
+        .order_by(order_fn(sort_map[sort_by]), order_fn(ChatSession.id))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
     return [
         AdminChatSessionResponse(
@@ -393,9 +413,9 @@ async def list_chat_sessions(
             created_at=session.created_at,
             user_id=session.user_id,
             username=session.user.username,
-            messages_count=len(session.messages),
+            messages_count=message_count,
         )
-        for session in sessions
+        for session, message_count in sessions
     ]
 
 

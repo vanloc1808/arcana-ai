@@ -47,13 +47,15 @@ export default function AdminChatSessionsPage() {
         if (!isAuthenticated) { router.push("/login"); return; }
         if (!user?.is_admin) { router.push("/"); return; }
         loadSessions();
-    }, [isAuthenticated, user, router, isAuthLoading]);
+    }, [isAuthenticated, user, router, isAuthLoading, sortField, sortDirection]);
 
     const loadSessions = async () => {
         try {
             setLoading(true);
             const [sessionsRes, dashRes] = await Promise.all([
-                api.get("/admin/chat-sessions?limit=100"),
+                api.get("/admin/chat-sessions", {
+                    params: { limit: 100, sort_by: sortField, sort_direction: sortDirection },
+                }),
                 api.get("/admin/dashboard"),
             ]);
             setSessions(sessionsRes.data ?? []);
@@ -95,24 +97,6 @@ export default function AdminChatSessionsPage() {
             capped: sessions.length >= 100 && totalSessions > sessions.length,
         };
     }, [sessions, stats]);
-
-    const sortedSessions = useMemo(() => {
-        const sorted = [...sessions];
-        sorted.sort((a, b) => {
-            let comparison = 0;
-            if (sortField === "messages_count") {
-                comparison = a.messages_count - b.messages_count;
-            } else if (sortField === "created_at") {
-                comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-            } else if (sortField === "username") {
-                comparison = a.username.localeCompare(b.username, undefined, { sensitivity: "base" });
-            } else {
-                comparison = (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
-            }
-            return sortDirection === "asc" ? comparison : -comparison;
-        });
-        return sorted;
-    }, [sessions, sortDirection, sortField]);
 
     if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading sessions…" />;
     if (!user.is_admin) return null;
@@ -205,7 +189,7 @@ export default function AdminChatSessionsPage() {
 
                 <Table
                     columns={COLUMNS}
-                    rows={sortedSessions}
+                    rows={sessions}
                     empty="No chat sessions found."
                     renderRow={(s: AdminChatSession) => (
                         <tr key={s.id}>
