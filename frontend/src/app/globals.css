@@ -814,7 +814,7 @@ textarea.chat-input:focus {
 .alert-error {
   background: linear-gradient(135deg, #fef2f2, #fecaca);
   border: 1px solid #ef4444;
-  color: #dc2626;
+  color: #7f1d1d;
 }
 
 .alert-warning {
