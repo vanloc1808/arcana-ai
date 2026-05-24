@@ -49,7 +49,7 @@ const CARD_ANIMATION_OPTIONS: { value: string; label: string; desc: string }[] =
     { value: 'off', label: 'Off', desc: 'Cards appear instantly' },
 ];
 
-const READING_LANGUAGE_OPTIONS = ['English', 'Vietnamese', 'Spanish', 'French', 'German'];
+const READING_LANGUAGE_OPTIONS = ['English', 'Vietnamese', 'Chinese (Simplified)', 'Spanish', 'French', 'German'];
 
 function toForm(p: UserProfile): FormState {
     return {

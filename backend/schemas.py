@@ -363,7 +363,7 @@ class UserCreate(UserBase):
 
 
 CARD_ANIMATION_CHOICES = {"cinematic", "minimal", "off"}
-READING_LANGUAGE_CHOICES = {"English", "Vietnamese", "Spanish", "French", "German"}
+READING_LANGUAGE_CHOICES = {"English", "Vietnamese", "Chinese (Simplified)", "Spanish", "French", "German"}
 
 
 class UserUpdate(BaseModel):
@@ -1958,4 +1958,3 @@ class WebPushTestResponse(BaseModel):
     sent: int
     failed: int
     pruned: int
-

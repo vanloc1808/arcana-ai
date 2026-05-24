@@ -5,6 +5,7 @@ import { MysticCard, SectionHeader } from './MysticCard';
 import { ProfileIcon } from './ProfileIcon';
 import { SubscriptionHistory } from '@/components/SubscriptionHistory';
 import { UserProfile } from '@/types/tarot';
+import { getProfilePlanLabel, hasProfileUnlimitedAccess } from './subscriptionStatus';
 
 interface HistoryTabProps {
     profile: UserProfile | null;
@@ -12,9 +13,12 @@ interface HistoryTabProps {
 
 export function HistoryTab({ profile }: HistoryTabProps) {
     const [filter, setFilter] = useState<'overview' | 'transactions' | 'usage'>('overview');
+    const hasUnlimitedAccess = hasProfileUnlimitedAccess(profile);
 
     const totalTurns = profile
-        ? profile.number_of_free_turns + profile.number_of_paid_turns
+        ? hasUnlimitedAccess
+            ? '∞'
+            : String(profile.number_of_free_turns + profile.number_of_paid_turns)
         : 0;
 
     return (
@@ -89,7 +93,7 @@ function OverviewView({ profile }: { profile: UserProfile | null }) {
                 <SectionHeader eyebrow="At a glance" title="Current state" />
                 <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <KV k="Subscription" v={<span style={{ color: '#f5b942' }}>
-                        {profile && (profile.number_of_paid_turns > 0) ? 'Unlimited Seer' : 'Novice (Free)'}
+                        {getProfilePlanLabel(profile)}
                     </span>} />
                     <KV k="Free turns" v={String(profile?.number_of_free_turns ?? '—')} />
                     <KV k="Paid turns" v={String(profile?.number_of_paid_turns ?? '—')} />
