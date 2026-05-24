@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { tarot } from '@/lib/api';
+import { tarot, auth } from '@/lib/api';
 import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { ArcanaCard } from '@/components/ArcanaCard';
-import { Search, X } from 'lucide-react';
+import { Search, X, ChevronDown, Check, Layers } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -24,16 +24,109 @@ interface LibraryCard {
     numerology: number | null;
 }
 
+interface Deck {
+    id: number;
+    name: string;
+    description: string | null;
+}
+
 // ─── Filter config ───────────────────────────────────────────────────────────
 
 const SUIT_FILTERS = [
-    { label: 'All Cards', value: '', count: 78 },
-    { label: 'Major Arcana', value: 'Major Arcana', count: 22 },
-    { label: 'Cups', value: 'Cups', count: 14 },
-    { label: 'Pentacles', value: 'Pentacles', count: 14 },
-    { label: 'Swords', value: 'Swords', count: 14 },
-    { label: 'Wands', value: 'Wands', count: 14 },
+    { label: 'All Cards', value: '' },
+    { label: 'Major Arcana', value: 'Major Arcana' },
+    { label: 'Cups', value: 'Cups' },
+    { label: 'Pentacles', value: 'Pentacles' },
+    { label: 'Swords', value: 'Swords' },
+    { label: 'Wands', value: 'Wands' },
 ];
+
+// ─── Deck Picker ─────────────────────────────────────────────────────────────
+
+function DeckPicker({
+    decks,
+    currentDeckId,
+    saving,
+    onChange,
+}: {
+    decks: Deck[];
+    currentDeckId: number | null;
+    saving: boolean;
+    onChange: (id: number) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    const currentDeck = decks.find(d => d.id === currentDeckId);
+
+    // Close on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        };
+        if (open) document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    if (decks.length === 0) return null;
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                onClick={() => setOpen(o => !o)}
+                disabled={saving}
+                className="flex items-center gap-2 px-3 py-1.5 border border-purple-700/60 bg-purple-900/20 hover:bg-purple-900/40 rounded-sm transition-colors text-purple-300 hover:text-purple-200 disabled:opacity-50"
+            >
+                <Layers size={12} className="flex-shrink-0" />
+                <span className="font-mono text-xs uppercase tracking-wider truncate max-w-[160px]">
+                    {saving ? 'Saving…' : (currentDeck?.name ?? 'Select deck')}
+                </span>
+                <ChevronDown
+                    size={12}
+                    className={`flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                />
+            </button>
+
+            {open && (
+                <div className="absolute right-0 top-full mt-1 z-40 w-64 bg-gray-900 border border-purple-700/50 rounded-lg shadow-2xl overflow-hidden">
+                    <div className="px-3 py-2 border-b border-gray-800">
+                        <p className="font-mono text-[10px] text-gray-500 uppercase tracking-widest">
+                            Choose your deck
+                        </p>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                        {decks.map(deck => {
+                            const active = deck.id === currentDeckId;
+                            return (
+                                <button
+                                    key={deck.id}
+                                    onClick={() => { onChange(deck.id); setOpen(false); }}
+                                    className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-gray-800/50 last:border-0 ${
+                                        active
+                                            ? 'bg-purple-900/30 text-purple-200'
+                                            : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
+                                    }`}
+                                >
+                                    <span className="mt-0.5 flex-shrink-0 w-4">
+                                        {active && <Check size={13} className="text-amber-500" />}
+                                    </span>
+                                    <span>
+                                        <span className="block text-sm font-medium leading-snug">{deck.name}</span>
+                                        {deck.description && (
+                                            <span className="block text-xs text-gray-500 mt-0.5 leading-snug line-clamp-2">
+                                                {deck.description}
+                                            </span>
+                                        )}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 // ─── Card Detail Panel ───────────────────────────────────────────────────────
 
@@ -135,6 +228,11 @@ export default function LibraryPage() {
     const [selectedCard, setSelectedCard] = useState<LibraryCard | null>(null);
     const [counts, setCounts] = useState<Record<string, number>>({});
 
+    // Deck state
+    const [decks, setDecks] = useState<Deck[]>([]);
+    const [currentDeckId, setCurrentDeckId] = useState<number | null>(null);
+    const [savingDeck, setSavingDeck] = useState(false);
+
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Auth guard
@@ -170,21 +268,52 @@ export default function LibraryPage() {
 
     useEffect(() => { fetchCards(); }, [fetchCards]);
 
-    // Fetch counts for filter tabs (once on mount)
+    // Fetch counts for filter tabs
+    const fetchCounts = useCallback(async () => {
+        if (!isAuthenticated) return;
+        try {
+            const all = await tarot.getLibraryCards();
+            const c: Record<string, number> = { '': all.length };
+            for (const f of SUIT_FILTERS.slice(1)) {
+                c[f.value] = all.filter((card: LibraryCard) => card.suit === f.value).length;
+            }
+            setCounts(c);
+        } catch { /* ignore */ }
+    }, [isAuthenticated]);
+
+    useEffect(() => { fetchCounts(); }, [fetchCounts]);
+
+    // Fetch available decks + user's current favorite deck
     useEffect(() => {
         if (!isAuthenticated) return;
-        const fetchCounts = async () => {
+        const fetchMeta = async () => {
             try {
-                const all = await tarot.getLibraryCards();
-                const c: Record<string, number> = { '': all.length };
-                for (const f of SUIT_FILTERS.slice(1)) {
-                    c[f.value] = all.filter((card: LibraryCard) => card.suit === f.value).length;
-                }
-                setCounts(c);
+                const [deckList, profile] = await Promise.all([
+                    auth.getDecks(),
+                    auth.getProfile(),
+                ]);
+                setDecks(deckList);
+                setCurrentDeckId(profile.favorite_deck_id ?? null);
             } catch { /* ignore */ }
         };
-        fetchCounts();
+        fetchMeta();
     }, [isAuthenticated]);
+
+    // Handle deck change
+    const handleDeckChange = useCallback(async (deckId: number) => {
+        if (deckId === currentDeckId || savingDeck) return;
+        setSavingDeck(true);
+        try {
+            await auth.updateProfile({ favorite_deck_id: deckId });
+            setCurrentDeckId(deckId);
+            // Re-fetch cards and counts with the new deck
+            await Promise.all([fetchCards(), fetchCounts()]);
+        } catch {
+            /* api interceptor already shows a toast */
+        } finally {
+            setSavingDeck(false);
+        }
+    }, [currentDeckId, savingDeck, fetchCards, fetchCounts]);
 
     if (isAuthLoading) {
         return (
@@ -201,17 +330,29 @@ export default function LibraryPage() {
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
 
                 {/* ── Page Header ── */}
-                <div className="mb-8">
-                    <p className="font-mono text-xs text-amber-500 uppercase tracking-[0.36em] mb-2">
-                        The Library · {counts[''] ?? 78} Cards
-                    </p>
-                    <h1 className="font-mystical font-normal leading-none tracking-tight text-5xl md:text-6xl text-white mb-4">
-                        The{' '}
-                        <em className="text-amber-500 not-italic">Arcana</em>
-                    </h1>
-                    <p className="font-serif-alt italic text-gray-400 text-lg max-w-lg">
-                        Every card in the deck — their history, their voices, and what they have to say.
-                    </p>
+                <div className="flex items-start justify-between gap-4 mb-8">
+                    <div>
+                        <p className="font-mono text-xs text-amber-500 uppercase tracking-[0.36em] mb-2">
+                            The Library · {counts[''] ?? 78} Cards
+                        </p>
+                        <h1 className="font-mystical font-normal leading-none tracking-tight text-5xl md:text-6xl text-white mb-4">
+                            The{' '}
+                            <em className="text-amber-500 not-italic">Arcana</em>
+                        </h1>
+                        <p className="font-serif-alt italic text-gray-400 text-lg max-w-lg">
+                            Every card in the deck — their history, their voices, and what they have to say.
+                        </p>
+                    </div>
+
+                    {/* ── Deck Picker ── */}
+                    <div className="flex-shrink-0 pt-1">
+                        <DeckPicker
+                            decks={decks}
+                            currentDeckId={currentDeckId}
+                            saving={savingDeck}
+                            onChange={handleDeckChange}
+                        />
+                    </div>
                 </div>
 
                 {/* ── Divider ── */}
