@@ -233,9 +233,6 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                         <p style={{ margin: '6px 0 18px', color: '#b3b0d4', fontSize: 15 }}>
                             {profile.email}
                         </p>
-                        <p style={{ margin: '14px 0 0', color: '#7c799f', fontSize: 12 }}>
-                            JPEG · PNG · GIF · WebP &nbsp;·&nbsp; max 10MB &nbsp;·&nbsp; resized to 400×400px
-                        </p>
                     </div>
                 </div>
             </MysticCard>
