@@ -20,6 +20,11 @@ export function HistoryTab({ profile }: HistoryTabProps) {
             ? '∞'
             : String(profile.number_of_free_turns + profile.number_of_paid_turns)
         : 0;
+    const paidTurns = profile
+        ? hasUnlimitedAccess
+            ? '∞'
+            : String(profile.number_of_paid_turns)
+        : 0;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -27,7 +32,7 @@ export function HistoryTab({ profile }: HistoryTabProps) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
                 <StatCard icon="card" label="Total readings" value="147" sub="lifetime" tone="violet" />
                 <StatCard icon="bolt" label="Turns remaining" value={String(totalTurns)} sub="current balance" tone="gold" />
-                <StatCard icon="chart" label="Paid turns" value={String(profile?.number_of_paid_turns ?? 0)} sub="purchased" tone="emerald" />
+                <StatCard icon="chart" label="Paid turns" value={String(paidTurns)} sub="purchased" tone="emerald" />
                 <StatCard icon="moon" label="Longest streak" value="23 days" sub="closed Apr 12" tone="sky" />
             </div>
 
@@ -87,6 +92,18 @@ export function HistoryTab({ profile }: HistoryTabProps) {
 }
 
 function OverviewView({ profile }: { profile: UserProfile | null }) {
+    const hasUnlimitedAccess = hasProfileUnlimitedAccess(profile);
+    const freeTurns = profile
+        ? hasUnlimitedAccess
+            ? '∞'
+            : String(profile.number_of_free_turns)
+        : '—';
+    const paidTurns = profile
+        ? hasUnlimitedAccess
+            ? '∞'
+            : String(profile.number_of_paid_turns)
+        : '—';
+
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             <div>
@@ -95,8 +112,8 @@ function OverviewView({ profile }: { profile: UserProfile | null }) {
                     <KV k="Subscription" v={<span style={{ color: '#f5b942' }}>
                         {getProfilePlanLabel(profile)}
                     </span>} />
-                    <KV k="Free turns" v={String(profile?.number_of_free_turns ?? '—')} />
-                    <KV k="Paid turns" v={String(profile?.number_of_paid_turns ?? '—')} />
+                    <KV k="Free turns" v={freeTurns} />
+                    <KV k="Paid turns" v={paidTurns} />
                     <KV k="Favorite deck" v={profile?.favorite_deck?.name ?? 'None selected'} />
                     <KV k="Member since" v={profile ? new Date(profile.created_at).toLocaleDateString() : '—'} />
                 </div>

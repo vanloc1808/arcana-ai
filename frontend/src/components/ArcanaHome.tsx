@@ -503,7 +503,7 @@ export function ArcanaHome({
 
         <div className="ah-whisper">
           &ldquo;{whisper}&rdquo;
-          <span className="ah-whisper-attrib">A note from the deck · refreshes at midnight</span>
+          <span className="ah-whisper-attrib">Your daily advice</span>
         </div>
       </div>
     </div>

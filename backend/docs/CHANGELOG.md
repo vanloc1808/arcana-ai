@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Profile history/subscription status now recognizes specialized premium and active subscription access instead of showing Unlimited Seer users as "Novice (Free)" when they have zero paid-turn balance.
 - Profile reading-preference toggles now render as compact switches instead of oversized circular controls.
 - Profile notification toggles now render as compact switches instead of oversized circular controls.
+- Profile history now shows infinity for free and paid turn counts when the user has unlimited access.
 
 ## [0.0.16] - 2026-05-24
 
