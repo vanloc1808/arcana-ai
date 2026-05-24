@@ -117,7 +117,7 @@ export default function CompatibilityReadingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-950 to-gray-900 text-white">
+        <div className="min-h-screen pt-20 bg-gradient-to-br from-gray-900 via-purple-950 to-gray-900 text-white">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
                 <div className="flex items-center justify-between mb-6">
                     <Link href="/reading" className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white">

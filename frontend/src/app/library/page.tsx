@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { tarot, auth } from '@/lib/api';
-import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { ArcanaCard } from '@/components/ArcanaCard';
 import { Search, X, ChevronDown, Check, Layers } from 'lucide-react';
 
@@ -325,8 +324,6 @@ export default function LibraryPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-purple-950">
-            <EnhancedNavigation />
-
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
 
                 {/* ── Page Header ── */}

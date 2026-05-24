@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import { EnhancedNavigation } from "@/components/EnhancedNavigation";
 
 export const metadata: Metadata = {
   title: "ArcanaAI - Mystical Guidance & Insights",
@@ -41,6 +42,7 @@ export default function RootLayout({
       <body className="font-body bg-gradient-to-br from-gray-900 via-gray-800 to-purple-900 min-h-screen" suppressHydrationWarning>
         <Providers>
           <ServiceWorkerRegistrar />
+          <EnhancedNavigation />
           {children}
         </Providers>
       </body>

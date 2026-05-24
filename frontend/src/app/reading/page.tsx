@@ -118,7 +118,7 @@ export default function ReadingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-purple-900">
+        <div className="min-h-screen pt-20 bg-gradient-to-br from-gray-900 via-gray-800 to-purple-900">
             <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
                 <div className="max-w-6xl mx-auto">
                     {/* Header */}
