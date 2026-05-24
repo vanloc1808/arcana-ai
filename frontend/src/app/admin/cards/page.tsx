@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, StatCard, SearchInput, Icon, Table, type Column } from "@/components/admin/AdminUI";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import api from "@/lib/api";
 
@@ -132,112 +132,121 @@ export default function AdminCardsPage() {
                     columns={COLUMNS}
                     rows={filtered}
                     empty="No cards match your filters."
-                    renderRow={(c: AdminCard) => {
-                        const color = SUIT_COLORS[c.suit] ?? DEFAULT_SUIT_COLOR;
-                        return (
-                            <tr key={c.id}>
-                                <td>
-                                    <div className="cell-card">
-                                        <div className="card-thumb" style={{ background: `linear-gradient(135deg, ${color}30, ${color}08)`, borderColor: `${color}40` }}>
-                                            <span style={{ color }}>{c.rank || "—"}</span>
-                                        </div>
-                                        <div>
-                                            <div className="cell-card-name">{c.name}</div>
-                                            <div className="cell-card-id">CARD-{String(c.id).padStart(4, "0")}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    {c.suit ? (
-                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color, fontWeight: 500, fontSize: 13 }}>
-                                            <span style={{ width: 6, height: 6, borderRadius: 99, background: color }} />
-                                            {c.suit}
-                                        </span>
-                                    ) : <span className="muted">—</span>}
-                                </td>
-                                <td className="mono">{c.rank || "—"}</td>
-                                <td className="muted">{deckName(c)}</td>
-                                <td className="muted">{c.element || "—"}</td>
-                                <td style={{ textAlign: "right" }}>
-                                    <div className="row-actions">
-                                        <Dialog>
-                                            <DialogTrigger asChild>
-                                                <button className="row-action" title="Edit"><Icon name="edit" size={14} /></button>
-                                            </DialogTrigger>
-                                            <DialogContent className="admin-dialog">
-                                                <DialogHeader>
-                                                    <DialogTitle className="admin-dialog-title">Edit card</DialogTitle>
-                                                </DialogHeader>
-                                                <form
-                                                    onSubmit={async (e) => {
-                                                        e.preventDefault();
-                                                        const fd = new FormData(e.currentTarget);
-                                                        try {
-                                                            await api.put(`/admin/cards/${c.id}`, {
-                                                                name: fd.get("name"),
-                                                                suit: fd.get("suit"),
-                                                                rank: fd.get("rank"),
-                                                                description_short: fd.get("description_short"),
-                                                                description_upright: fd.get("description_upright"),
-                                                                description_reversed: fd.get("description_reversed"),
-                                                                element: fd.get("element"),
-                                                                astrology: fd.get("astrology"),
-                                                                numerology: Number(fd.get("numerology")),
-                                                                deck_id: fd.get("deck_id"),
-                                                            });
-                                                            loadData();
-                                                        } catch { alert("Failed to update card."); }
-                                                    }}
-                                                    className="space-y-3 mt-2"
-                                                >
-                                                    {[
-                                                        { name: "name", label: "Name", val: c.name, required: true },
-                                                        { name: "suit", label: "Suit", val: c.suit, required: false },
-                                                        { name: "rank", label: "Rank", val: c.rank, required: false },
-                                                        { name: "description_short", label: "Short description", val: c.description_short, required: false },
-                                                        { name: "description_upright", label: "Upright description", val: c.description_upright, required: false },
-                                                        { name: "description_reversed", label: "Reversed description", val: c.description_reversed, required: false },
-                                                        { name: "element", label: "Element", val: c.element, required: false },
-                                                        { name: "astrology", label: "Astrology", val: c.astrology, required: false },
-                                                    ].map((f) => (
-                                                        <div key={f.name}>
-                                                            <label className="admin-field-label">{f.label}</label>
-                                                            <input name={f.name} defaultValue={f.val ?? ""} required={f.required} className="admin-input" />
-                                                        </div>
-                                                    ))}
-                                                    <div>
-                                                        <label className="admin-field-label">Numerology</label>
-                                                        <input name="numerology" type="number" defaultValue={c.numerology} className="admin-input" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="admin-field-label">Deck</label>
-                                                        <div className="mt-1.5">
-                                                            <Select name="deck_id" defaultValue={String(c.deck_id)}>
-                                                                <SelectTrigger className="admin-input">
-                                                                    <SelectValue placeholder="Select a deck" />
-                                                                </SelectTrigger>
-                                                                <SelectContent style={{ background: "#181b27", border: "1px solid rgba(167,160,200,0.18)", color: "#eceaf4" }}>
-                                                                    {decks.map((d) => (
-                                                                        <SelectItem key={d.id} value={String(d.id)} style={{ color: "#eceaf4" }}>{d.name}</SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                    </div>
-                                                    <button type="submit" className="admin-dialog-submit">Save changes</button>
-                                                </form>
-                                            </DialogContent>
-                                        </Dialog>
-                                        <button className="row-action danger" title="Delete" onClick={() => handleDelete(c.id)}>
-                                            <Icon name="trash" size={14} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        );
-                    }}
+                    renderRow={(c: AdminCard) => (
+                        <CardRow key={c.id} c={c} decks={decks} deckName={deckName(c)} onSaved={loadData} onDelete={() => handleDelete(c.id)} />
+                    )}
                 />
             </div>
         </AdminLayout>
+    );
+}
+
+function CardRow({ c, decks, deckName, onSaved, onDelete }: {
+    c: AdminCard; decks: AdminDeck[]; deckName: string; onSaved: () => void; onDelete: () => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const color = SUIT_COLORS[c.suit] ?? DEFAULT_SUIT_COLOR;
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <tr className="is-clickable" onClick={() => setOpen(true)}>
+                <td>
+                    <div className="cell-card">
+                        <div className="card-thumb" style={{ background: `linear-gradient(135deg, ${color}30, ${color}08)`, borderColor: `${color}40` }}>
+                            <span style={{ color }}>{c.rank || "—"}</span>
+                        </div>
+                        <div>
+                            <div className="cell-card-name">{c.name}</div>
+                            <div className="cell-card-id">CARD-{String(c.id).padStart(4, "0")}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {c.suit ? (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color, fontWeight: 500, fontSize: 13 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: 99, background: color }} />
+                            {c.suit}
+                        </span>
+                    ) : <span className="muted">—</span>}
+                </td>
+                <td className="mono">{c.rank || "—"}</td>
+                <td className="muted">{deckName}</td>
+                <td className="muted">{c.element || "—"}</td>
+                <td style={{ textAlign: "right" }}>
+                    <div className="row-actions">
+                        <button className="row-action" title="Edit" onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+                            <Icon name="edit" size={14} />
+                        </button>
+                        <button className="row-action danger" title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+                            <Icon name="trash" size={14} />
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            <DialogContent className="admin-dialog">
+                <DialogHeader>
+                    <DialogTitle className="admin-dialog-title">Edit card</DialogTitle>
+                </DialogHeader>
+                <form
+                    onSubmit={async (e) => {
+                        e.preventDefault();
+                        const fd = new FormData(e.currentTarget);
+                        try {
+                            await api.put(`/admin/cards/${c.id}`, {
+                                name: fd.get("name"),
+                                suit: fd.get("suit"),
+                                rank: fd.get("rank"),
+                                description_short: fd.get("description_short"),
+                                description_upright: fd.get("description_upright"),
+                                description_reversed: fd.get("description_reversed"),
+                                element: fd.get("element"),
+                                astrology: fd.get("astrology"),
+                                numerology: Number(fd.get("numerology")),
+                                deck_id: fd.get("deck_id"),
+                            });
+                            setOpen(false);
+                            onSaved();
+                        } catch { alert("Failed to update card."); }
+                    }}
+                    className="space-y-3 mt-2"
+                >
+                    {[
+                        { name: "name", label: "Name", val: c.name, required: true },
+                        { name: "suit", label: "Suit", val: c.suit, required: false },
+                        { name: "rank", label: "Rank", val: c.rank, required: false },
+                        { name: "description_short", label: "Short description", val: c.description_short, required: false },
+                        { name: "description_upright", label: "Upright description", val: c.description_upright, required: false },
+                        { name: "description_reversed", label: "Reversed description", val: c.description_reversed, required: false },
+                        { name: "element", label: "Element", val: c.element, required: false },
+                        { name: "astrology", label: "Astrology", val: c.astrology, required: false },
+                    ].map((f) => (
+                        <div key={f.name}>
+                            <label className="admin-field-label">{f.label}</label>
+                            <input name={f.name} defaultValue={f.val ?? ""} required={f.required} className="admin-input" />
+                        </div>
+                    ))}
+                    <div>
+                        <label className="admin-field-label">Numerology</label>
+                        <input name="numerology" type="number" defaultValue={c.numerology} className="admin-input" />
+                    </div>
+                    <div>
+                        <label className="admin-field-label">Deck</label>
+                        <div className="mt-1.5">
+                            <Select name="deck_id" defaultValue={String(c.deck_id)}>
+                                <SelectTrigger className="admin-input">
+                                    <SelectValue placeholder="Select a deck" />
+                                </SelectTrigger>
+                                <SelectContent style={{ background: "#181b27", border: "1px solid rgba(167,160,200,0.18)", color: "#eceaf4" }}>
+                                    {decks.map((d) => (
+                                        <SelectItem key={d.id} value={String(d.id)} style={{ color: "#eceaf4" }}>{d.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <button type="submit" className="admin-dialog-submit">Save changes</button>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }

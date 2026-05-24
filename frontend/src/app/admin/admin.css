@@ -604,6 +604,8 @@
 }
 .admin-shell .table tbody tr:last-child td { border-bottom: 0; }
 .admin-shell .table tbody tr:hover { background: var(--bg-3); }
+.admin-shell .table tbody tr.is-clickable { cursor: pointer; }
+.admin-shell .deck-card.is-clickable { cursor: pointer; }
 .admin-shell .table tbody td.muted { color: var(--text-2); }
 .admin-shell .table tbody td.mono {
   font-family: var(--mono-font);

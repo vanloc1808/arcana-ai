@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Global frontend header navigation is now mounted from the root app layout, so authenticated users see a consistent ArcanaAI top header across frontend pages (instead of only on the home experience)
 - Reading, compatibility reading, journal, and profile pages now include top spacing so the shared sticky header is fully visible and does not overlap page content
+- Admin sidebar "Card of the day" is now dynamic, sourced from the daily card-of-the-day endpoint (matching the user-facing sidebar) instead of a hardcoded card
+- Admin Users, Decks, and Cards rows/objects are now clickable to open the edit dialog, in addition to the existing Edit button
+- Admin Chat Sessions page now shows engagement metrics (total sessions, total messages, average messages per session, active users, most active users, busiest session, empty sessions, and new-this-week counts)
+
+### Fixed
+- Admin Chat Sessions page no longer shows an empty list and zeroed stats: it now calls the correct `/admin/chat-sessions` endpoint (previously requested a non-existent `/admin/chat_sessions` path)
 
 ## [0.0.13] - 2026-05-21
 
