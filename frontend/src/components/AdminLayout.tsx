@@ -295,7 +295,6 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
 
                     <div className="content">
                         {children}
-                        <div className="footer-mark">ArcanaAI · Admin console</div>
                     </div>
                 </div>
             </div>
