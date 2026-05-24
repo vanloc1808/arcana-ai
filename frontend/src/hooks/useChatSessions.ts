@@ -48,10 +48,15 @@ interface StreamResponse {
 // How long the card-drawing animation plays before cards/reading are revealed.
 export const CARD_DRAW_ANIMATION_MS = 5000;
 
+// Number of sessions fetched per page by the paginated /chat/sessions/ endpoint.
+export const SESSIONS_PAGE_SIZE = 30;
+
 export const useChatSessions = () => {
     const { token, logout } = useAuth();
     const { refreshDataWithProfile: refreshSubscriptionData } = useSubscription();
     const [sessions, setSessions] = useState<ChatSession[]>([]);
+    const [hasMoreSessions, setHasMoreSessions] = useState(false);
+    const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
     const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(false);
@@ -101,9 +106,10 @@ export const useChatSessions = () => {
         hasAttemptedFetch.current = true;
         try {
             logDebug('Fetching sessions', { hook: 'useChatSessions', hasToken: !!token });
-            const data = await chat.getSessions();
+            const data: ChatSession[] = await chat.getSessions(0, SESSIONS_PAGE_SIZE);
             logDebug('Sessions fetched successfully', { hook: 'useChatSessions', count: data.length });
             setSessions(data);
+            setHasMoreSessions(data.length === SESSIONS_PAGE_SIZE);
         } catch (error: unknown) {
             if (error instanceof Error && 'response' in error && (error as { response?: { status?: number } }).response?.status === 401) {
                 logDebug('Unauthorized - redirecting to login', { hook: 'useChatSessions' });
@@ -114,6 +120,30 @@ export const useChatSessions = () => {
             setError(error instanceof Error ? error.message : 'Failed to load chat sessions');
         }
     }, [handleUnauthorized, token]);
+
+    const loadMoreSessions = useCallback(async () => {
+        if (isLoadingMoreSessions || !hasMoreSessions) {
+            return;
+        }
+        setIsLoadingMoreSessions(true);
+        try {
+            const data: ChatSession[] = await chat.getSessions(sessions.length, SESSIONS_PAGE_SIZE);
+            setSessions(prev => {
+                const seen = new Set(prev.map(s => s.id));
+                return [...prev, ...data.filter(s => !seen.has(s.id))];
+            });
+            setHasMoreSessions(data.length === SESSIONS_PAGE_SIZE);
+        } catch (error: unknown) {
+            if (error instanceof Error && 'response' in error && (error as { response?: { status?: number } }).response?.status === 401) {
+                handleUnauthorized();
+                return;
+            }
+            logHookError('useChatSessions', 'loadMoreSessions', error);
+            setError(error instanceof Error ? error.message : 'Failed to load more chat sessions');
+        } finally {
+            setIsLoadingMoreSessions(false);
+        }
+    }, [handleUnauthorized, hasMoreSessions, isLoadingMoreSessions, sessions.length]);
 
     const createSession = async () => {
         try {
@@ -440,6 +470,8 @@ export const useChatSessions = () => {
 
     return {
         sessions,
+        hasMoreSessions,
+        isLoadingMoreSessions,
         currentSession,
         messages,
         loading,
@@ -454,6 +486,7 @@ export const useChatSessions = () => {
         sendMessage,
         renameSession,
         refreshSessions: fetchSessions,
+        loadMoreSessions,
         clearCurrentCards,
     };
 };

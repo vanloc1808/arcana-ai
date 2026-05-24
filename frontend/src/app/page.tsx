@@ -376,6 +376,8 @@ const MessageContent = ({ content }: { content: string }) => {
 function HomeContent() {
   const {
     sessions,
+    hasMoreSessions,
+    isLoadingMoreSessions,
     currentSession,
     messages,
     loading,
@@ -388,6 +390,7 @@ function HomeContent() {
     fetchMessages,
     sendMessage,
     renameSession,
+    loadMoreSessions,
   } = useChatSessions();
 
   const [input, setInput] = useState('');
@@ -648,6 +651,18 @@ function HomeContent() {
                   </div>
                 ))}
               </div>
+
+              {hasMoreSessions && (
+                <div className="mt-3 md:mt-4 flex justify-center">
+                  <button
+                    onClick={loadMoreSessions}
+                    disabled={isLoadingMoreSessions}
+                    className="card-mystical px-4 py-2 text-sm text-purple-300 hover:text-purple-200 hover:border-purple-600/50 transition-colors touch-manipulation disabled:opacity-60"
+                  >
+                    {isLoadingMoreSessions ? 'Loading…' : 'Load more'}
+                  </button>
+                </div>
+              )}
 
               {sessions.length === 0 && (
                 <div className="text-center py-8 md:py-12">
