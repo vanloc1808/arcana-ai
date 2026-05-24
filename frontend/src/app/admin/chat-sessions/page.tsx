@@ -21,6 +21,9 @@ interface DashboardStats {
     total_messages?: number;
 }
 
+type SortField = "created_at" | "username" | "title" | "messages_count";
+type SortDirection = "asc" | "desc";
+
 const COLUMNS: Column[] = [
     { label: "Title", width: "40%" },
     { label: "User", width: "22%" },
@@ -35,6 +38,8 @@ export default function AdminChatSessionsPage() {
     const router = useRouter();
     const [sessions, setSessions] = useState<AdminChatSession[]>([]);
     const [stats, setStats] = useState<DashboardStats>({});
+    const [sortField, setSortField] = useState<SortField>("created_at");
+    const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -91,6 +96,24 @@ export default function AdminChatSessionsPage() {
         };
     }, [sessions, stats]);
 
+    const sortedSessions = useMemo(() => {
+        const sorted = [...sessions];
+        sorted.sort((a, b) => {
+            let comparison = 0;
+            if (sortField === "messages_count") {
+                comparison = a.messages_count - b.messages_count;
+            } else if (sortField === "created_at") {
+                comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+            } else if (sortField === "username") {
+                comparison = a.username.localeCompare(b.username, undefined, { sensitivity: "base" });
+            } else {
+                comparison = (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
+            }
+            return sortDirection === "asc" ? comparison : -comparison;
+        });
+        return sorted;
+    }, [sessions, sortDirection, sortField]);
+
     if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading sessions…" />;
     if (!user.is_admin) return null;
     if (loading) return <AdminLoadingScreen label="Consulting the ether…" />;
@@ -100,7 +123,26 @@ export default function AdminChatSessionsPage() {
     return (
         <AdminLayout activePath="/admin/chat-sessions" breadcrumb="Chat Sessions" username={user.username ?? "Admin"}>
             <div className="view">
-                <PageHeader kicker="Conversations" title="Chat sessions" subtitle="Engagement metrics across reading conversations with the Arcana oracle." />
+                <PageHeader
+                    kicker="Conversations"
+                    title="Chat sessions"
+                    subtitle="Engagement metrics across reading conversations with the Arcana oracle."
+                    actions={(
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <label className="muted" style={{ fontSize: 12 }}>Sort by</label>
+                            <select className="btn btn-sm btn-secondary" value={sortField} onChange={(e) => setSortField(e.target.value as SortField)}>
+                                <option value="created_at">Started</option>
+                                <option value="username">User</option>
+                                <option value="title">Title</option>
+                                <option value="messages_count">Messages</option>
+                            </select>
+                            <select className="btn btn-sm btn-secondary" value={sortDirection} onChange={(e) => setSortDirection(e.target.value as SortDirection)}>
+                                <option value="desc">Descending</option>
+                                <option value="asc">Ascending</option>
+                            </select>
+                        </div>
+                    )}
+                />
 
                 <div className="stats-grid stats-grid-4">
                     <StatCard label="Total sessions" value={metrics.totalSessions.toLocaleString()} caption="all recorded sessions" accent="teal" />
@@ -163,7 +205,7 @@ export default function AdminChatSessionsPage() {
 
                 <Table
                     columns={COLUMNS}
-                    rows={sessions}
+                    rows={sortedSessions}
                     empty="No chat sessions found."
                     renderRow={(s: AdminChatSession) => (
                         <tr key={s.id}>

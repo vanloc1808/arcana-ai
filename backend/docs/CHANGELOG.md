@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Admin sidebar "Card of the day" is now dynamic, sourced from the daily card-of-the-day endpoint (matching the user-facing sidebar) instead of a hardcoded card
 - Admin Users, Decks, and Cards rows/objects are now clickable to open the edit dialog, in addition to the existing Edit button
 - Admin Chat Sessions page now shows engagement metrics (total sessions, total messages, average messages per session, active users, most active users, busiest session, empty sessions, and new-this-week counts)
+- Admin Chat Sessions table now supports sorting by user, title, and message count (with ascending/descending order controls)
 - Removed the decorative "ArcanaAI · Admin console" watermark text from admin pages for a cleaner workspace view
 
 ### Fixed
