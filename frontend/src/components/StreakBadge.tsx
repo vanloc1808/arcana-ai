@@ -49,13 +49,16 @@ export function StreakBadge() {
             href="/profile?tab=achievements"
             title={title}
             aria-label={title}
-            className={`inline-flex items-center gap-1 rounded-full border border-amber-400/40 px-2 py-1 text-xs font-medium transition-colors ${
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-bold transition-all min-w-[72px] justify-center ${
                 isDim
-                    ? 'bg-amber-400/5 text-amber-300/70 hover:text-amber-200'
-                    : 'bg-amber-400/15 text-amber-300 hover:bg-amber-400/25'
+                    ? 'border-amber-500/30 bg-amber-500/8 text-amber-400/60 hover:text-amber-300'
+                    : 'border-amber-400/60 bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 hover:from-amber-500/30 hover:to-orange-500/30 shadow-[0_0_10px_rgba(251,146,60,0.25)]'
             }`}
         >
-            <Flame className={`h-3.5 w-3.5 ${isDim ? 'opacity-60' : ''}`} aria-hidden />
+            <Flame
+                className={`h-5 w-5 ${isDim ? 'opacity-50' : 'text-orange-400 drop-shadow-[0_0_4px_rgba(251,146,60,0.7)]'}`}
+                aria-hidden
+            />
             <span>{streak.current_streak}</span>
         </Link>
     );

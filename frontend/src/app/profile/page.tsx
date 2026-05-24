@@ -10,15 +10,12 @@ import { SubscriptionHistory } from '@/components/SubscriptionHistory';
 import { PushNotificationToggle } from '@/components/PushNotificationToggle';
 import { useSubscription } from '@/hooks/useSubscription';
 import { AvatarUpload } from '@/components/AvatarUpload';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { TarotAgentLogo } from '@/components/icons';
 
 export default function ProfilePage() {
-    const { isAuthenticated, logout } = useAuth();
+    const { isAuthenticated } = useAuth();
     const { profile, fetchProfile, updateFullName } = useUserProfile();
     const { getSubscriptionStatusText, isPremium } = useSubscription();
-    const router = useRouter();
+
     const [activeTab, setActiveTab] = useState<'profile' | 'decks' | 'subscription' | 'history' | 'notifications'>('profile');
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
     const [isEditingFullName, setIsEditingFullName] = useState(false);
@@ -76,54 +73,16 @@ export default function ProfilePage() {
 
     return (
         <div className="min-h-screen pt-20 bg-gray-900">
-            <div className="container mx-auto px-4 pt-4">
-                <Link
-                    href="/"
-                    className="inline-flex items-center space-x-2 hover:opacity-80 transition-opacity touch-manipulation"
-                    title="Return to Homepage"
-                >
-                    <TarotAgentLogo size={32} className="text-primary-600 md:w-10 md:h-10 lg:w-12 lg:h-12" />
-                    <div>
-                        <h1 className="text-xl md:text-2xl lg:text-3xl font-mystical font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-                            ArcanaAI
-                        </h1>
-                        <p className="text-xs md:text-sm text-gray-400 -mt-1">
-                            Mystical Guidance
-                        </p>
-                    </div>
-                </Link>
-            </div>
             <div className="container mx-auto px-4 py-8">
                 <div className="max-w-4xl mx-auto">
                     {/* Header */}
                     <div className="bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-3xl font-bold text-white">
-                                    User Profile
-                                </h1>
-                                <p className="text-gray-400 mt-1">
-                                    Manage your account settings and preferences
-                                </p>
-                            </div>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => router.push('/')}
-                                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                    title="Return to Homepage"
-                                >
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={logout}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                                >
-                                    Logout
-                                </button>
-                            </div>
-                        </div>
+                        <h1 className="text-3xl font-bold text-white">
+                            User Profile
+                        </h1>
+                        <p className="text-gray-400 mt-1">
+                            Manage your account settings and preferences
+                        </p>
                     </div>
 
                     {/* Navigation Tabs */}

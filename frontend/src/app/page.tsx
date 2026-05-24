@@ -420,7 +420,9 @@ function HomeContent() {
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 0 || streamingContent) {
+      scrollToBottom();
+    }
   }, [messages, streamingContent]);
 
   useEffect(() => {
