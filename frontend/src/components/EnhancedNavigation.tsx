@@ -155,6 +155,7 @@ export function EnhancedNavigation() {
     };
 
     if (!isAuthenticated) return null;
+    if (pathname?.startsWith('/admin')) return null;
 
     const isUnlimited = hasUnlimitedTurns();
     const premium = isPremium();

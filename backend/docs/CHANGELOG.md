@@ -5,10 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.15] - 2026-05-24
+## [0.0.17] - 2026-05-24
 
 ### Changed
 - Redesigned the home/welcome experience (shown before a reading is opened) with a cosmic celestial theme: the static "Welcome to ArcanaAI" hero is replaced by a personalized, time-aware poetic greeting; a lunar/time strip shows the live moon phase and illumination; the center now follows a three-column rhythm (Continue where you left off · Card of the Day as the gold-accented centerpiece · Tonight's spread picker) over a twinkling starfield, followed by a "Shuffle the deck" ritual call-to-action and a nightly whisper. Continue-reading entries open the user's recent sessions and the Card of the Day uses the real daily card.
+## [0.0.16] - 2026-05-24
+
+### Changed
+- Profile editing now uses an explicit "Edit profile" button: fields are read-only by default and unlock for editing only after clicking Edit, which then shows Save/Cancel controls. This replaces the always-editable form so it's clear how to update profile information.
+
+## [0.0.15] - 2026-05-24
+
+### Added
+- Profile page now lets users edit and save more of their information: bio, timezone, favorite deck, and reading preferences (lunar phase awareness, card animation style, reading language, and reversed cards), in addition to the existing full name. Username and email remain read-only.
+- User profile now stores `bio`, `timezone`, `lunar_phase_awareness`, `card_animations`, `reading_language`, and `reversed_cards`, returned by `GET /auth/me` and updatable via `PUT /auth/me` (with validation for timezone, animation style, and reading language).
+
+### Changed
+- The profile "Account details" and "Reading preferences" sections are now a single editable form with Save/Discard controls and an unsaved-changes indicator, instead of static placeholder fields.
+
+### Fixed
+- Admin portal top-bar search is now actionable: clicking the search icon or pressing Enter runs an admin search, routes to Users/Cards/Chat Sessions, and pre-fills each destination page's local search filter with the query.
+
 
 ## [0.0.14] - 2026-05-24
 
@@ -19,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Admin sidebar "Card of the day" is now dynamic, sourced from the daily card-of-the-day endpoint (matching the user-facing sidebar) instead of a hardcoded card
 - Admin Users, Decks, and Cards rows/objects are now clickable to open the edit dialog, in addition to the existing Edit button
 - Admin Chat Sessions page now shows engagement metrics (total sessions, total messages, average messages per session, active users, most active users, busiest session, empty sessions, and new-this-week counts)
+- Admin Chat Sessions table now supports sorting by user, title, and message count (with ascending/descending order controls), backed by server-side sorting on the admin API
+- Removed the decorative "ArcanaAI · Admin console" watermark text from admin pages for a cleaner workspace view
 
 ### Fixed
 - Admin Chat Sessions page no longer shows an empty list and zeroed stats: it now calls the correct `/admin/chat-sessions` endpoint (previously requested a non-existent `/admin/chat_sessions` path)

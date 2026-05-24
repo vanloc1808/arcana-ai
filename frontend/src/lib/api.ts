@@ -26,6 +26,7 @@ import {
     ReminderCreate,
     JournalFilters,
     TagUsage,
+    ProfileUpdatePayload,
 } from "@/types/tarot";
 
 // Callback function to be set by AuthProvider
@@ -237,7 +238,7 @@ export const auth = {
         return response.data;
     },
 
-    updateProfile: async (data: { favorite_deck_id?: number; full_name?: string | null }) => {
+    updateProfile: async (data: ProfileUpdatePayload) => {
         const response = await api.put("/auth/me", data);
         return response.data;
     },

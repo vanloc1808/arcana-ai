@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, StatCard, Pill, Button, SearchInput, Icon, Table, type Column } from "@/components/admin/AdminUI";
@@ -43,6 +43,7 @@ const COLUMNS: Column[] = [
 export default function AdminUsersPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,6 +92,11 @@ export default function AdminUsersPage() {
     const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     useEffect(() => { setPage(1); }, [q, filter]);
+
+    useEffect(() => {
+        const query = searchParams.get("q");
+        if (query) setQ(query);
+    }, [searchParams]);
 
     if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading users…" />;
     if (!user.is_admin) return null;

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UserProfile, Deck } from '@/types/tarot';
+import { UserProfile, Deck, ProfileUpdatePayload } from '@/types/tarot';
 import { auth } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -84,22 +84,22 @@ export const useUserProfile = () => {
         }
     }, []);
 
-    const updateFullName = useCallback(async (fullName: string) => {
+    const updateProfile = useCallback(async (data: ProfileUpdatePayload) => {
         setIsLoading(true);
         setError(null);
 
         try {
-            // Convert empty string to null for the API
-            const fullNameValue = fullName.trim() === '' ? null : fullName.trim();
-            const updatedProfile = await auth.updateProfile({ full_name: fullNameValue });
+            const updatedProfile = await auth.updateProfile(data);
             setProfile(updatedProfile);
             return true;
         } catch (err: unknown) {
-            let errorMessage = 'Failed to update full name';
+            let errorMessage = 'Failed to update profile';
             if (typeof err === 'object' && err !== null) {
-                const errorObject = err as { response?: { data?: { error?: string } }, message?: string };
+                const errorObject = err as { response?: { data?: { error?: string; detail?: string } }, message?: string };
                 if (errorObject.response?.data?.error) {
                     errorMessage = errorObject.response.data.error;
+                } else if (errorObject.response?.data?.detail) {
+                    errorMessage = errorObject.response.data.detail;
                 } else if (errorObject.message) {
                     errorMessage = errorObject.message;
                 }
@@ -119,6 +119,6 @@ export const useUserProfile = () => {
         fetchProfile,
         fetchDecks,
         updateFavoriteDeck,
-        updateFullName,
+        updateProfile,
     };
 };

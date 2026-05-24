@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import "@/app/admin/admin.css";
 import api, { tarot } from "@/lib/api";
 import { Icon, SearchInput, type IconName } from "@/components/admin/AdminUI";
@@ -146,6 +148,29 @@ function useDailyCard(): DailyCard {
     return card;
 }
 
+function OrnamentCard({ card }: { card: DailyCard }) {
+    const [imageError, setImageError] = useState(false);
+
+    return (
+        <div className="ornament-card">
+            <div className="ornament-glyph">✦</div>
+            <div className="ornament-title">Card of the day</div>
+            {card.image_url && !imageError && (
+                <Image
+                    src={card.image_url}
+                    alt={card.name}
+                    width={88}
+                    height={154}
+                    className="ornament-card-image"
+                    onError={() => setImageError(true)}
+                />
+            )}
+            <div className="ornament-card-name">{card.name}</div>
+            <div className="ornament-card-meaning">{card.meaning}</div>
+        </div>
+    );
+}
+
 /* ─── Sidebar nav ───────────────────────────────────────────────────────── */
 interface SidebarCounts {
     total_users?: number;
@@ -175,10 +200,12 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children, activePath, breadcrumb, username = "Admin" }: AdminLayoutProps) {
+    const router = useRouter();
     const theme = useAdminTheme();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [counts, setCounts] = useState<SidebarCounts>({});
     const [search, setSearch] = useState("");
+    const [searching, setSearching] = useState(false);
     const dailyCard = useDailyCard();
     const initial = username[0]?.toUpperCase() ?? "A";
 
@@ -189,6 +216,31 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
             .catch(() => { /* counts are best-effort */ });
         return () => { cancelled = true; };
     }, []);
+
+    const runGlobalSearch = useCallback(async () => {
+        const q = search.trim();
+        if (!q || searching) return;
+        setSearching(true);
+        try {
+            const [users, cards, sessions] = await Promise.all([
+                api.post("/admin/search", { query: q, model_type: "users", limit: 1, offset: 0 }),
+                api.post("/admin/search", { query: q, model_type: "cards", limit: 1, offset: 0 }),
+                api.post("/admin/search", { query: q, model_type: "chat_sessions", limit: 1, offset: 0 }),
+            ]);
+
+            const user = users.data?.[0];
+            const card = cards.data?.[0];
+            const session = sessions.data?.[0];
+            const encoded = encodeURIComponent(q);
+            if (user?.id) router.push(`/admin/users?q=${encoded}`);
+            else if (card?.id) router.push(`/admin/cards?q=${encoded}`);
+            else if (session?.id) router.push(`/admin/chat-sessions?q=${encoded}`);
+        } catch (error) {
+            console.error("Admin global search failed:", error);
+        } finally {
+            setSearching(false);
+        }
+    }, [router, search, searching]);
 
     return (
         <div
@@ -234,12 +286,7 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
                     </nav>
 
                     <div className="sidebar-ornament">
-                        <div className="ornament-card">
-                            <div className="ornament-glyph">✦</div>
-                            <div className="ornament-title">Card of the day</div>
-                            <div className="ornament-card-name">{dailyCard.name}</div>
-                            <div className="ornament-card-meaning">{dailyCard.meaning}</div>
-                        </div>
+                        <OrnamentCard card={dailyCard} />
                     </div>
 
                     <div className="sidebar-footer">
@@ -266,7 +313,12 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
                             </div>
                         </div>
                         <div className="topbar-right">
-                            <SearchInput value={search} onChange={setSearch} placeholder="Search users, cards, sessions…" />
+                            <SearchInput
+                                value={search}
+                                onChange={setSearch}
+                                onSubmit={runGlobalSearch}
+                                placeholder="Search users, cards, sessions…"
+                            />
                             <button className="topbar-icon-btn" aria-label="Notifications">
                                 <Icon name="bell" size={16} />
                             </button>
@@ -276,7 +328,6 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
 
                     <div className="content">
                         {children}
-                        <div className="footer-mark">ArcanaAI · Admin console</div>
                     </div>
                 </div>
             </div>

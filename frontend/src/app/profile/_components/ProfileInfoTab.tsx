@@ -1,40 +1,154 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { MysticCard, SectionHeader, FieldLabel, FieldInput, FieldSelect, FieldTextarea } from './MysticCard';
 import { ProfileIcon } from './ProfileIcon';
-import { UserProfile } from '@/types/tarot';
+import { Deck, ProfileUpdatePayload, UserProfile } from '@/types/tarot';
 import { AvatarUpload } from '@/components/AvatarUpload';
 
 interface ProfileInfoTabProps {
     profile: UserProfile | null;
+    decks?: Deck[];
     isLoading?: boolean;
     onAvatarChange?: (url: string | null) => void;
     fetchProfile?: () => Promise<void>;
-    updateFullName?: (name: string) => Promise<boolean>;
+    updateProfile?: (data: ProfileUpdatePayload) => Promise<boolean>;
 }
 
-export function ProfileInfoTab({ profile, isLoading, onAvatarChange, fetchProfile, updateFullName }: ProfileInfoTabProps) {
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [fullNameValue, setFullNameValue] = useState(profile?.full_name || '');
-    const [isSavingName, setIsSavingName] = useState(false);
+interface FormState {
+    full_name: string;
+    bio: string;
+    timezone: string;
+    favorite_deck_id: number | '';
+    lunar_phase_awareness: boolean;
+    card_animations: string;
+    reading_language: string;
+    reversed_cards: boolean;
+}
+
+const TIMEZONE_OPTIONS: { value: string; label: string }[] = [
+    { value: 'UTC', label: 'UTC' },
+    { value: 'Asia/Ho_Chi_Minh', label: 'Vietnam (UTC+7)' },
+    { value: 'Asia/Singapore', label: 'Singapore (UTC+8)' },
+    { value: 'Asia/Tokyo', label: 'Japan (UTC+9)' },
+    { value: 'Asia/Kolkata', label: 'India (UTC+5:30)' },
+    { value: 'Europe/London', label: 'London (UTC+0)' },
+    { value: 'Europe/Paris', label: 'Central Europe (UTC+1)' },
+    { value: 'America/New_York', label: 'New York (UTC−5)' },
+    { value: 'America/Chicago', label: 'Chicago (UTC−6)' },
+    { value: 'America/Denver', label: 'Denver (UTC−7)' },
+    { value: 'America/Los_Angeles', label: 'Los Angeles (UTC−8)' },
+    { value: 'Australia/Sydney', label: 'Sydney (UTC+11)' },
+    { value: 'Pacific/Auckland', label: 'Auckland (UTC+13)' },
+];
+
+const CARD_ANIMATION_OPTIONS: { value: string; label: string; desc: string }[] = [
+    { value: 'cinematic', label: 'Cinematic', desc: 'Full shuffle + reveal sequence' },
+    { value: 'minimal', label: 'Minimal', desc: 'Quick fade, no shuffle' },
+    { value: 'off', label: 'Off', desc: 'Cards appear instantly' },
+];
+
+const READING_LANGUAGE_OPTIONS = ['English', 'Vietnamese', 'Spanish', 'French', 'German'];
+
+function toForm(p: UserProfile): FormState {
+    return {
+        full_name: p.full_name ?? '',
+        bio: p.bio ?? '',
+        timezone: p.timezone ?? '',
+        favorite_deck_id: p.favorite_deck_id ?? '',
+        lunar_phase_awareness: p.lunar_phase_awareness ?? true,
+        card_animations: p.card_animations ?? 'cinematic',
+        reading_language: p.reading_language ?? 'English',
+        reversed_cards: p.reversed_cards ?? true,
+    };
+}
+
+export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetchProfile, updateProfile }: ProfileInfoTabProps) {
+    const baseline = useMemo(() => (profile ? toForm(profile) : null), [profile]);
+    const [form, setForm] = useState<FormState | null>(baseline);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+
+    // Re-sync the editable form whenever the underlying profile changes
+    // (initial load, refetch, or after a successful save).
+    useEffect(() => {
+        setForm(baseline);
+    }, [baseline]);
 
     const memberSince = profile?.created_at
         ? new Date(profile.created_at).getFullYear()
         : '—';
 
-    const handleSaveName = async () => {
-        if (!updateFullName) return;
-        setIsSavingName(true);
+    const isDirty = useMemo(() => {
+        if (!form || !baseline) return false;
+        return JSON.stringify(form) !== JSON.stringify(baseline);
+    }, [form, baseline]);
+
+    const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+        setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+    };
+
+    const buildPayload = (): ProfileUpdatePayload => {
+        const payload: ProfileUpdatePayload = {};
+        if (!form || !baseline) return payload;
+
+        if (form.full_name !== baseline.full_name) {
+            const trimmed = form.full_name.trim();
+            payload.full_name = trimmed === '' ? null : trimmed;
+        }
+        if (form.bio !== baseline.bio) {
+            const trimmed = form.bio.trim();
+            payload.bio = trimmed === '' ? null : trimmed;
+        }
+        if (form.timezone !== baseline.timezone) {
+            payload.timezone = form.timezone === '' ? null : form.timezone;
+        }
+        if (form.favorite_deck_id !== baseline.favorite_deck_id && form.favorite_deck_id !== '') {
+            payload.favorite_deck_id = form.favorite_deck_id;
+        }
+        if (form.lunar_phase_awareness !== baseline.lunar_phase_awareness) {
+            payload.lunar_phase_awareness = form.lunar_phase_awareness;
+        }
+        if (form.card_animations !== baseline.card_animations) {
+            payload.card_animations = form.card_animations;
+        }
+        if (form.reading_language !== baseline.reading_language) {
+            payload.reading_language = form.reading_language;
+        }
+        if (form.reversed_cards !== baseline.reversed_cards) {
+            payload.reversed_cards = form.reversed_cards;
+        }
+        return payload;
+    };
+
+    const handleSave = async () => {
+        if (!updateProfile || !isDirty) return;
+        const payload = buildPayload();
+        if (Object.keys(payload).length === 0) return;
+
+        setIsSaving(true);
         try {
-            const ok = await updateFullName(fullNameValue);
-            if (ok) setIsEditingName(false);
+            const ok = await updateProfile(payload);
+            if (ok) {
+                toast.success('Profile updated');
+                setIsEditing(false);
+            } else {
+                toast.error('Could not save your profile. Please try again.');
+            }
         } finally {
-            setIsSavingName(false);
+            setIsSaving(false);
         }
     };
 
-    if (isLoading || !profile) {
+    const handleCancel = () => {
+        setForm(baseline);
+        setIsEditing(false);
+    };
+
+    const locked = !isEditing || isSaving;
+
+    if (isLoading || !profile || !form) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60 }}>
                 <div style={{
@@ -48,6 +162,10 @@ export function ProfileInfoTab({ profile, isLoading, onAvatarChange, fetchProfil
             </div>
         );
     }
+
+    const deckOptions = decks && decks.length > 0
+        ? decks
+        : (profile.favorite_deck ? [profile.favorite_deck] : []);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -110,7 +228,7 @@ export function ProfileInfoTab({ profile, isLoading, onAvatarChange, fetchProfil
                             letterSpacing: '-0.01em', fontFamily: "'Cormorant Garamond', serif",
                             color: '#f4f1ff',
                         }}>
-                            {profile.username}
+                            {profile.full_name || profile.username}
                         </h2>
                         <p style={{ margin: '6px 0 18px', color: '#b3b0d4', fontSize: 15 }}>
                             {profile.email}
@@ -124,7 +242,15 @@ export function ProfileInfoTab({ profile, isLoading, onAvatarChange, fetchProfil
 
             {/* Account details form */}
             <MysticCard>
-                <SectionHeader eyebrow="Personal" title="Account details" />
+                <SectionHeader
+                    eyebrow="Personal"
+                    title="Account details"
+                    action={!isEditing ? (
+                        <MysticButton onClick={() => setIsEditing(true)}>
+                            <ProfileIcon name="pencil" size={14} /> Edit profile
+                        </MysticButton>
+                    ) : undefined}
+                />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
                     <div>
                         <FieldLabel>Username</FieldLabel>
@@ -136,52 +262,58 @@ export function ProfileInfoTab({ profile, isLoading, onAvatarChange, fetchProfil
                     </div>
                     <div style={{ gridColumn: '1 / -1' }}>
                         <FieldLabel>Full name (display name)</FieldLabel>
-                        {isEditingName ? (
-                            <div style={{ display: 'flex', gap: 10 }}>
-                                <FieldInput
-                                    value={fullNameValue}
-                                    onChange={(e) => setFullNameValue(e.target.value)}
-                                    placeholder="Enter your full name"
-                                    disabled={isSavingName}
-                                    style={{ flex: 1 }}
-                                />
-                                <MysticButton onClick={handleSaveName} disabled={isSavingName}>
-                                    <ProfileIcon name="check" size={14} />
-                                    {isSavingName ? 'Saving…' : 'Save'}
-                                </MysticButton>
-                                <GhostButton onClick={() => { setIsEditingName(false); setFullNameValue(profile.full_name || ''); }}>
-                                    Cancel
-                                </GhostButton>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <FieldInput value={profile.full_name || ''} readOnly style={{ flex: 1, opacity: 0.7, cursor: 'default' }} />
-                                <GhostButton onClick={() => { setIsEditingName(true); setFullNameValue(profile.full_name || ''); }}>
-                                    Edit
-                                </GhostButton>
-                            </div>
-                        )}
+                        <FieldInput
+                            value={form.full_name}
+                            onChange={(e) => setField('full_name', e.target.value)}
+                            placeholder={isEditing ? 'Enter your full name' : 'Not set'}
+                            readOnly={locked}
+                            maxLength={100}
+                            style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
+                        />
                     </div>
                     <div>
                         <FieldLabel>Timezone</FieldLabel>
-                        <FieldSelect defaultValue="Asia/Ho_Chi_Minh (UTC+7)">
-                            <option>Asia/Ho_Chi_Minh (UTC+7)</option>
-                            <option>Asia/Singapore (UTC+8)</option>
-                            <option>Europe/London (UTC+0)</option>
-                            <option>America/New_York (UTC−5)</option>
+                        <FieldSelect
+                            value={form.timezone}
+                            onChange={(e) => setField('timezone', e.target.value)}
+                            disabled={locked}
+                            style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
+                        >
+                            <option value="">Not set</option>
+                            {TIMEZONE_OPTIONS.map((tz) => (
+                                <option key={tz.value} value={tz.value}>{tz.label}</option>
+                            ))}
                         </FieldSelect>
                     </div>
                     <div>
                         <FieldLabel>Favorite deck</FieldLabel>
-                        <FieldInput
-                            value={profile.favorite_deck ? profile.favorite_deck.name : 'No deck selected'}
-                            readOnly
-                            style={{ opacity: 0.7, cursor: 'default' }}
-                        />
+                        <FieldSelect
+                            value={form.favorite_deck_id === '' ? '' : String(form.favorite_deck_id)}
+                            onChange={(e) => setField('favorite_deck_id', e.target.value === '' ? '' : Number(e.target.value))}
+                            disabled={locked || deckOptions.length === 0}
+                            style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
+                        >
+                            {form.favorite_deck_id === '' && <option value="">No deck selected</option>}
+                            {deckOptions.map((deck) => (
+                                <option key={deck.id} value={String(deck.id)}>{deck.name}</option>
+                            ))}
+                        </FieldSelect>
                     </div>
                     <div style={{ gridColumn: '1 / -1' }}>
                         <FieldLabel>Bio · what the cards reveal about you</FieldLabel>
-                        <FieldTextarea defaultValue="Reader of the Thoth deck. Drawn to the Major Arcana, fascinated by reversals." />
+                        <FieldTextarea
+                            value={form.bio}
+                            onChange={(e) => setField('bio', e.target.value)}
+                            placeholder={isEditing ? 'Reader of the Thoth deck. Drawn to the Major Arcana, fascinated by reversals.' : 'No bio yet'}
+                            readOnly={locked}
+                            maxLength={500}
+                            style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
+                        />
+                        {isEditing && (
+                            <div style={{ marginTop: 6, textAlign: 'right', fontSize: 11, color: '#7c799f' }}>
+                                {form.bio.length} / 500
+                            </div>
+                        )}
                     </div>
                 </div>
             </MysticCard>
@@ -190,23 +322,65 @@ export function ProfileInfoTab({ profile, isLoading, onAvatarChange, fetchProfil
             <MysticCard>
                 <SectionHeader eyebrow="Practice" title="Reading preferences" />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 20 }}>
-                    <PrefRow icon="moon" label="Lunar phase awareness" value="On" desc="Color readings with current moon phase" />
-                    <PrefRow icon="sparkle" label="Card animations" value="Cinematic" desc="Full shuffle + reveal sequence" />
-                    <PrefRow icon="globe" label="Reading language" value="English" desc="Used for all generated interpretations" />
-                    <PrefRow icon="eye" label="Reversed cards" value="Enabled" desc="Cards may appear inverted in spreads" />
+                    <ToggleRow
+                        icon="moon"
+                        label="Lunar phase awareness"
+                        desc="Color readings with current moon phase"
+                        checked={form.lunar_phase_awareness}
+                        disabled={locked}
+                        onChange={(v) => setField('lunar_phase_awareness', v)}
+                    />
+                    <SelectRow
+                        icon="sparkle"
+                        label="Card animations"
+                        desc={CARD_ANIMATION_OPTIONS.find((o) => o.value === form.card_animations)?.desc ?? ''}
+                        value={form.card_animations}
+                        disabled={locked}
+                        options={CARD_ANIMATION_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                        onChange={(v) => setField('card_animations', v)}
+                    />
+                    <SelectRow
+                        icon="globe"
+                        label="Reading language"
+                        desc="Used for all generated interpretations"
+                        value={form.reading_language}
+                        disabled={locked}
+                        options={READING_LANGUAGE_OPTIONS.map((l) => ({ value: l, label: l }))}
+                        onChange={(v) => setField('reading_language', v)}
+                    />
+                    <ToggleRow
+                        icon="eye"
+                        label="Reversed cards"
+                        desc="Cards may appear inverted in spreads"
+                        checked={form.reversed_cards}
+                        disabled={locked}
+                        onChange={(v) => setField('reversed_cards', v)}
+                    />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24, gap: 10 }}>
-                    <GhostButton>Discard changes</GhostButton>
-                    <MysticButton>
-                        <ProfileIcon name="check" size={14} /> Save profile
-                    </MysticButton>
-                </div>
+                {isEditing && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 24, gap: 10 }}>
+                        {isDirty && (
+                            <span style={{ marginRight: 'auto', color: '#f5b942', fontSize: 12 }}>
+                                You have unsaved changes
+                            </span>
+                        )}
+                        <GhostButton onClick={handleCancel} disabled={isSaving}>Cancel</GhostButton>
+                        <MysticButton onClick={handleSave} disabled={isSaving || !isDirty}>
+                            <ProfileIcon name="check" size={14} /> {isSaving ? 'Saving…' : 'Save profile'}
+                        </MysticButton>
+                    </div>
+                )}
             </MysticCard>
         </div>
     );
 }
 
-function PrefRow({ icon, label, value, desc }: { icon: Parameters<typeof ProfileIcon>[0]['name']; label: string; value: string; desc: string }) {
+function RowShell({ icon, label, desc, children }: {
+    icon: Parameters<typeof ProfileIcon>[0]['name'];
+    label: string;
+    desc: string;
+    children: React.ReactNode;
+}) {
     return (
         <div style={{
             display: 'flex', alignItems: 'center', gap: 14,
@@ -226,14 +400,72 @@ function PrefRow({ icon, label, value, desc }: { icon: Parameters<typeof Profile
                 <div style={{ fontSize: 14, fontWeight: 600, color: '#f4f1ff' }}>{label}</div>
                 <div style={{ fontSize: 12, color: '#7c799f' }}>{desc}</div>
             </div>
-            <div style={{
-                fontSize: 12, fontWeight: 600, color: '#b3b0d4',
-                padding: '6px 12px', background: '#1d2049', borderRadius: 999,
-                flexShrink: 0,
-            }}>
-                {value}
-            </div>
+            <div style={{ flexShrink: 0 }}>{children}</div>
         </div>
+    );
+}
+
+function ToggleRow({ icon, label, desc, checked, disabled, onChange }: {
+    icon: Parameters<typeof ProfileIcon>[0]['name'];
+    label: string;
+    desc: string;
+    checked: boolean;
+    disabled?: boolean;
+    onChange: (v: boolean) => void;
+}) {
+    return (
+        <RowShell icon={icon} label={label} desc={desc}>
+            <button
+                type="button"
+                role="switch"
+                aria-checked={checked}
+                aria-label={label}
+                onClick={() => !disabled && onChange(!checked)}
+                disabled={disabled}
+                style={{
+                    width: 46, height: 26, borderRadius: 999, position: 'relative',
+                    border: '1px solid', cursor: disabled ? 'not-allowed' : 'pointer',
+                    borderColor: checked ? 'rgba(168,85,247,0.6)' : '#2a2d5a',
+                    background: checked
+                        ? 'linear-gradient(180deg, #a855f7 0%, #8b5cf6 100%)'
+                        : '#1d2049',
+                    transition: 'all 160ms ease', padding: 0,
+                    opacity: disabled ? 0.6 : 1,
+                }}
+            >
+                <span style={{
+                    position: 'absolute', top: 2, left: checked ? 22 : 2,
+                    width: 20, height: 20, borderRadius: '50%',
+                    background: '#fff', transition: 'left 160ms ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                }} />
+            </button>
+        </RowShell>
+    );
+}
+
+function SelectRow({ icon, label, desc, value, options, disabled, onChange }: {
+    icon: Parameters<typeof ProfileIcon>[0]['name'];
+    label: string;
+    desc: string;
+    value: string;
+    options: { value: string; label: string }[];
+    disabled?: boolean;
+    onChange: (v: string) => void;
+}) {
+    return (
+        <RowShell icon={icon} label={label} desc={desc}>
+            <FieldSelect
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                disabled={disabled}
+                style={{ width: 'auto', minWidth: 130, padding: '8px 12px' }}
+            >
+                {options.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+            </FieldSelect>
+        </RowShell>
     );
 }
 

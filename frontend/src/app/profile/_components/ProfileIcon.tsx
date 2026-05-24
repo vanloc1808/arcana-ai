@@ -6,7 +6,7 @@ type IconName =
     | 'user' | 'cards' | 'crown' | 'history' | 'bell'
     | 'upload' | 'trash' | 'check' | 'sparkle' | 'moon'
     | 'bolt' | 'plus' | 'refresh' | 'lock' | 'external'
-    | 'dot' | 'globe' | 'eye' | 'chart' | 'card';
+    | 'dot' | 'globe' | 'eye' | 'chart' | 'card' | 'pencil';
 
 export function ProfileIcon({ name, size = 16, stroke = 1.8 }: { name: IconName; size?: number; stroke?: number }) {
     const common = {
@@ -36,6 +36,7 @@ export function ProfileIcon({ name, size = 16, stroke = 1.8 }: { name: IconName;
         case 'eye':     return <svg {...common}><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>;
         case 'chart':   return <svg {...common}><line x1="3" y1="20" x2="21" y2="20"/><line x1="6" y1="20" x2="6" y2="12"/><line x1="11" y1="20" x2="11" y2="8"/><line x1="16" y1="20" x2="16" y2="14"/><line x1="21" y1="20" x2="21" y2="4"/></svg>;
         case 'card':    return <svg {...common}><rect x="2" y="6" width="20" height="13" rx="2"/><line x1="2" y1="11" x2="22" y2="11"/></svg>;
+        case 'pencil':  return <svg {...common}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>;
         default: return null;
     }
 }
