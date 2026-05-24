@@ -260,3 +260,78 @@ def list_all_achievements() -> list[dict]:
         {"code": a.code, "title": a.title, "description": a.description}
         for a in REGISTRY
     ]
+
+
+def get_dashboard_stats(db: Session, user_id: int, period_days: int = 30) -> dict:
+    """Return aggregated stats for the user's History tab dashboard.
+
+    Returns a plain dict (validated by the router against ``UserDashboardStats``).
+
+    Args:
+        db: Active SQLAlchemy session.
+        user_id: Target user ID.
+        period_days: Window for usage breakdown and recent readings list.
+            Defaults to 30 days.
+    """
+    today = _today_utc()
+    streak = _get_or_create_streak(db, user_id)
+
+    # ── Streak fields ──────────────────────────────────────────────────────
+    is_active_recent = streak.last_activity_date in (today, today - timedelta(days=1))
+    current = streak.current_streak if is_active_recent else 0
+    is_active_today = streak.last_activity_date == today
+
+    # ── Lifetime reading count ─────────────────────────────────────────────
+    total_readings: int = (
+        db.query(func.count(TurnUsageHistory.id))
+        .filter(TurnUsageHistory.user_id == user_id)
+        .scalar()
+        or 0
+    )
+
+    # ── Period-bounded usage ───────────────────────────────────────────────
+    period_start = datetime.now(UTC) - timedelta(days=period_days)
+
+    recent_rows = (
+        db.query(TurnUsageHistory)
+        .filter(
+            TurnUsageHistory.user_id == user_id,
+            TurnUsageHistory.consumed_at >= period_start,
+        )
+        .order_by(TurnUsageHistory.consumed_at.desc())
+        .all()
+    )
+
+    # Aggregate by context
+    context_counts: dict[str, int] = {}
+    for row in recent_rows:
+        ctx = row.usage_context or "other"
+        context_counts[ctx] = context_counts.get(ctx, 0) + 1
+
+    usage_by_context = [
+        {"context": ctx, "count": cnt}
+        for ctx, cnt in sorted(context_counts.items(), key=lambda kv: kv[1], reverse=True)
+    ]
+
+    recent_readings = [
+        {
+            "id": row.id,
+            "turn_type": row.turn_type,
+            "usage_context": row.usage_context,
+            "feature_used": row.feature_used,
+            "consumed_at": row.consumed_at,
+        }
+        for row in recent_rows[:20]  # cap at 20 entries for the log
+    ]
+
+    return {
+        "total_readings": total_readings,
+        "current_streak": current,
+        "longest_streak": streak.longest_streak or 0,
+        "total_active_days": streak.total_active_days or 0,
+        "last_activity_date": streak.last_activity_date,
+        "is_active_today": is_active_today,
+        "period_days": period_days,
+        "usage_by_context": usage_by_context,
+        "recent_readings": recent_readings,
+    }
