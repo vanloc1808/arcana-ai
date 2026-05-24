@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import "@/app/admin/admin.css";
 import api, { tarot } from "@/lib/api";
 import { Icon, SearchInput, type IconName } from "@/components/admin/AdminUI";
@@ -199,10 +200,12 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children, activePath, breadcrumb, username = "Admin" }: AdminLayoutProps) {
+    const router = useRouter();
     const theme = useAdminTheme();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [counts, setCounts] = useState<SidebarCounts>({});
     const [search, setSearch] = useState("");
+    const [searching, setSearching] = useState(false);
     const dailyCard = useDailyCard();
     const initial = username[0]?.toUpperCase() ?? "A";
 
@@ -213,6 +216,31 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
             .catch(() => { /* counts are best-effort */ });
         return () => { cancelled = true; };
     }, []);
+
+    const runGlobalSearch = useCallback(async () => {
+        const q = search.trim();
+        if (!q || searching) return;
+        setSearching(true);
+        try {
+            const [users, cards, sessions] = await Promise.all([
+                api.post("/admin/search", { query: q, model_type: "users", limit: 1, offset: 0 }),
+                api.post("/admin/search", { query: q, model_type: "cards", limit: 1, offset: 0 }),
+                api.post("/admin/search", { query: q, model_type: "chat_sessions", limit: 1, offset: 0 }),
+            ]);
+
+            const user = users.data?.[0];
+            const card = cards.data?.[0];
+            const session = sessions.data?.[0];
+            const encoded = encodeURIComponent(q);
+            if (user?.id) router.push(`/admin/users?q=${encoded}`);
+            else if (card?.id) router.push(`/admin/cards?q=${encoded}`);
+            else if (session?.id) router.push(`/admin/chat-sessions?q=${encoded}`);
+        } catch (error) {
+            console.error("Admin global search failed:", error);
+        } finally {
+            setSearching(false);
+        }
+    }, [router, search, searching]);
 
     return (
         <div
@@ -285,7 +313,12 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
                             </div>
                         </div>
                         <div className="topbar-right">
-                            <SearchInput value={search} onChange={setSearch} placeholder="Search users, cards, sessions…" />
+                            <SearchInput
+                                value={search}
+                                onChange={setSearch}
+                                onSubmit={runGlobalSearch}
+                                placeholder="Search users, cards, sessions…"
+                            />
                             <button className="topbar-icon-btn" aria-label="Notifications">
                                 <Icon name="bell" size={16} />
                             </button>

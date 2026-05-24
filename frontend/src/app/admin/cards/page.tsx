@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, StatCard, SearchInput, Icon, Table, type Column } from "@/components/admin/AdminUI";
@@ -48,6 +48,7 @@ const COLUMNS: Column[] = [
 export default function AdminCardsPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [cards, setCards] = useState<AdminCard[]>([]);
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
@@ -97,6 +98,11 @@ export default function AdminCardsPage() {
             return c.name.toLowerCase().includes(s) || (c.suit ?? "").toLowerCase().includes(s);
         });
     }, [cards, q, deckFilter, decks]);
+
+    useEffect(() => {
+        const query = searchParams.get("q");
+        if (query) setQ(query);
+    }, [searchParams]);
 
     if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading cards…" />;
     if (!user.is_admin) return null;
