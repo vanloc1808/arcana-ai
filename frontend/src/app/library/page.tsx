@@ -52,6 +52,7 @@ function CardDetailPanel({ card, onClose }: { card: LibraryCard; onClose: () => 
                             name={card.name}
                             suit={card.suit}
                             numerology={card.numerology}
+                            imageUrl={card.image_url}
                             width={100}
                             height={158}
                         />
@@ -279,6 +280,7 @@ export default function LibraryPage() {
                                     name={card.name}
                                     suit={card.suit}
                                     numerology={card.numerology}
+                                    imageUrl={card.image_url}
                                     width={140}
                                     height={220}
                                     onClick={() => setSelectedCard(card)}

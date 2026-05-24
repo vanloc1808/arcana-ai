@@ -311,6 +311,7 @@ interface ArcanaCardProps {
     name: string;
     suit?: string | null;
     numerology?: number | null;
+    imageUrl?: string | null;
     width?: number;
     height?: number;
     accentColor?: string;
@@ -324,6 +325,7 @@ export function ArcanaCard({
     name,
     suit,
     numerology,
+    imageUrl,
     width = 160,
     height = 252,
     accentColor = '#f59e0b',
@@ -332,6 +334,8 @@ export function ArcanaCard({
     onClick,
     className = '',
 }: ArcanaCardProps) {
+    const [imgError, setImgError] = React.useState(false);
+
     const isMajor = suit === 'Major Arcana';
     const Glyph = isMajor ? MajorArcanaGlyph[name] : SuitGlyph[suit ?? ''];
     const numeral = isMajor && numerology !== undefined && numerology !== null
@@ -339,58 +343,78 @@ export function ArcanaCard({
         : '';
 
     const glyphSize = Math.min(width * 0.52, height * 0.38);
+    const showImage = !!imageUrl && !imgError;
 
     return (
         <div
             onClick={onClick}
             className={`relative select-none transition-transform hover:scale-105 hover:-translate-y-1 ${onClick ? 'cursor-pointer' : ''} ${className}`}
-            style={{ width, height, borderRadius: 8, background: bgColor, boxShadow: `0 0 0 1px ${borderColor}88, 0 20px 50px -15px rgba(0,0,0,0.7)` }}
+            style={{ width, height, borderRadius: 8, background: bgColor, boxShadow: `0 0 0 1px ${borderColor}88, 0 20px 50px -15px rgba(0,0,0,0.7)`, overflow: 'hidden' }}
         >
-            {/* Inner hairline frame */}
-            <div style={{ position: 'absolute', inset: 7, border: `1px solid ${borderColor}55`, borderRadius: 4, pointerEvents: 'none' }} />
+            {showImage ? (
+                /* ── Real card image from the deck ── */
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                    src={imageUrl!}
+                    alt={name}
+                    onError={() => setImgError(true)}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                        borderRadius: 8,
+                    }}
+                />
+            ) : (
+                /* ── SVG glyph fallback ── */
+                <>
+                    {/* Inner hairline frame */}
+                    <div style={{ position: 'absolute', inset: 7, border: `1px solid ${borderColor}55`, borderRadius: 4, pointerEvents: 'none' }} />
 
-            {/* Numeral */}
-            {numeral && (
-                <div style={{
-                    position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
-                    fontFamily: '"Cormorant Garamond", "Playfair Display", serif',
-                    color: accentColor, letterSpacing: '0.3em', fontSize: 10, fontWeight: 500,
-                }}>
-                    {numeral}
-                </div>
+                    {/* Numeral */}
+                    {numeral && (
+                        <div style={{
+                            position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
+                            fontFamily: '"Cormorant Garamond", "Playfair Display", serif',
+                            color: accentColor, letterSpacing: '0.3em', fontSize: 10, fontWeight: 500,
+                        }}>
+                            {numeral}
+                        </div>
+                    )}
+
+                    {/* Glyph */}
+                    <div style={{
+                        position: 'absolute', top: '50%', left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        color: accentColor, marginTop: 4,
+                    }}>
+                        {Glyph
+                            ? <Glyph size={glyphSize} />
+                            : (
+                                <svg width={glyphSize} height={glyphSize} viewBox="0 0 100 100" fill="none" stroke={accentColor} strokeWidth="1.2">
+                                    <circle cx="50" cy="50" r="38" />
+                                    <circle cx="50" cy="50" r="28" />
+                                    <text x="50" y="58" textAnchor="middle" fontSize="28" fill={accentColor} fontFamily="serif" stroke="none">
+                                        {name.charAt(0)}
+                                    </text>
+                                </svg>
+                            )
+                        }
+                    </div>
+
+                    {/* Card name */}
+                    <div style={{
+                        position: 'absolute', bottom: 12, left: 0, right: 0, textAlign: 'center',
+                        fontFamily: '"Cormorant Garamond", "Playfair Display", serif',
+                        color: accentColor, fontSize: Math.max(9, width * 0.068),
+                        letterSpacing: '0.12em', fontStyle: 'italic',
+                        padding: '0 8px', lineHeight: 1.2,
+                    }}>
+                        {name}
+                    </div>
+                </>
             )}
-
-            {/* Glyph */}
-            <div style={{
-                position: 'absolute', top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                color: accentColor, marginTop: 4,
-            }}>
-                {Glyph
-                    ? <Glyph size={glyphSize} />
-                    : (
-                        // Fallback: suit initial in a decorative circle
-                        <svg width={glyphSize} height={glyphSize} viewBox="0 0 100 100" fill="none" stroke={accentColor} strokeWidth="1.2">
-                            <circle cx="50" cy="50" r="38" />
-                            <circle cx="50" cy="50" r="28" />
-                            <text x="50" y="58" textAnchor="middle" fontSize="28" fill={accentColor} fontFamily="serif" stroke="none">
-                                {name.charAt(0)}
-                            </text>
-                        </svg>
-                    )
-                }
-            </div>
-
-            {/* Card name */}
-            <div style={{
-                position: 'absolute', bottom: 12, left: 0, right: 0, textAlign: 'center',
-                fontFamily: '"Cormorant Garamond", "Playfair Display", serif',
-                color: accentColor, fontSize: Math.max(9, width * 0.068),
-                letterSpacing: '0.12em', fontStyle: 'italic',
-                padding: '0 8px', lineHeight: 1.2,
-            }}>
-                {name}
-            </div>
         </div>
     );
 }
