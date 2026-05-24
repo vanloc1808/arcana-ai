@@ -2683,3 +2683,225 @@ a:focus-visible {
     margin-bottom: 6px;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ArcanaAI homepage redesign — cosmic / celestial welcome experience.
+   Scoped under .arcana-home so it never leaks into the chat / app chrome.
+   Config baked in: accent lavender #C9A6F0 + gold #F0CC7E · comfortable
+   density · Card of the Day centered · starfield background.
+   ───────────────────────────────────────────────────────────────────────── */
+.arcana-home {
+  --ah-bg-0: oklch(0.10 0.035 280);
+  --ah-line: oklch(0.30 0.04 285 / 0.5);
+  --ah-line-soft: oklch(0.30 0.04 285 / 0.22);
+  --ah-ink-0: oklch(0.96 0.015 85);
+  --ah-ink-1: oklch(0.86 0.02 85);
+  --ah-ink-2: oklch(0.66 0.025 285);
+  --ah-ink-3: oklch(0.50 0.03 285);
+  --ah-lav: #C9A6F0;
+  --ah-lav-dim: #C9A6F0aa;
+  --ah-gold: #F0CC7E;
+  --ah-gold-dim: #F0CC7Eaa;
+  --ah-radius-sm: 8px;
+  --ah-radius: 14px;
+  --ah-radius-lg: 22px;
+  --ah-serif: "Cormorant Garamond", "Cormorant", Garamond, serif;
+  --ah-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --ah-mono: "JetBrains Mono", ui-monospace, monospace;
+  --ah-gutter: 28px;
+
+  position: relative;
+  min-height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: var(--ah-sans);
+  font-size: 14px;
+  color: var(--ah-ink-1);
+  -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(900px 600px at 18% -10%, oklch(0.30 0.10 295 / 0.55), transparent 60%),
+    radial-gradient(1200px 700px at 110% 110%, oklch(0.26 0.10 25 / 0.32), transparent 60%),
+    radial-gradient(600px 400px at 50% 120%, oklch(0.30 0.10 260 / 0.30), transparent 60%),
+    var(--ah-bg-0);
+}
+.arcana-home::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    radial-gradient(1px 1px at 12% 22%, oklch(0.95 0.02 85 / 0.9), transparent 50%),
+    radial-gradient(1px 1px at 23% 78%, oklch(0.95 0.02 85 / 0.6), transparent 50%),
+    radial-gradient(1.5px 1.5px at 41% 14%, oklch(0.95 0.02 85 / 0.85), transparent 50%),
+    radial-gradient(1px 1px at 67% 38%, oklch(0.95 0.02 85 / 0.55), transparent 50%),
+    radial-gradient(1.5px 1.5px at 81% 71%, oklch(0.95 0.02 85 / 0.8), transparent 50%),
+    radial-gradient(1px 1px at 92% 18%, oklch(0.95 0.02 85 / 0.6), transparent 50%),
+    radial-gradient(1px 1px at 56% 88%, oklch(0.95 0.02 85 / 0.7), transparent 50%),
+    radial-gradient(1px 1px at 8% 56%, oklch(0.95 0.02 85 / 0.5), transparent 50%),
+    radial-gradient(1.5px 1.5px at 34% 46%, oklch(0.95 0.02 85 / 0.8), transparent 50%),
+    radial-gradient(1px 1px at 73% 8%, oklch(0.95 0.02 85 / 0.5), transparent 50%);
+  background-repeat: no-repeat;
+  opacity: 0.85;
+  animation: ah-twinkle 7s ease-in-out infinite alternate;
+}
+@keyframes ah-twinkle { from { opacity: .55 } to { opacity: .9 } }
+@media (prefers-reduced-motion: reduce) {
+  .arcana-home::before { animation: none; }
+  .arcana-home .ah-fade-in { animation: none; }
+}
+
+.arcana-home .ah-main {
+  position: relative; z-index: 1;
+  padding: var(--ah-gutter) 40px 60px;
+  max-width: 1480px; width: 100%; margin: 0 auto;
+}
+
+.arcana-home .ah-it { font-style: italic; }
+.arcana-home .ah-mono { font-family: var(--ah-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ah-ink-2); text-transform: uppercase; }
+.arcana-home .ah-eyebrow { font-family: var(--ah-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ah-ink-3); }
+
+/* Lunar / time strip */
+.arcana-home .ah-strip {
+  display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+  padding: 14px 22px;
+  border: 1px solid var(--ah-line-soft);
+  border-radius: 999px;
+  background: linear-gradient(90deg, oklch(0.14 0.04 285 / 0.6), oklch(0.16 0.05 285 / 0.3));
+  margin-bottom: var(--ah-gutter);
+  font-family: var(--ah-mono); font-size: 11px; color: var(--ah-ink-2);
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.arcana-home .ah-strip .ah-moon { display: inline-flex; align-items: center; gap: 10px; color: var(--ah-ink-1); }
+.arcana-home .ah-strip .ah-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--ah-ink-3); display: inline-block; }
+.arcana-home .ah-strip .ah-grow { flex: 1; min-width: 24px; height: 1px; background: linear-gradient(90deg, transparent, var(--ah-line-soft), transparent); }
+
+/* Hero */
+.arcana-home .ah-hero { padding: 14px 0 var(--ah-gutter); }
+.arcana-home .ah-hero-greeting { font-family: var(--ah-serif); font-weight: 400; font-size: clamp(36px, 4.4vw, 60px); letter-spacing: -0.015em; color: var(--ah-ink-0); line-height: 1.04; max-width: 18ch; margin: 0; }
+.arcana-home .ah-hero-greeting .ah-it { color: var(--ah-lav); }
+.arcana-home .ah-hero-sub { margin-top: 14px; max-width: 56ch; color: var(--ah-ink-2); font-size: 15px; line-height: 1.55; }
+.arcana-home .ah-hero-meta { margin-top: 22px; display: flex; gap: 28px; align-items: center; flex-wrap: wrap; color: var(--ah-ink-3); font-family: var(--ah-mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; }
+.arcana-home .ah-hero-meta b { color: var(--ah-ink-1); font-weight: 500; }
+
+/* Grid (Card of the Day centered) */
+.arcana-home .ah-grid { display: grid; grid-template-columns: 1.05fr 1.4fr 1.05fr; gap: var(--ah-gutter); align-items: start; }
+
+/* Card surface */
+.arcana-home .ah-card {
+  position: relative;
+  background: oklch(0.14 0.04 285 / 0.55);
+  border: 1px solid var(--ah-line-soft);
+  border-radius: var(--ah-radius);
+  padding: 22px;
+  backdrop-filter: blur(8px);
+  transition: border-color .2s, transform .2s;
+}
+.arcana-home .ah-card:hover { border-color: var(--ah-line); }
+.arcana-home .ah-card-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.arcana-home .ah-card-title h3 { margin: 0; font-family: var(--ah-serif); font-weight: 500; font-size: 22px; color: var(--ah-ink-0); letter-spacing: -0.005em; }
+.arcana-home .ah-card-title .ah-meta { font-family: var(--ah-mono); font-size: 10px; letter-spacing: 0.14em; color: var(--ah-ink-3); text-transform: uppercase; }
+
+/* Card of the Day */
+.arcana-home .ah-cod {
+  background:
+    radial-gradient(80% 60% at 50% 0%, oklch(0.30 0.10 80 / 0.18), transparent 70%),
+    oklch(0.13 0.04 285 / 0.7);
+  border: 1px solid oklch(0.60 0.10 80 / 0.30);
+  border-radius: var(--ah-radius-lg);
+  padding: 26px;
+  overflow: hidden;
+}
+.arcana-home .ah-cod-eyebrow { display: flex; align-items: center; justify-content: space-between; }
+.arcana-home .ah-cod-eyebrow .ah-badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--ah-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ah-gold); }
+.arcana-home .ah-cod-eyebrow .ah-badge .ah-b-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ah-gold); box-shadow: 0 0 8px var(--ah-gold); }
+.arcana-home .ah-cod-frame {
+  aspect-ratio: 3 / 5; margin: 18px auto 16px; max-width: 240px;
+  border-radius: 14px; border: 1px solid oklch(0.70 0.10 80 / 0.35);
+  background: linear-gradient(180deg, oklch(0.20 0.06 285), oklch(0.13 0.04 280));
+  position: relative; overflow: hidden;
+  box-shadow: 0 30px 80px oklch(0 0 0 / 0.5), inset 0 1px 0 oklch(1 0 0 / 0.06);
+}
+.arcana-home .ah-cod-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.arcana-home .ah-cod-frame .ah-cod-art { position: absolute; inset: 28px 18px; display: grid; place-items: center; color: oklch(0.85 0.10 82); }
+.arcana-home .ah-cod-title { font-family: var(--ah-serif); font-weight: 500; font-size: 26px; color: var(--ah-ink-0); text-align: center; margin: 4px 0 2px; letter-spacing: -0.005em; }
+.arcana-home .ah-cod-elements { display: flex; gap: 14px; justify-content: center; font-family: var(--ah-mono); font-size: 10px; letter-spacing: 0.14em; color: var(--ah-ink-3); text-transform: uppercase; margin-bottom: 14px; }
+.arcana-home .ah-cod-elements b { color: var(--ah-ink-1); font-weight: 500; margin-left: 6px; }
+.arcana-home .ah-cod-keywords { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 16px; }
+.arcana-home .ah-keyword { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: oklch(0.30 0.05 285 / 0.5); border: 1px solid var(--ah-line-soft); color: var(--ah-ink-1); }
+.arcana-home .ah-cod-message { color: var(--ah-ink-1); font-size: 14px; line-height: 1.65; text-align: center; max-width: 36ch; margin: 0 auto 18px; }
+.arcana-home .ah-cod-message::before, .arcana-home .ah-cod-message::after { content: "—"; color: var(--ah-gold-dim); margin: 0 8px; }
+.arcana-home .ah-cod-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.arcana-home .ah-btn-ghost-gold { padding: 9px 16px; border-radius: 10px; border: 1px solid oklch(0.60 0.10 80 / 0.4); color: var(--ah-gold); font-size: 12.5px; font-weight: 500; letter-spacing: 0.02em; background: none; cursor: pointer; font-family: var(--ah-sans); }
+.arcana-home .ah-btn-ghost-gold:hover { background: oklch(0.50 0.10 80 / 0.10); border-color: var(--ah-gold-dim); }
+
+/* Continue reading */
+.arcana-home .ah-cont-list { display: flex; flex-direction: column; gap: 10px; }
+.arcana-home .ah-cont-item {
+  display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 14px;
+  padding: 12px 14px; border-radius: 12px;
+  background: oklch(0.16 0.04 285 / 0.35); border: 1px solid var(--ah-line-soft);
+  cursor: pointer; transition: all .15s; text-align: left; width: 100%; font-family: var(--ah-sans);
+}
+.arcana-home .ah-cont-item:hover { background: oklch(0.20 0.06 285 / 0.45); border-color: var(--ah-line); transform: translateX(2px); }
+.arcana-home .ah-cont-mini-cards { display: flex; }
+.arcana-home .ah-cont-mini { width: 18px; height: 28px; border-radius: 3px; border: 0.5px solid oklch(0.70 0.10 80 / 0.35); margin-left: -6px; background: linear-gradient(180deg, oklch(0.22 0.06 285), oklch(0.14 0.04 280)); }
+.arcana-home .ah-cont-mini:first-child { margin-left: 0; }
+.arcana-home .ah-cont-mini.ah-gold { border-color: oklch(0.75 0.12 80 / 0.6); }
+.arcana-home .ah-cont-body .ah-topic { font-family: var(--ah-serif); font-style: italic; font-size: 15px; color: var(--ah-ink-0); line-height: 1.2; }
+.arcana-home .ah-cont-body .ah-meta { font-family: var(--ah-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--ah-ink-3); text-transform: uppercase; margin-top: 4px; }
+.arcana-home .ah-cont-arrow { color: var(--ah-ink-3); display: inline-flex; }
+.arcana-home .ah-cont-item:hover .ah-cont-arrow { color: var(--ah-lav); }
+.arcana-home .ah-empty { color: var(--ah-ink-2); font-size: 13px; line-height: 1.5; padding: 8px 2px; }
+
+/* Spread picker */
+.arcana-home .ah-spreads { display: flex; flex-direction: column; gap: 10px; }
+.arcana-home .ah-spread {
+  display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 14px;
+  padding: 14px; border-radius: 12px; border: 1px solid var(--ah-line-soft);
+  background: oklch(0.16 0.04 285 / 0.35); cursor: pointer; transition: all .15s;
+  text-align: left; width: 100%; font-family: var(--ah-sans);
+}
+.arcana-home .ah-spread:hover { border-color: var(--ah-lav-dim); background: oklch(0.18 0.06 290 / 0.5); }
+.arcana-home .ah-spread.ah-featured { border-color: oklch(0.55 0.10 295 / 0.5); background: linear-gradient(180deg, oklch(0.18 0.07 290 / 0.6), oklch(0.14 0.04 285 / 0.45)); }
+.arcana-home .ah-spread-glyph { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 10px; background: oklch(0.10 0.03 285 / 0.7); border: 1px solid var(--ah-line-soft); }
+.arcana-home .ah-spread-name { font-family: var(--ah-serif); font-size: 17px; color: var(--ah-ink-0); letter-spacing: -0.003em; }
+.arcana-home .ah-spread-desc { font-size: 12px; color: var(--ah-ink-2); margin-top: 2px; }
+.arcana-home .ah-spread-count { font-family: var(--ah-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--ah-ink-3); text-transform: uppercase; text-align: right; }
+.arcana-home .ah-spread-count b { display: block; font-family: var(--ah-serif); font-size: 22px; color: var(--ah-ink-1); font-weight: 500; letter-spacing: 0; }
+
+/* Ritual CTA */
+.arcana-home .ah-ritual-cta {
+  margin-top: var(--ah-gutter);
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 28px;
+  padding: 22px 26px; border-radius: var(--ah-radius);
+  background: linear-gradient(135deg, oklch(0.20 0.10 295 / 0.55), oklch(0.16 0.07 320 / 0.4));
+  border: 1px solid oklch(0.55 0.10 295 / 0.4);
+  box-shadow: 0 20px 50px oklch(0.20 0.10 290 / 0.20);
+}
+.arcana-home .ah-ritual-cta h4 { margin: 0 0 4px; font-family: var(--ah-serif); font-size: 22px; color: var(--ah-ink-0); font-weight: 500; }
+.arcana-home .ah-ritual-cta p { margin: 0; color: var(--ah-ink-2); font-size: 13.5px; max-width: 64ch; }
+.arcana-home .ah-ritual-cta .ah-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.arcana-home .ah-btn-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 12px 22px; border-radius: 999px;
+  background: linear-gradient(135deg, oklch(0.78 0.13 295), oklch(0.62 0.16 305));
+  color: oklch(0.16 0.03 295); font-weight: 600; font-size: 13.5px; letter-spacing: 0.01em;
+  box-shadow: 0 6px 24px oklch(0.55 0.16 295 / 0.40), inset 0 1px 0 oklch(1 0 0 / 0.4);
+  transition: transform .15s, box-shadow .15s; cursor: pointer; font-family: var(--ah-sans);
+}
+.arcana-home .ah-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 32px oklch(0.55 0.16 295 / 0.55); }
+.arcana-home .ah-btn-secondary { padding: 12px 18px; border-radius: 999px; border: 1px solid var(--ah-line); color: var(--ah-ink-1); font-size: 13.5px; font-weight: 500; background: none; cursor: pointer; font-family: var(--ah-sans); }
+.arcana-home .ah-btn-secondary:hover { background: oklch(1 0 0 / 0.04); border-color: var(--ah-ink-3); }
+
+/* Whisper */
+.arcana-home .ah-whisper { margin-top: var(--ah-gutter); text-align: center; padding: 26px 16px 12px; color: var(--ah-ink-2); font-family: var(--ah-serif); font-style: italic; font-size: 17px; letter-spacing: 0.005em; }
+.arcana-home .ah-whisper::before { content: "\2749"; display: block; color: var(--ah-gold-dim); margin-bottom: 10px; font-size: 11px; }
+.arcana-home .ah-whisper-attrib { display: block; margin-top: 8px; font-family: var(--ah-mono); font-size: 9.5px; letter-spacing: 0.2em; color: var(--ah-ink-3); text-transform: uppercase; font-style: normal; }
+
+.arcana-home .ah-fade-in { animation: ah-fade .45s ease; }
+@keyframes ah-fade { from { opacity: 0.4; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 1180px) {
+  .arcana-home .ah-grid { grid-template-columns: 1fr; }
+  .arcana-home .ah-ritual-cta { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .arcana-home .ah-main { padding: var(--ah-gutter) 18px 48px; }
+}

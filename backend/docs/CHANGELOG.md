@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.15] - 2026-05-24
+
+### Changed
+- Redesigned the home/welcome experience (shown before a reading is opened) with a cosmic celestial theme: the static "Welcome to ArcanaAI" hero is replaced by a personalized, time-aware poetic greeting; a lunar/time strip shows the live moon phase and illumination; the center now follows a three-column rhythm (Continue where you left off · Card of the Day as the gold-accented centerpiece · Tonight's spread picker) over a twinkling starfield, followed by a "Shuffle the deck" ritual call-to-action and a nightly whisper. Continue-reading entries open the user's recent sessions and the Card of the Day uses the real daily card.
+
 ## [0.0.14] - 2026-05-24
 
 
