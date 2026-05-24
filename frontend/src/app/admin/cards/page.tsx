@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
@@ -45,10 +45,19 @@ const COLUMNS: Column[] = [
     { label: "", width: "6%", align: "right" },
 ];
 
+/** Syncs the ?q= URL param to local state. Must live inside a Suspense boundary. */
+function SearchParamSync({ setQ }: { setQ: (q: string) => void }) {
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        const query = searchParams.get("q");
+        if (query) setQ(query);
+    }, [searchParams, setQ]);
+    return null;
+}
+
 export default function AdminCardsPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [cards, setCards] = useState<AdminCard[]>([]);
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
@@ -99,11 +108,6 @@ export default function AdminCardsPage() {
         });
     }, [cards, q, deckFilter, decks]);
 
-    useEffect(() => {
-        const query = searchParams.get("q");
-        if (query) setQ(query);
-    }, [searchParams]);
-
     if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading cards…" />;
     if (!user.is_admin) return null;
     if (loading) return <AdminLoadingScreen label="Shuffling the arcana…" />;
@@ -113,6 +117,9 @@ export default function AdminCardsPage() {
 
     return (
         <AdminLayout activePath="/admin/cards" breadcrumb="Cards" username={user.username ?? "Admin"}>
+            <Suspense fallback={null}>
+                <SearchParamSync setQ={setQ} />
+            </Suspense>
             <div className="view">
                 <PageHeader kicker="Content" title="Cards" subtitle="The full catalog across every deck." />
 

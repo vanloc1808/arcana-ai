@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
@@ -40,10 +40,19 @@ const COLUMNS: Column[] = [
     { label: "", width: "16%", align: "right" },
 ];
 
+/** Syncs the ?q= URL param to local state. Must live inside a Suspense boundary. */
+function SearchParamSync({ setQ }: { setQ: (q: string) => void }) {
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        const query = searchParams.get("q");
+        if (query) setQ(query);
+    }, [searchParams, setQ]);
+    return null;
+}
+
 export default function AdminUsersPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
@@ -93,11 +102,6 @@ export default function AdminUsersPage() {
 
     useEffect(() => { setPage(1); }, [q, filter]);
 
-    useEffect(() => {
-        const query = searchParams.get("q");
-        if (query) setQ(query);
-    }, [searchParams]);
-
     if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading users…" />;
     if (!user.is_admin) return null;
     if (loading) return <AdminLoadingScreen label="Summoning user records…" />;
@@ -108,6 +112,9 @@ export default function AdminUsersPage() {
 
     return (
         <AdminLayout activePath="/admin/users" breadcrumb="Users" username={user.username ?? "Admin"}>
+            <Suspense fallback={null}>
+                <SearchParamSync setQ={setQ} />
+            </Suspense>
             <div className="view">
                 <PageHeader kicker="People" title="Users" subtitle="Manage accounts, subscriptions, and access." />
 
