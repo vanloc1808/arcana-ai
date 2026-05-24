@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.15] - 2026-05-24
+
+### Added
+- Profile page now lets users edit and save more of their information: bio, timezone, favorite deck, and reading preferences (lunar phase awareness, card animation style, reading language, and reversed cards), in addition to the existing full name. Username and email remain read-only.
+- User profile now stores `bio`, `timezone`, `lunar_phase_awareness`, `card_animations`, `reading_language`, and `reversed_cards`, returned by `GET /auth/me` and updatable via `PUT /auth/me` (with validation for timezone, animation style, and reading language).
+
+### Changed
+- The profile "Account details" and "Reading preferences" sections are now a single editable form with Save/Discard controls and an unsaved-changes indicator, instead of static placeholder fields.
+
 ## [0.0.14] - 2026-05-24
 
 

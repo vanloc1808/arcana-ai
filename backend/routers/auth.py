@@ -647,6 +647,14 @@ async def get_current_user_profile(
             number_of_paid_turns=current_user.number_of_paid_turns,
             last_free_turns_reset=current_user.last_free_turns_reset,
             avatar_url=avatar_url,
+            bio=current_user.bio,
+            timezone=current_user.timezone,
+            lunar_phase_awareness=(
+                current_user.lunar_phase_awareness if current_user.lunar_phase_awareness is not None else True
+            ),
+            card_animations=current_user.card_animations or "cinematic",
+            reading_language=current_user.reading_language or "English",
+            reversed_cards=current_user.reversed_cards if current_user.reversed_cards is not None else True,
         )
         return user_response
     except Exception as e:
@@ -672,6 +680,12 @@ async def update_current_user_profile(
         user_update (UserUpdate): User update data
             - favorite_deck_id (int, optional): ID of the user's favorite tarot deck
             - full_name (str, optional): Full name of the user
+            - bio (str, optional): Short profile biography
+            - timezone (str, optional): IANA timezone name
+            - lunar_phase_awareness (bool, optional): Color readings with the moon phase
+            - card_animations (str, optional): Card reveal animation style
+            - reading_language (str, optional): Preferred interpretation language
+            - reversed_cards (bool, optional): Allow reversed cards in spreads
 
     Returns:
         UserResponse: Updated user information
@@ -694,6 +708,18 @@ async def update_current_user_profile(
         # Update full name if provided in the request
         if "full_name" in user_update.model_fields_set:
             current_user.full_name = user_update.full_name
+
+        # Update profile details and reading preferences when explicitly provided
+        for field in (
+            "bio",
+            "timezone",
+            "lunar_phase_awareness",
+            "card_animations",
+            "reading_language",
+            "reversed_cards",
+        ):
+            if field in user_update.model_fields_set:
+                setattr(current_user, field, getattr(user_update, field))
 
         db.commit()
         db.refresh(current_user)

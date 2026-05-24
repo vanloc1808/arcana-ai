@@ -362,16 +362,32 @@ class UserCreate(UserBase):
         return _sanitize_string(v, "Password", min_length=8, max_length=128)
 
 
+CARD_ANIMATION_CHOICES = {"cinematic", "minimal", "off"}
+READING_LANGUAGE_CHOICES = {"English", "Vietnamese", "Spanish", "French", "German"}
+
+
 class UserUpdate(BaseModel):
     """Schema for updating user preferences.
 
     Attributes:
         favorite_deck_id (Optional[int]): ID of the user's favorite deck.
         full_name (Optional[str]): Full name of the user.
+        bio (Optional[str]): Short biography shown on the profile.
+        timezone (Optional[str]): IANA timezone name.
+        lunar_phase_awareness (Optional[bool]): Color readings with the current moon phase.
+        card_animations (Optional[str]): Card reveal animation style.
+        reading_language (Optional[str]): Preferred interpretation language.
+        reversed_cards (Optional[bool]): Allow reversed cards in spreads.
     """
 
     favorite_deck_id: int | None = None
     full_name: str | None = None
+    bio: str | None = None
+    timezone: str | None = None
+    lunar_phase_awareness: bool | None = None
+    card_animations: str | None = None
+    reading_language: str | None = None
+    reversed_cards: bool | None = None
 
     @field_validator("full_name")
     def validate_full_name(cls, v):
@@ -389,6 +405,50 @@ class UserUpdate(BaseModel):
         if not stripped:
             return None
         return _sanitize_string(v, "Full name", min_length=1, max_length=100, allow_empty=False)
+
+    @field_validator("bio")
+    def validate_bio(cls, v):
+        """Validate the bio, treating blank input as cleared."""
+        if v is None:
+            return None
+        stripped = v.strip() if isinstance(v, str) else v
+        if not stripped:
+            return None
+        return _sanitize_string(v, "Bio", min_length=1, max_length=500, allow_empty=False)
+
+    @field_validator("timezone")
+    def validate_timezone(cls, v):
+        """Validate the timezone is a known IANA name, treating blank as cleared."""
+        if v is None:
+            return None
+        stripped = v.strip() if isinstance(v, str) else v
+        if not stripped:
+            return None
+        try:
+            from zoneinfo import ZoneInfo
+
+            ZoneInfo(stripped)
+        except Exception as exc:
+            raise ValueError("Invalid timezone.") from exc
+        return stripped
+
+    @field_validator("card_animations")
+    def validate_card_animations(cls, v):
+        """Validate the card animation preference."""
+        if v is None:
+            return None
+        if v not in CARD_ANIMATION_CHOICES:
+            raise ValueError(f"Card animations must be one of: {', '.join(sorted(CARD_ANIMATION_CHOICES))}.")
+        return v
+
+    @field_validator("reading_language")
+    def validate_reading_language(cls, v):
+        """Validate the reading language preference."""
+        if v is None:
+            return None
+        if v not in READING_LANGUAGE_CHOICES:
+            raise ValueError(f"Reading language must be one of: {', '.join(sorted(READING_LANGUAGE_CHOICES))}.")
+        return v
 
 
 class UserResponse(BaseModel):
@@ -429,6 +489,12 @@ class UserResponse(BaseModel):
     number_of_paid_turns: int = 0
     last_free_turns_reset: datetime | None = None
     avatar_url: str | None = None
+    bio: str | None = None
+    timezone: str | None = None
+    lunar_phase_awareness: bool = True
+    card_animations: str = "cinematic"
+    reading_language: str = "English"
+    reversed_cards: bool = True
 
     class Config:
         """Pydantic configuration."""
