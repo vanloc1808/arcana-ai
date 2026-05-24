@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
@@ -34,6 +34,14 @@ const COLUMNS: Column[] = [
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default function AdminChatSessionsPage() {
+    return (
+        <Suspense fallback={<AdminLoadingScreen label="Loading sessions…" />}>
+            <AdminChatSessionsPageContent />
+        </Suspense>
+    );
+}
+
+function AdminChatSessionsPageContent() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
