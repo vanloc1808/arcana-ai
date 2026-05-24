@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, StatCard, Pill, Button, SearchInput, Icon, Table, type Column } from "@/components/admin/AdminUI";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import api from "@/lib/api";
 import { Avatar } from "@/components/AvatarUpload";
@@ -46,7 +46,6 @@ export default function AdminUsersPage() {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
-    const [validationError, setValidationError] = useState("");
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState<Filter>("all");
     const [page, setPage] = useState(1);
@@ -129,105 +128,7 @@ export default function AdminUsersPage() {
                     rows={pageRows}
                     empty="No users match your filters."
                     renderRow={(u: AdminUser) => (
-                        <tr key={u.id}>
-                            <td>
-                                <div className="cell-user">
-                                    <Avatar src={u.avatar_url} username={u.username} size="sm" />
-                                    <div>
-                                        <div className="cell-user-name">
-                                            {u.full_name || u.username}
-                                            <span className="cell-user-handle">@{u.username}</span>
-                                        </div>
-                                        <div className="cell-user-email">{u.email}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                {u.is_active ? <Pill tone="success" dot>Active</Pill> : <Pill tone="neutral" dot>Inactive</Pill>}
-                            </td>
-                            <td>
-                                {u.is_specialized_premium ? <Pill tone="accent">VIP</Pill> : <Pill tone="neutral">Free</Pill>}
-                            </td>
-                            <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{u.shared_readings_count}</td>
-                            <td className="muted">{new Date(u.created_at).toLocaleDateString()}</td>
-                            <td style={{ textAlign: "right" }}>
-                                <Dialog onOpenChange={() => setValidationError("")}>
-                                    <DialogTrigger asChild>
-                                        <button className="btn btn-secondary btn-sm" title="Edit user">
-                                            <Icon name="edit" size={13} /> Edit
-                                        </button>
-                                    </DialogTrigger>
-                                    <DialogContent className="admin-dialog">
-                                        <DialogHeader>
-                                            <DialogTitle className="admin-dialog-title">Edit user</DialogTitle>
-                                        </DialogHeader>
-                                        <form
-                                            onSubmit={async (e) => {
-                                                e.preventDefault();
-                                                const fd = new FormData(e.currentTarget);
-                                                const username = fd.get("username") as string;
-                                                const validation = isValidUsername(username);
-                                                if (!validation.isValid) { setValidationError(validation.error ?? "Invalid username"); return; }
-                                                setValidationError("");
-                                                try {
-                                                    await api.put(`/admin/users/${u.id}`, {
-                                                        username,
-                                                        email: fd.get("email"),
-                                                        full_name: fd.get("full_name"),
-                                                        is_active: fd.get("is_active") === "on",
-                                                        is_specialized_premium: fd.get("is_specialized_premium") === "on",
-                                                        receive_error_alerts: fd.get("receive_error_alerts") === "on",
-                                                        favorite_deck_id: parseInt(fd.get("favorite_deck_id") as string),
-                                                    });
-                                                    loadData();
-                                                } catch { alert("Failed to update user."); }
-                                            }}
-                                            className="space-y-4 mt-2"
-                                        >
-                                            {validationError && <div className="admin-dialog-error">{validationError}</div>}
-                                            {[
-                                                { name: "username", label: "Username", type: "text", val: u.username, required: true },
-                                                { name: "email", label: "Email", type: "email", val: u.email, required: true },
-                                                { name: "full_name", label: "Full name", type: "text", val: u.full_name ?? "", required: false },
-                                            ].map((f) => (
-                                                <div key={f.name}>
-                                                    <label className="admin-field-label">{f.label}</label>
-                                                    <input name={f.name} type={f.type} defaultValue={f.val} required={f.required} className="admin-input" />
-                                                </div>
-                                            ))}
-                                            <div className="flex flex-col gap-3">
-                                                {[
-                                                    { name: "is_active", label: "Active user", checked: u.is_active },
-                                                    { name: "is_specialized_premium", label: "VIP access (unlimited turns)", checked: u.is_specialized_premium },
-                                                    { name: "receive_error_alerts", label: "Error alert monitoring", checked: u.receive_error_alerts },
-                                                ].map((ck) => (
-                                                    <label key={ck.name} className="admin-check-label">
-                                                        <input type="checkbox" name={ck.name} defaultChecked={ck.checked} className="admin-check" />
-                                                        <span>{ck.label}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                            <div>
-                                                <label className="admin-field-label">Favorite deck</label>
-                                                <div className="mt-1.5">
-                                                    <Select name="favorite_deck_id" defaultValue={String(u.favorite_deck_id)}>
-                                                        <SelectTrigger className="admin-input">
-                                                            <SelectValue placeholder="Select a deck" />
-                                                        </SelectTrigger>
-                                                        <SelectContent style={{ background: "#181b27", border: "1px solid rgba(167,160,200,0.18)", color: "#eceaf4" }}>
-                                                            {decks.map((d) => (
-                                                                <SelectItem key={d.id} value={String(d.id)} style={{ color: "#eceaf4" }}>{d.name}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </div>
-                                            <button type="submit" className="admin-dialog-submit">Save changes</button>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
-                            </td>
-                        </tr>
+                        <UserRow key={u.id} u={u} decks={decks} onSaved={loadData} />
                     )}
                 />
 
@@ -250,5 +151,111 @@ export default function AdminUsersPage() {
                 </div>
             </div>
         </AdminLayout>
+    );
+}
+
+function UserRow({ u, decks, onSaved }: { u: AdminUser; decks: AdminDeck[]; onSaved: () => void }) {
+    const [open, setOpen] = useState(false);
+    const [validationError, setValidationError] = useState("");
+
+    return (
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setValidationError(""); }}>
+            <tr className="is-clickable" onClick={() => setOpen(true)}>
+                <td>
+                    <div className="cell-user">
+                        <Avatar src={u.avatar_url} username={u.username} size="sm" />
+                        <div>
+                            <div className="cell-user-name">
+                                {u.full_name || u.username}
+                                <span className="cell-user-handle">@{u.username}</span>
+                            </div>
+                            <div className="cell-user-email">{u.email}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {u.is_active ? <Pill tone="success" dot>Active</Pill> : <Pill tone="neutral" dot>Inactive</Pill>}
+                </td>
+                <td>
+                    {u.is_specialized_premium ? <Pill tone="accent">VIP</Pill> : <Pill tone="neutral">Free</Pill>}
+                </td>
+                <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{u.shared_readings_count}</td>
+                <td className="muted">{new Date(u.created_at).toLocaleDateString()}</td>
+                <td style={{ textAlign: "right" }}>
+                    <button className="btn btn-secondary btn-sm" title="Edit user" onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+                        <Icon name="edit" size={13} /> Edit
+                    </button>
+                </td>
+            </tr>
+            <DialogContent className="admin-dialog">
+                <DialogHeader>
+                    <DialogTitle className="admin-dialog-title">Edit user</DialogTitle>
+                </DialogHeader>
+                <form
+                    onSubmit={async (e) => {
+                        e.preventDefault();
+                        const fd = new FormData(e.currentTarget);
+                        const username = fd.get("username") as string;
+                        const validation = isValidUsername(username);
+                        if (!validation.isValid) { setValidationError(validation.error ?? "Invalid username"); return; }
+                        setValidationError("");
+                        try {
+                            await api.put(`/admin/users/${u.id}`, {
+                                username,
+                                email: fd.get("email"),
+                                full_name: fd.get("full_name"),
+                                is_active: fd.get("is_active") === "on",
+                                is_specialized_premium: fd.get("is_specialized_premium") === "on",
+                                receive_error_alerts: fd.get("receive_error_alerts") === "on",
+                                favorite_deck_id: parseInt(fd.get("favorite_deck_id") as string),
+                            });
+                            setOpen(false);
+                            onSaved();
+                        } catch { alert("Failed to update user."); }
+                    }}
+                    className="space-y-4 mt-2"
+                >
+                    {validationError && <div className="admin-dialog-error">{validationError}</div>}
+                    {[
+                        { name: "username", label: "Username", type: "text", val: u.username, required: true },
+                        { name: "email", label: "Email", type: "email", val: u.email, required: true },
+                        { name: "full_name", label: "Full name", type: "text", val: u.full_name ?? "", required: false },
+                    ].map((f) => (
+                        <div key={f.name}>
+                            <label className="admin-field-label">{f.label}</label>
+                            <input name={f.name} type={f.type} defaultValue={f.val} required={f.required} className="admin-input" />
+                        </div>
+                    ))}
+                    <div className="flex flex-col gap-3">
+                        {[
+                            { name: "is_active", label: "Active user", checked: u.is_active },
+                            { name: "is_specialized_premium", label: "VIP access (unlimited turns)", checked: u.is_specialized_premium },
+                            { name: "receive_error_alerts", label: "Error alert monitoring", checked: u.receive_error_alerts },
+                        ].map((ck) => (
+                            <label key={ck.name} className="admin-check-label">
+                                <input type="checkbox" name={ck.name} defaultChecked={ck.checked} className="admin-check" />
+                                <span>{ck.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                    <div>
+                        <label className="admin-field-label">Favorite deck</label>
+                        <div className="mt-1.5">
+                            <Select name="favorite_deck_id" defaultValue={String(u.favorite_deck_id)}>
+                                <SelectTrigger className="admin-input">
+                                    <SelectValue placeholder="Select a deck" />
+                                </SelectTrigger>
+                                <SelectContent style={{ background: "#181b27", border: "1px solid rgba(167,160,200,0.18)", color: "#eceaf4" }}>
+                                    {decks.map((d) => (
+                                        <SelectItem key={d.id} value={String(d.id)} style={{ color: "#eceaf4" }}>{d.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <button type="submit" className="admin-dialog-submit">Save changes</button>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }

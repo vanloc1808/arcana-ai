@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import "@/app/admin/admin.css";
-import api from "@/lib/api";
+import api, { tarot } from "@/lib/api";
 import { Icon, SearchInput, type IconName } from "@/components/admin/AdminUI";
+import { getDailyCard } from "@/lib/dailyCard";
 
 /* ─── Theme handling ────────────────────────────────────────────────────── */
 type ThemePref = "system" | "dark" | "light" | "hc";
@@ -124,6 +125,38 @@ function SettingsPopover({ theme }: { theme: ReturnType<typeof useAdminTheme> })
     );
 }
 
+/* ─── Card of the day ───────────────────────────────────────────────────── */
+function meaningLine(words: string[]): string {
+    return words
+        .map((w) => w.trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" · ");
+}
+
+function useDailyCard() {
+    const initial = getDailyCard();
+    const [card, setCard] = useState({ name: initial.name, meaning: meaningLine(initial.keywords) });
+
+    useEffect(() => {
+        let cancelled = false;
+        tarot
+            .getCardOfTheDay()
+            .then((res) => {
+                if (cancelled || !res?.name) return;
+                const meaning = meaningLine(String(res.description_upright ?? "").split(","));
+                setCard((prev) => ({ name: res.name ?? prev.name, meaning: meaning || prev.meaning }));
+            })
+            .catch(() => {
+                // Keep the deterministic local fallback if the request fails.
+            });
+        return () => { cancelled = true; };
+    }, []);
+
+    return card;
+}
+
 /* ─── Sidebar nav ───────────────────────────────────────────────────────── */
 interface SidebarCounts {
     total_users?: number;
@@ -157,6 +190,7 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [counts, setCounts] = useState<SidebarCounts>({});
     const [search, setSearch] = useState("");
+    const dailyCard = useDailyCard();
     const initial = username[0]?.toUpperCase() ?? "A";
 
     useEffect(() => {
@@ -214,8 +248,8 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
                         <div className="ornament-card">
                             <div className="ornament-glyph">✦</div>
                             <div className="ornament-title">Card of the day</div>
-                            <div className="ornament-card-name">The Star</div>
-                            <div className="ornament-card-meaning">Hope · Renewal · Serenity</div>
+                            <div className="ornament-card-name">{dailyCard.name}</div>
+                            <div className="ornament-card-meaning">{dailyCard.meaning}</div>
                         </div>
                     </div>
 

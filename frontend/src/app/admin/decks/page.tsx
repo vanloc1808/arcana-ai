@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, Pill, Icon } from "@/components/admin/AdminUI";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import api from "@/lib/api";
 
 interface AdminDeck {
@@ -74,69 +74,78 @@ export default function AdminDecksPage() {
                 ) : (
                     <div className="deck-grid">
                         {decks.map((d) => (
-                            <div key={d.id} className="card deck-card">
-                                <div className="deck-cover" style={{ background: COVER_GRADIENTS[d.id % COVER_GRADIENTS.length] }}>
-                                    <div className="deck-cover-mark">
-                                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                                            <path d="M12 2L13.8 8.2L20 10L13.8 11.8L12 18L10.2 11.8L4 10L10.2 8.2L12 2Z" fill="white" fillOpacity="0.85" />
-                                        </svg>
-                                    </div>
-                                    <div className="deck-cover-name">{d.name}</div>
-                                </div>
-                                <div className="deck-body">
-                                    <div className="deck-meta-row">
-                                        <Pill tone="info" dot>Active</Pill>
-                                        <span className="deck-meta-count">{d.cards_count} cards</span>
-                                    </div>
-                                    <p className="deck-desc">{d.description || "No description."}</p>
-                                    <div className="deck-foot">
-                                        <span className="muted">Added {new Date(d.created_at).toLocaleDateString()}</span>
-                                        <div className="row-actions">
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <button className="row-action" title="Edit"><Icon name="edit" size={14} /></button>
-                                                </DialogTrigger>
-                                                <DialogContent className="admin-dialog">
-                                                    <DialogHeader>
-                                                        <DialogTitle className="admin-dialog-title">Edit deck</DialogTitle>
-                                                    </DialogHeader>
-                                                    <form
-                                                        onSubmit={async (e) => {
-                                                            e.preventDefault();
-                                                            const fd = new FormData(e.currentTarget);
-                                                            try {
-                                                                await api.put(`/admin/decks/${d.id}`, {
-                                                                    name: fd.get("name"),
-                                                                    description: fd.get("description"),
-                                                                });
-                                                                loadDecks();
-                                                            } catch { alert("Failed to update deck."); }
-                                                        }}
-                                                        className="space-y-4 mt-2"
-                                                    >
-                                                        <div>
-                                                            <label className="admin-field-label">Name</label>
-                                                            <input name="name" defaultValue={d.name} required className="admin-input" />
-                                                        </div>
-                                                        <div>
-                                                            <label className="admin-field-label">Description</label>
-                                                            <input name="description" defaultValue={d.description} className="admin-input" />
-                                                        </div>
-                                                        <button type="submit" className="admin-dialog-submit">Save changes</button>
-                                                    </form>
-                                                </DialogContent>
-                                            </Dialog>
-                                            <button className="row-action danger" title="Delete" onClick={() => handleDelete(d.id)}>
-                                                <Icon name="trash" size={14} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <DeckCard key={d.id} d={d} onSaved={loadDecks} onDelete={() => handleDelete(d.id)} />
                         ))}
                     </div>
                 )}
             </div>
         </AdminLayout>
+    );
+}
+
+function DeckCard({ d, onSaved, onDelete }: { d: AdminDeck; onSaved: () => void; onDelete: () => void }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <div className="card deck-card is-clickable" onClick={() => setOpen(true)}>
+                <div className="deck-cover" style={{ background: COVER_GRADIENTS[d.id % COVER_GRADIENTS.length] }}>
+                    <div className="deck-cover-mark">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2L13.8 8.2L20 10L13.8 11.8L12 18L10.2 11.8L4 10L10.2 8.2L12 2Z" fill="white" fillOpacity="0.85" />
+                        </svg>
+                    </div>
+                    <div className="deck-cover-name">{d.name}</div>
+                </div>
+                <div className="deck-body">
+                    <div className="deck-meta-row">
+                        <Pill tone="info" dot>Active</Pill>
+                        <span className="deck-meta-count">{d.cards_count} cards</span>
+                    </div>
+                    <p className="deck-desc">{d.description || "No description."}</p>
+                    <div className="deck-foot">
+                        <span className="muted">Added {new Date(d.created_at).toLocaleDateString()}</span>
+                        <div className="row-actions">
+                            <button className="row-action" title="Edit" onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+                                <Icon name="edit" size={14} />
+                            </button>
+                            <button className="row-action danger" title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+                                <Icon name="trash" size={14} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <DialogContent className="admin-dialog">
+                <DialogHeader>
+                    <DialogTitle className="admin-dialog-title">Edit deck</DialogTitle>
+                </DialogHeader>
+                <form
+                    onSubmit={async (e) => {
+                        e.preventDefault();
+                        const fd = new FormData(e.currentTarget);
+                        try {
+                            await api.put(`/admin/decks/${d.id}`, {
+                                name: fd.get("name"),
+                                description: fd.get("description"),
+                            });
+                            setOpen(false);
+                            onSaved();
+                        } catch { alert("Failed to update deck."); }
+                    }}
+                    className="space-y-4 mt-2"
+                >
+                    <div>
+                        <label className="admin-field-label">Name</label>
+                        <input name="name" defaultValue={d.name} required className="admin-input" />
+                    </div>
+                    <div>
+                        <label className="admin-field-label">Description</label>
+                        <input name="description" defaultValue={d.description} className="admin-input" />
+                    </div>
+                    <button type="submit" className="admin-dialog-submit">Save changes</button>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }
