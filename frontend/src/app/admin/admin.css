@@ -256,6 +256,16 @@
   font-size: 10.5px; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--text-3);
 }
+.admin-shell .ornament-card-image {
+  display: block;
+  width: 88px;
+  height: auto;
+  margin: 10px auto 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border-2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  object-fit: contain;
+}
 .admin-shell .ornament-card-name {
   font-family: var(--display-font);
   font-size: 19px; color: var(--text-1);
