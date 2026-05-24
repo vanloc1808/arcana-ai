@@ -13,7 +13,7 @@ import { TarotCard } from '@/components/TarotCard';
 import { DrawnCardReveal } from '@/components/DrawnCardReveal';
 import { CardDrawingAnimation } from '@/components/CardDrawingAnimation';
 import { tarot } from '@/lib/api';
-import { getDailyCard, type DailyCard } from '@/lib/dailyCard';
+import { getDailyCard, mergeDailyCard, type DailyCard } from '@/lib/dailyCard';
 
 const mysticalQuotes = [
   "The cards reveal what the heart already knows.",
@@ -95,13 +95,7 @@ const EnhancedWelcome = ({ onStartReading }: { onStartReading: () => void }) => 
       .getCardOfTheDay()
       .then((card) => {
         if (cancelled || !card) return;
-        setDailyCard((prev) => ({
-          ...prev,
-          name: card.name ?? prev.name,
-          image_url: card.image_url ?? prev.image_url,
-          description_upright: card.description_upright ?? prev.description_upright,
-          element: card.element ?? prev.element,
-        }));
+        setDailyCard((prev) => mergeDailyCard(prev, card));
       })
       .catch(() => {
         // Keep the hardcoded fallback card if the request fails.

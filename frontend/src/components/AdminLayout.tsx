@@ -5,7 +5,7 @@ import Link from "next/link";
 import "@/app/admin/admin.css";
 import api, { tarot } from "@/lib/api";
 import { Icon, SearchInput, type IconName } from "@/components/admin/AdminUI";
-import { getDailyCard } from "@/lib/dailyCard";
+import { getDailyCard, mergeDailyCard, type DailyCard } from "@/lib/dailyCard";
 
 /* ─── Theme handling ────────────────────────────────────────────────────── */
 type ThemePref = "system" | "dark" | "light" | "hc";
@@ -126,27 +126,16 @@ function SettingsPopover({ theme }: { theme: ReturnType<typeof useAdminTheme> })
 }
 
 /* ─── Card of the day ───────────────────────────────────────────────────── */
-function meaningLine(words: string[]): string {
-    return words
-        .map((w) => w.trim())
-        .filter(Boolean)
-        .slice(0, 3)
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" · ");
-}
-
-function useDailyCard() {
-    const initial = getDailyCard();
-    const [card, setCard] = useState({ name: initial.name, meaning: meaningLine(initial.keywords) });
+function useDailyCard(): DailyCard {
+    const [card, setCard] = useState<DailyCard>(getDailyCard);
 
     useEffect(() => {
         let cancelled = false;
         tarot
             .getCardOfTheDay()
             .then((res) => {
-                if (cancelled || !res?.name) return;
-                const meaning = meaningLine(String(res.description_upright ?? "").split(","));
-                setCard((prev) => ({ name: res.name ?? prev.name, meaning: meaning || prev.meaning }));
+                if (cancelled || !res) return;
+                setCard((prev) => mergeDailyCard(prev, res));
             })
             .catch(() => {
                 // Keep the deterministic local fallback if the request fails.
