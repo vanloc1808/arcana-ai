@@ -9,64 +9,53 @@ on:
 
 env:
   PROJECT_DIR: ${{ secrets.VPS_PROJECT_DIR }}
+  COMPOSE_FILE: docker-compose.prod.yaml
+  IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
 
 jobs:
   deploy:
     runs-on: self-hosted
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Deploy application
         run: |
           set -e
           cd ${{ env.PROJECT_DIR }}
+
+          # Refresh the prod compose file from the repo (app code rides in the image)
           git fetch origin
           git checkout main
           git pull origin main
 
-          # Stop existing services
-          docker compose down --remove-orphans
-          docker rm -f tarot-backend tarot-frontend tarot-redis tarot-celery-worker tarot-celery-beat tarot-prometheus tarot-grafana tarot-cadvisor tarot-node-exporter || true
-          docker rmi vanloc1808/tarot-backend:latest vanloc1808/tarot-frontend:latest || true
+          export IMAGE_TAG="${IMAGE_TAG}"
+          echo "Deploying image tag: ${IMAGE_TAG}"
 
-          # Pull latest images
-          docker compose pull
+          # Pull the exact images built by CI for this commit
+          docker compose -f "${COMPOSE_FILE}" pull
 
-          # Start services
-          docker compose up -d
+          # Rolling update: only services with a changed image are recreated
+          docker compose -f "${COMPOSE_FILE}" up -d
 
-          # Wait for backend to be ready
+      - name: Run database migrations
+        run: |
+          set -e
+          cd ${{ env.PROJECT_DIR }}
           echo "Waiting for backend to be ready..."
           sleep 30
+          echo "Running database migrations..."
+          docker compose -f "${COMPOSE_FILE}" exec -T backend python migrate.py
+          echo "Database migrations completed successfully"
 
-          # Run database migrations if backend is running
-          if docker ps | grep -q tarot-backend; then
-            echo "Running database migrations..."
-            if docker exec tarot-backend python migrate.py; then
-              echo "Database migrations completed successfully"
-            else
-              echo "Warning: Database migrations failed, but continuing deployment"
-              echo "You may need to run migrations manually or check the backend logs"
-              echo "Checking backend logs for errors..."
-              docker logs tarot-backend --tail 50 || echo "Could not retrieve backend logs"
-            fi
-          else
-            echo "Backend not running, skipping migrations"
-            echo "Warning: Database migrations were not run. Check backend status."
-          fi
-
-          # Health check after deployment
-          echo "Performing health checks..."
+      - name: Health check
+        run: |
+          cd ${{ env.PROJECT_DIR }}
           echo "Service status:"
-          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-          # Check if services are responding
-          if docker ps | grep -q tarot-backend; then
-            echo "Backend container is running"
-            echo "Checking backend health endpoint..."
-            sleep 10  # Give backend time to fully start
-            if curl -f http://localhost:8000/health; then
-              echo "Backend health check passed"
-            else
-              echo "Warning: Backend health check failed"
-            fi
+          docker compose -f "${COMPOSE_FILE}" ps
+          echo "Checking backend health endpoint..."
+          sleep 10
+          if curl -f http://localhost:8000/health; then
+            echo "Backend health check passed"
+          else
+            echo "Warning: Backend health check failed"
           fi

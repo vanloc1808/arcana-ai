@@ -187,7 +187,9 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: vanloc1808/tarot-backend:latest
+          tags: |
+            vanloc1808/tarot-backend:latest
+            vanloc1808/tarot-backend:${{ github.sha }}
           cache-from: type=registry,ref=vanloc1808/tarot-backend:buildcache
           cache-to: type=registry,ref=vanloc1808/tarot-backend:buildcache,mode=max
 
@@ -196,6 +198,8 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: vanloc1808/tarot-frontend:latest
+          tags: |
+            vanloc1808/tarot-frontend:latest
+            vanloc1808/tarot-frontend:${{ github.sha }}
           cache-from: type=registry,ref=vanloc1808/tarot-frontend:buildcache
           cache-to: type=registry,ref=vanloc1808/tarot-frontend:buildcache,mode=max
