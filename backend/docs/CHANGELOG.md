@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - The profile "Account details" and "Reading preferences" sections are now a single editable form with Save/Discard controls and an unsaved-changes indicator, instead of static placeholder fields.
 
+### Fixed
+- Admin portal top-bar search is now actionable: clicking the search icon or pressing Enter runs an admin search, routes to Users/Cards/Chat Sessions, and pre-fills each destination page's local search filter with the query.
+
 ## [0.0.14] - 2026-05-24
 
 

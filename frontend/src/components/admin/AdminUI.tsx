@@ -139,12 +139,25 @@ export const Button = ({ variant = "secondary", size = "md", icon, children, ...
 );
 
 /* ─── Search input ──────────────────────────────────────────────────────── */
-export const SearchInput = ({ value, onChange, placeholder = "Search…" }: {
-    value: string; onChange: (v: string) => void; placeholder?: string;
+export const SearchInput = ({ value, onChange, placeholder = "Search…", onSubmit }: {
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    onSubmit?: () => void;
 }) => (
     <div className="search-input">
-        <Icon name="search" size={15} />
-        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+        <button type="button" className="search-input-btn" onClick={onSubmit} aria-label="Run search">
+            <Icon name="search" size={15} />
+        </button>
+        <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+                if (e.key === "Enter") onSubmit?.();
+            }}
+            placeholder={placeholder}
+        />
     </div>
 );
 

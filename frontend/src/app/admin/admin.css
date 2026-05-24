@@ -344,6 +344,14 @@
   color: var(--text-1);
 }
 .admin-shell .search-input input::placeholder { color: var(--text-3); }
+.admin-shell .search-input-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
 
 .admin-shell .topbar-icon-btn {
   position: relative;

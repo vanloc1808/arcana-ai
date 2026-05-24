@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
-import { PageHeader, StatCard, Icon, Table, type Column } from "@/components/admin/AdminUI";
+import { PageHeader, StatCard, SearchInput, Icon, Table, type Column } from "@/components/admin/AdminUI";
 import api from "@/lib/api";
 
 interface AdminChatSession {
@@ -36,11 +36,13 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export default function AdminChatSessionsPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [sessions, setSessions] = useState<AdminChatSession[]>([]);
     const [stats, setStats] = useState<DashboardStats>({});
     const [sortField, setSortField] = useState<SortField>("created_at");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
     const [loading, setLoading] = useState(true);
+    const [q, setQ] = useState("");
 
     useEffect(() => {
         if (isAuthLoading) return;
@@ -97,6 +99,20 @@ export default function AdminChatSessionsPage() {
             capped: sessions.length >= 100 && totalSessions > sessions.length,
         };
     }, [sessions, stats]);
+
+    useEffect(() => {
+        const query = searchParams.get("q");
+        if (query) setQ(query);
+    }, [searchParams]);
+
+    const filteredSessions = useMemo(() => {
+        const search = q.trim().toLowerCase();
+        if (!search) return sessions;
+        return sessions.filter((s) =>
+            (s.title ?? "").toLowerCase().includes(search) ||
+            (s.username ?? "").toLowerCase().includes(search),
+        );
+    }, [sessions, q]);
 
     if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading sessions…" />;
     if (!user.is_admin) return null;
@@ -186,10 +202,13 @@ export default function AdminChatSessionsPage() {
                         </div>
                     </div>
                 </div>
+                <div className="toolbar">
+                    <SearchInput value={q} onChange={setQ} placeholder="Search sessions by title or username…" />
+                </div>
 
                 <Table
                     columns={COLUMNS}
-                    rows={sessions}
+                    rows={filteredSessions}
                     empty="No chat sessions found."
                     renderRow={(s: AdminChatSession) => (
                         <tr key={s.id}>
