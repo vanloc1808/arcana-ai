@@ -68,6 +68,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
     const baseline = useMemo(() => (profile ? toForm(profile) : null), [profile]);
     const [form, setForm] = useState<FormState | null>(baseline);
     const [isSaving, setIsSaving] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     // Re-sync the editable form whenever the underlying profile changes
     // (initial load, refetch, or after a successful save).
@@ -131,6 +132,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
             const ok = await updateProfile(payload);
             if (ok) {
                 toast.success('Profile updated');
+                setIsEditing(false);
             } else {
                 toast.error('Could not save your profile. Please try again.');
             }
@@ -139,9 +141,12 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
         }
     };
 
-    const handleDiscard = () => {
+    const handleCancel = () => {
         setForm(baseline);
+        setIsEditing(false);
     };
+
+    const locked = !isEditing || isSaving;
 
     if (isLoading || !profile || !form) {
         return (
@@ -237,7 +242,15 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
 
             {/* Account details form */}
             <MysticCard>
-                <SectionHeader eyebrow="Personal" title="Account details" />
+                <SectionHeader
+                    eyebrow="Personal"
+                    title="Account details"
+                    action={!isEditing ? (
+                        <MysticButton onClick={() => setIsEditing(true)}>
+                            <ProfileIcon name="pencil" size={14} /> Edit profile
+                        </MysticButton>
+                    ) : undefined}
+                />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
                     <div>
                         <FieldLabel>Username</FieldLabel>
@@ -252,9 +265,10 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                         <FieldInput
                             value={form.full_name}
                             onChange={(e) => setField('full_name', e.target.value)}
-                            placeholder="Enter your full name"
-                            disabled={isSaving}
+                            placeholder={isEditing ? 'Enter your full name' : 'Not set'}
+                            readOnly={locked}
                             maxLength={100}
+                            style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
                         />
                     </div>
                     <div>
@@ -262,7 +276,8 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                         <FieldSelect
                             value={form.timezone}
                             onChange={(e) => setField('timezone', e.target.value)}
-                            disabled={isSaving}
+                            disabled={locked}
+                            style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
                         >
                             <option value="">Not set</option>
                             {TIMEZONE_OPTIONS.map((tz) => (
@@ -275,7 +290,8 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                         <FieldSelect
                             value={form.favorite_deck_id === '' ? '' : String(form.favorite_deck_id)}
                             onChange={(e) => setField('favorite_deck_id', e.target.value === '' ? '' : Number(e.target.value))}
-                            disabled={isSaving || deckOptions.length === 0}
+                            disabled={locked || deckOptions.length === 0}
+                            style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
                         >
                             {form.favorite_deck_id === '' && <option value="">No deck selected</option>}
                             {deckOptions.map((deck) => (
@@ -288,13 +304,16 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                         <FieldTextarea
                             value={form.bio}
                             onChange={(e) => setField('bio', e.target.value)}
-                            placeholder="Reader of the Thoth deck. Drawn to the Major Arcana, fascinated by reversals."
-                            disabled={isSaving}
+                            placeholder={isEditing ? 'Reader of the Thoth deck. Drawn to the Major Arcana, fascinated by reversals.' : 'No bio yet'}
+                            readOnly={locked}
                             maxLength={500}
+                            style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
                         />
-                        <div style={{ marginTop: 6, textAlign: 'right', fontSize: 11, color: '#7c799f' }}>
-                            {form.bio.length} / 500
-                        </div>
+                        {isEditing && (
+                            <div style={{ marginTop: 6, textAlign: 'right', fontSize: 11, color: '#7c799f' }}>
+                                {form.bio.length} / 500
+                            </div>
+                        )}
                     </div>
                 </div>
             </MysticCard>
@@ -308,7 +327,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                         label="Lunar phase awareness"
                         desc="Color readings with current moon phase"
                         checked={form.lunar_phase_awareness}
-                        disabled={isSaving}
+                        disabled={locked}
                         onChange={(v) => setField('lunar_phase_awareness', v)}
                     />
                     <SelectRow
@@ -316,7 +335,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                         label="Card animations"
                         desc={CARD_ANIMATION_OPTIONS.find((o) => o.value === form.card_animations)?.desc ?? ''}
                         value={form.card_animations}
-                        disabled={isSaving}
+                        disabled={locked}
                         options={CARD_ANIMATION_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
                         onChange={(v) => setField('card_animations', v)}
                     />
@@ -325,7 +344,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                         label="Reading language"
                         desc="Used for all generated interpretations"
                         value={form.reading_language}
-                        disabled={isSaving}
+                        disabled={locked}
                         options={READING_LANGUAGE_OPTIONS.map((l) => ({ value: l, label: l }))}
                         onChange={(v) => setField('reading_language', v)}
                     />
@@ -334,21 +353,23 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                         label="Reversed cards"
                         desc="Cards may appear inverted in spreads"
                         checked={form.reversed_cards}
-                        disabled={isSaving}
+                        disabled={locked}
                         onChange={(v) => setField('reversed_cards', v)}
                     />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 24, gap: 10 }}>
-                    {isDirty && (
-                        <span style={{ marginRight: 'auto', color: '#f5b942', fontSize: 12 }}>
-                            You have unsaved changes
-                        </span>
-                    )}
-                    <GhostButton onClick={handleDiscard} disabled={isSaving || !isDirty}>Discard changes</GhostButton>
-                    <MysticButton onClick={handleSave} disabled={isSaving || !isDirty}>
-                        <ProfileIcon name="check" size={14} /> {isSaving ? 'Saving…' : 'Save profile'}
-                    </MysticButton>
-                </div>
+                {isEditing && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 24, gap: 10 }}>
+                        {isDirty && (
+                            <span style={{ marginRight: 'auto', color: '#f5b942', fontSize: 12 }}>
+                                You have unsaved changes
+                            </span>
+                        )}
+                        <GhostButton onClick={handleCancel} disabled={isSaving}>Cancel</GhostButton>
+                        <MysticButton onClick={handleSave} disabled={isSaving || !isDirty}>
+                            <ProfileIcon name="check" size={14} /> {isSaving ? 'Saving…' : 'Save profile'}
+                        </MysticButton>
+                    </div>
+                )}
             </MysticCard>
         </div>
     );
