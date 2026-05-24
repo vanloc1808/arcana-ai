@@ -413,9 +413,16 @@ function ToggleRow({ icon, label, desc, checked, disabled, onChange }: {
     disabled?: boolean;
     onChange: (v: boolean) => void;
 }) {
+    const trackWidth = 40;
+    const trackHeight = 22;
+    const thumbSize = 16;
+    const thumbInset = 3;
+    const thumbTravel = trackWidth - thumbSize - thumbInset * 2;
+
     return (
         <RowShell icon={icon} label={label} desc={desc}>
             <button
+                className="unstyled"
                 type="button"
                 role="switch"
                 aria-checked={checked}
@@ -423,21 +430,39 @@ function ToggleRow({ icon, label, desc, checked, disabled, onChange }: {
                 onClick={() => !disabled && onChange(!checked)}
                 disabled={disabled}
                 style={{
-                    width: 46, height: 26, borderRadius: 999, position: 'relative',
-                    border: '1px solid', cursor: disabled ? 'not-allowed' : 'pointer',
+                    width: trackWidth,
+                    height: trackHeight,
+                    minWidth: 0,
+                    minHeight: 0,
+                    borderRadius: 999,
+                    position: 'relative',
+                    display: 'inline-block',
+                    boxSizing: 'border-box',
+                    border: '1px solid',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
                     borderColor: checked ? 'rgba(168,85,247,0.6)' : '#2a2d5a',
                     background: checked
                         ? 'linear-gradient(180deg, #a855f7 0%, #8b5cf6 100%)'
                         : '#1d2049',
-                    transition: 'all 160ms ease', padding: 0,
+                    transition: 'background 160ms ease, border-color 160ms ease, opacity 160ms ease',
+                    padding: 0,
+                    lineHeight: 0,
                     opacity: disabled ? 0.6 : 1,
                 }}
             >
                 <span style={{
-                    position: 'absolute', top: 2, left: checked ? 22 : 2,
-                    width: 20, height: 20, borderRadius: '50%',
-                    background: '#fff', transition: 'left 160ms ease',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                    position: 'absolute',
+                    top: thumbInset,
+                    left: thumbInset,
+                    width: thumbSize,
+                    height: thumbSize,
+                    borderRadius: '50%',
+                    background: '#f8f6ff',
+                    transform: `translateX(${checked ? thumbTravel : 0}px)`,
+                    transition: 'transform 160ms ease',
+                    boxShadow: checked
+                        ? '0 2px 8px rgba(0,0,0,0.35), 0 0 10px rgba(255,255,255,0.28)'
+                        : '0 2px 6px rgba(0,0,0,0.35)',
                 }} />
             </button>
         </RowShell>
