@@ -361,9 +361,10 @@ export function ArcanaCard({
                     style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
+                        objectFit: 'contain',
                         display: 'block',
                         borderRadius: 8,
+                        background: bgColor,
                     }}
                 />
             ) : (

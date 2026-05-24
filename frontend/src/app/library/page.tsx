@@ -285,11 +285,9 @@ export default function LibraryPage() {
                                     height={220}
                                     onClick={() => setSelectedCard(card)}
                                 />
-                                {card.suit && card.suit !== 'Major Arcana' && (
-                                    <p className="font-mono text-[9px] text-gray-600 uppercase tracking-widest text-center">
-                                        {card.suit}
-                                    </p>
-                                )}
+                                <p className="font-mono text-[9px] text-gray-500 uppercase tracking-widest text-center leading-tight max-w-[140px]">
+                                    {card.name}
+                                </p>
                             </div>
                         ))}
                     </div>
