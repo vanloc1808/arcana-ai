@@ -348,6 +348,15 @@ export const tarot = {
         return response.data;
     },
 
+    getLibraryCards: async (suit?: string, search?: string) => {
+        const params = new URLSearchParams();
+        if (suit) params.set('suit', suit);
+        if (search) params.set('search', search);
+        const query = params.toString() ? `?${params.toString()}` : '';
+        const response = await api.get(`/tarot/library${query}`);
+        return response.data;
+    },
+
     getCompatibilityReading: async (payload: CompatibilityReadingRequest): Promise<CompatibilityReadingResponse> => {
         const response = await api.post("/tarot/compatibility", payload);
         return response.data;

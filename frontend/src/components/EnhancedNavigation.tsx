@@ -17,7 +17,8 @@ import {
     Crown,
     Star,
     X,
-    HelpCircle
+    HelpCircle,
+    Library
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -209,6 +210,12 @@ export function EnhancedNavigation() {
                                     Journal
                                 </Link>
                             </Button>
+                            <Button variant="ghost" size="sm" asChild className="text-gray-300 hover:text-white hover:bg-gray-800 px-4 py-3 touch-manipulation">
+                                <Link href="/library">
+                                    <Library className="w-5 h-5 mr-2" />
+                                    Library
+                                </Link>
+                            </Button>
                         </div>
 
                         {/* User Menu - Mobile-optimized */}
@@ -266,6 +273,12 @@ export function EnhancedNavigation() {
                                             <Link href="/journal" className="flex items-center">
                                                 <BookOpen className="w-5 h-5 mr-3" />
                                                 Journal
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild className="px-4 py-3 text-base">
+                                            <Link href="/library" className="flex items-center">
+                                                <Library className="w-5 h-5 mr-3" />
+                                                The Library
                                             </Link>
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator className="bg-gray-700" />
