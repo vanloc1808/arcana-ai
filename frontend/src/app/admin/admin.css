@@ -107,8 +107,10 @@
 .admin-shell * { box-sizing: border-box; }
 .admin-shell button { font-family: inherit; cursor: pointer; }
 
-/* Neutralize global `a` styling (globals.css) so admin links follow their own
-   classes — resets leaked color, min-height, padding, and hover underline. */
+/* Neutralize global element styling leaked from globals.css.
+   globals.css sets `span, p, li, h1-h6 { color: var(--foreground) }` which
+   forces near-white (#ededed) onto every element, making light-theme sidebar
+   text invisible. Reset all of them to inherit so admin tokens take effect. */
 .admin-shell a {
   color: inherit;
   min-height: 0;
@@ -116,6 +118,18 @@
   text-decoration: none;
 }
 .admin-shell a:hover { text-decoration: none; }
+
+.admin-shell span,
+.admin-shell p,
+.admin-shell li,
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
+.admin-shell h4,
+.admin-shell h5,
+.admin-shell h6 {
+  color: inherit;
+}
 
 /* ─── App layout ─────────────────────────────────────────────────────── */
 .admin-shell .app {
