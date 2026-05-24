@@ -45,7 +45,7 @@ jobs:
           sleep 30
           echo "Running database migrations..."
           docker compose -f "${COMPOSE_FILE}" exec -T backend \
-            bash -c "source /app/.venv/bin/activate && python migrate.py"
+            uv run python migrate.py
           echo "Database migrations completed successfully"
 
       - name: Health check
