@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import "@/app/admin/admin.css";
 import api, { tarot } from "@/lib/api";
 import { Icon, SearchInput, type IconName } from "@/components/admin/AdminUI";
@@ -146,6 +147,29 @@ function useDailyCard(): DailyCard {
     return card;
 }
 
+function OrnamentCard({ card }: { card: DailyCard }) {
+    const [imageError, setImageError] = useState(false);
+
+    return (
+        <div className="ornament-card">
+            <div className="ornament-glyph">✦</div>
+            <div className="ornament-title">Card of the day</div>
+            {card.image_url && !imageError && (
+                <Image
+                    src={card.image_url}
+                    alt={card.name}
+                    width={88}
+                    height={154}
+                    className="ornament-card-image"
+                    onError={() => setImageError(true)}
+                />
+            )}
+            <div className="ornament-card-name">{card.name}</div>
+            <div className="ornament-card-meaning">{card.meaning}</div>
+        </div>
+    );
+}
+
 /* ─── Sidebar nav ───────────────────────────────────────────────────────── */
 interface SidebarCounts {
     total_users?: number;
@@ -234,12 +258,7 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
                     </nav>
 
                     <div className="sidebar-ornament">
-                        <div className="ornament-card">
-                            <div className="ornament-glyph">✦</div>
-                            <div className="ornament-title">Card of the day</div>
-                            <div className="ornament-card-name">{dailyCard.name}</div>
-                            <div className="ornament-card-meaning">{dailyCard.meaning}</div>
-                        </div>
+                        <OrnamentCard card={dailyCard} />
                     </div>
 
                     <div className="sidebar-footer">
