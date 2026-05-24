@@ -64,9 +64,9 @@
   --border-2: rgba(40, 32, 56, 0.10);
   --border-3: rgba(40, 32, 56, 0.18);
   --text-1: #1a1525;
-  --text-2: #56506b;
-  --text-3: #847e95;
-  --text-4: #b8b3c5;
+  --text-2: #3c3552;
+  --text-3: #635c78;
+  --text-4: #9c97ab;
   --accent: #6d4dc7;
   --accent-2: #8264d6;
   --accent-soft: rgba(109, 77, 199, 0.08);
@@ -106,6 +106,16 @@
 
 .admin-shell * { box-sizing: border-box; }
 .admin-shell button { font-family: inherit; cursor: pointer; }
+
+/* Neutralize global `a` styling (globals.css) so admin links follow their own
+   classes — resets leaked color, min-height, padding, and hover underline. */
+.admin-shell a {
+  color: inherit;
+  min-height: 0;
+  padding: 0;
+  text-decoration: none;
+}
+.admin-shell a:hover { text-decoration: none; }
 
 /* ─── App layout ─────────────────────────────────────────────────────── */
 .admin-shell .app {
