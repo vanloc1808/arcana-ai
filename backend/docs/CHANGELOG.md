@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Profile editing now uses an explicit "Edit profile" button: fields are read-only by default and unlock for editing only after clicking Edit, which then shows Save/Cancel controls. This replaces the always-editable form so it's clear how to update profile information.
 
+### Fixed
+- Frontend production builds now succeed for `/admin/cards`: the page's `useSearchParams()` usage is wrapped in a Suspense boundary to satisfy Next.js prerender requirements in Docker/CI builds.
+
 ## [0.0.15] - 2026-05-24
 
 ### Added

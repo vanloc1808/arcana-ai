@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
@@ -44,6 +44,14 @@ function SearchParamSync({ setQ }: { setQ: (q: string) => void }) {
 }
 
 export default function AdminChatSessionsPage() {
+    return (
+        <Suspense fallback={<AdminLoadingScreen label="Loading sessions…" />}>
+            <AdminChatSessionsPageContent />
+        </Suspense>
+    );
+}
+
+function AdminChatSessionsPageContent() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
     const [sessions, setSessions] = useState<AdminChatSession[]>([]);
