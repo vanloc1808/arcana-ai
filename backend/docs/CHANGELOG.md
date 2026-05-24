@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.14] - 2026-05-24
+
+
+### Changed
+- Global frontend header navigation is now mounted from the root app layout, so authenticated users see a consistent ArcanaAI top header across frontend pages (instead of only on the home experience)
+- Reading, compatibility reading, journal, and profile pages now include top spacing so the shared sticky header is fully visible and does not overlap page content
+
 ## [0.0.13] - 2026-05-21
 
 Covers commits from 2026-05-19 through 2026-05-21 (ISO week 2026-W21).

@@ -75,7 +75,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-900">
+        <div className="min-h-screen pt-20 bg-gray-900">
             <div className="container mx-auto px-4 pt-4">
                 <Link
                     href="/"

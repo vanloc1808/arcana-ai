@@ -8,7 +8,6 @@ import { FiPlus, FiTrash2, FiSend, FiLoader, FiEdit2, FiMessageCircle, FiX, FiCl
 import ReactMarkdown from 'react-markdown';
 
 import { SubscriptionModal } from '@/components/SubscriptionModal';
-import { EnhancedNavigation } from '@/components/EnhancedNavigation';
 import { MysticalSidebar } from '@/components/MysticalSidebar';
 import { TarotCard } from '@/components/TarotCard';
 import { DrawnCardReveal } from '@/components/DrawnCardReveal';
@@ -508,7 +507,6 @@ function HomeContent() {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-purple-900">
       {/* Enhanced Navigation */}
-      <EnhancedNavigation />
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden relative">
@@ -818,7 +816,6 @@ function HomeContent() {
 function LoadingFallback() {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-purple-900">
-      <EnhancedNavigation />
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
