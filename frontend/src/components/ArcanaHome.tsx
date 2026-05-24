@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { List, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ChatSession } from '@/hooks/useChatSessions';
 import { tarot } from '@/lib/api';
@@ -12,6 +13,9 @@ interface ArcanaHomeProps {
   onStartReading: () => void;
   sessions: ChatSession[];
   onOpenSession: (sessionId: number) => void;
+  hasMoreSessions?: boolean;
+  isLoadingMoreSessions?: boolean;
+  onLoadMoreSessions?: () => void;
 }
 
 const WHISPERS = [
@@ -37,16 +41,23 @@ const MAJOR_ROMAN: Record<string, string> = {
 // Derive a friendly first name from a username (strip trailing digits, capitalize).
 function displayName(username?: string | null): string {
   if (!username) return 'Seeker';
-  const base = username.replace(/[0-9_]+$/, '').trim() || username;
-  return base.charAt(0).toUpperCase() + base.slice(1);
+  return username;
 }
 
 function dayOfYear(d: Date): number {
   return Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86400000);
 }
 
+function parseServerTimestamp(dateStr: string): Date {
+  const hasTimezone = /(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(dateStr);
+  if (hasTimezone) return new Date(dateStr);
+
+  const normalized = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+  return new Date(`${normalized}Z`);
+}
+
 function relativeDay(dateStr: string): string {
-  const then = new Date(dateStr);
+  const then = parseServerTimestamp(dateStr);
   const days = Math.floor((Date.now() - then.getTime()) / 86400000);
   if (days <= 0) return 'today';
   if (days === 1) return 'yesterday';
@@ -56,7 +67,7 @@ function relativeDay(dateStr: string): string {
 }
 
 function sessionMeta(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = parseServerTimestamp(dateStr);
   const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   return `${date} · ${time}`;
@@ -247,9 +258,9 @@ function CardOfDay({ card, onRead, onJournal }: {
   const roman = card ? MAJOR_ROMAN[card.name] : undefined;
   return (
     <section className="ah-card ah-cod">
-      <div className="ah-cod-eyebrow">
-        <span className="ah-badge"><span className="ah-b-dot" /> Card of the day</span>
-        <span className="ah-mono">{roman ? `${roman} · Major Arcana` : (card?.element ?? '')}</span>
+      <div className="ah-card-title">
+        <h3>Card of the day</h3>
+        <span className="ah-meta">{roman ? `${roman} · Major Arcana` : (card?.element ?? '')}</span>
       </div>
 
       <div className="ah-cod-frame" aria-label={card ? `${card.name} card` : 'Card of the day'}>
@@ -283,17 +294,46 @@ function CardOfDay({ card, onRead, onJournal }: {
 }
 
 // ── Continue reading ────────────────────────────────────────────────────────
-function ContinueReading({ sessions, onOpenSession, onStartReading }: {
-  sessions: ChatSession[]; onOpenSession: (id: number) => void; onStartReading: () => void;
+function ContinueReading({
+  sessions,
+  onOpenSession,
+  onStartReading,
+  hasMoreSessions,
+  isLoadingMoreSessions,
+  onLoadMoreSessions,
+}: {
+  sessions: ChatSession[];
+  onOpenSession: (id: number) => void;
+  onStartReading: () => void;
+  hasMoreSessions?: boolean;
+  isLoadingMoreSessions?: boolean;
+  onLoadMoreSessions?: () => void;
 }) {
-  const recent = sessions.slice(0, 4);
+  const [showAllSessions, setShowAllSessions] = useState(false);
+  const hasHiddenLoadedSessions = sessions.length > 4;
+  const visibleSessions = showAllSessions ? sessions : sessions.slice(0, 4);
+  const sessionMetaLabel = sessions.length
+    ? showAllSessions
+      ? hasMoreSessions
+        ? `${visibleSessions.length}+ shown`
+        : `${visibleSessions.length} total`
+      : `${visibleSessions.length} recent`
+    : 'new here';
   return (
     <section className="ah-card">
-      <div className="ah-card-title">
-        <h3>Continue where you left off</h3>
-        <span className="ah-meta">{recent.length ? `${recent.length} recent` : 'new here'}</span>
+      <div className="ah-card-title ah-card-title-actions">
+        <div className="ah-card-heading">
+          <h3>Continue where you left off</h3>
+          <span className="ah-meta">{sessionMetaLabel}</span>
+        </div>
+        <div className="ah-card-actions">
+          <button type="button" className="ah-card-action ah-card-action-primary" onClick={onStartReading}>
+            <Plus size={14} aria-hidden="true" />
+            New chat
+          </button>
+        </div>
       </div>
-      {recent.length === 0 ? (
+      {visibleSessions.length === 0 ? (
         <div className="ah-empty">
           No readings yet — your journey begins with a single card.
           <div style={{ marginTop: 14 }}>
@@ -301,21 +341,49 @@ function ContinueReading({ sessions, onOpenSession, onStartReading }: {
           </div>
         </div>
       ) : (
-        <div className="ah-cont-list">
-          {recent.map((s, i) => (
-            <button type="button" className="ah-cont-item" key={s.id} onClick={() => onOpenSession(s.id)}>
-              <span className="ah-cont-mini-cards">
-                {[0, 1, 2].map((j) => (
-                  <span key={j} className={'ah-cont-mini' + (i === 0 && j === 0 ? ' ah-gold' : '')} />
-                ))}
-              </span>
-              <span className="ah-cont-body">
-                <span className="ah-topic" style={{ display: 'block' }}>&ldquo;{s.title}&rdquo;</span>
-                <span className="ah-meta" style={{ display: 'block' }}>{sessionMeta(s.created_at)}</span>
-              </span>
-              <span className="ah-cont-arrow"><IconArrow size={16} /></span>
-            </button>
-          ))}
+        <div>
+          <div className={'ah-cont-list' + (showAllSessions ? ' ah-cont-list-all' : '')}>
+            {visibleSessions.map((s, i) => (
+              <button type="button" className="ah-cont-item" key={s.id} onClick={() => onOpenSession(s.id)}>
+                <span className="ah-cont-mini-cards">
+                  {[0, 1, 2].map((j) => (
+                    <span key={j} className={'ah-cont-mini' + (i === 0 && j === 0 ? ' ah-gold' : '')} />
+                  ))}
+                </span>
+                <span className="ah-cont-body">
+                  <span className="ah-topic" style={{ display: 'block' }}>&ldquo;{s.title}&rdquo;</span>
+                  <span className="ah-meta" style={{ display: 'block' }}>{sessionMeta(s.created_at)}</span>
+                </span>
+                <span className="ah-cont-arrow"><IconArrow size={16} /></span>
+              </button>
+            ))}
+          </div>
+          {(hasHiddenLoadedSessions || (showAllSessions && hasMoreSessions && onLoadMoreSessions)) && (
+            <div className="ah-cont-footer">
+              {hasHiddenLoadedSessions && (
+                <button
+                  type="button"
+                  className="ah-cont-footer-action"
+                  onClick={() => setShowAllSessions((value) => !value)}
+                  aria-expanded={showAllSessions}
+                >
+                  <List size={14} aria-hidden="true" />
+                  {showAllSessions ? 'Show recent' : 'All chats'}
+                </button>
+              )}
+              {showAllSessions && hasMoreSessions && onLoadMoreSessions && (
+                <button
+                  type="button"
+                  className="ah-cont-footer-action"
+                  onClick={onLoadMoreSessions}
+                  disabled={isLoadingMoreSessions}
+                >
+                  <List size={14} aria-hidden="true" />
+                  {isLoadingMoreSessions ? 'Loading...' : 'Load more chats'}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </section>
@@ -356,7 +424,14 @@ function SpreadPicker({ onStartReading }: { onStartReading: () => void }) {
 }
 
 // ── Root ────────────────────────────────────────────────────────────────────
-export function ArcanaHome({ onStartReading, sessions, onOpenSession }: ArcanaHomeProps) {
+export function ArcanaHome({
+  onStartReading,
+  sessions,
+  onOpenSession,
+  hasMoreSessions = false,
+  isLoadingMoreSessions = false,
+  onLoadMoreSessions,
+}: ArcanaHomeProps) {
   const { user } = useAuth();
   const router = useRouter();
   const name = displayName(user?.username);
@@ -397,7 +472,16 @@ export function ArcanaHome({ onStartReading, sessions, onOpenSession }: ArcanaHo
         <Hero name={name} ready={mounted} lastReading={lastReading} readingCount={sessions.length} />
 
         <div className="ah-grid">
-          <div><ContinueReading sessions={sessions} onOpenSession={onOpenSession} onStartReading={onStartReading} /></div>
+          <div>
+            <ContinueReading
+              sessions={sessions}
+              onOpenSession={onOpenSession}
+              onStartReading={onStartReading}
+              hasMoreSessions={hasMoreSessions}
+              isLoadingMoreSessions={isLoadingMoreSessions}
+              onLoadMoreSessions={onLoadMoreSessions}
+            />
+          </div>
           <div><CardOfDay card={dailyCard} onRead={() => router.push('/library')} onJournal={() => router.push('/journal')} /></div>
           <div><SpreadPicker onStartReading={onStartReading} /></div>
         </div>

@@ -2797,6 +2797,21 @@ a:focus-visible {
 .arcana-home .ah-card-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .arcana-home .ah-card-title h3 { margin: 0; font-family: var(--ah-serif); font-weight: 500; font-size: 22px; color: var(--ah-ink-0); letter-spacing: -0.005em; }
 .arcana-home .ah-card-title .ah-meta { font-family: var(--ah-mono); font-size: 10px; letter-spacing: 0.14em; color: var(--ah-ink-3); text-transform: uppercase; }
+.arcana-home .ah-card-title-actions { align-items: flex-start; gap: 14px; }
+.arcana-home .ah-card-heading { min-width: 0; }
+.arcana-home .ah-card-title-actions .ah-meta { display: block; margin-top: 6px; }
+.arcana-home .ah-card-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.arcana-home .ah-card-action {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 34px; padding: 8px 11px; border-radius: 999px;
+  border: 1px solid var(--ah-line-soft); color: var(--ah-ink-1);
+  background: oklch(0.16 0.04 285 / 0.35); cursor: pointer;
+  font-family: var(--ah-sans); font-size: 12px; font-weight: 600; white-space: nowrap;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.arcana-home .ah-card-action:hover { background: oklch(1 0 0 / 0.05); border-color: var(--ah-line); color: var(--ah-ink-0); }
+.arcana-home .ah-card-action-primary { border-color: var(--ah-lav-dim); color: var(--ah-lav); }
+.arcana-home .ah-card-action-primary:hover { border-color: var(--ah-lav); color: var(--ah-ink-0); }
 
 /* Card of the Day */
 .arcana-home .ah-cod {
@@ -2808,9 +2823,6 @@ a:focus-visible {
   padding: 26px;
   overflow: hidden;
 }
-.arcana-home .ah-cod-eyebrow { display: flex; align-items: center; justify-content: space-between; }
-.arcana-home .ah-cod-eyebrow .ah-badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--ah-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ah-gold); }
-.arcana-home .ah-cod-eyebrow .ah-badge .ah-b-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ah-gold); box-shadow: 0 0 8px var(--ah-gold); }
 .arcana-home .ah-cod-frame {
   aspect-ratio: 3 / 5; margin: 18px auto 16px; max-width: 240px;
   border-radius: 14px; border: 1px solid oklch(0.70 0.10 80 / 0.35);
@@ -2833,6 +2845,7 @@ a:focus-visible {
 
 /* Continue reading */
 .arcana-home .ah-cont-list { display: flex; flex-direction: column; gap: 10px; }
+.arcana-home .ah-cont-list-all { max-height: 420px; overflow-y: auto; padding-right: 4px; }
 .arcana-home .ah-cont-item {
   display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 14px;
   padding: 12px 14px; border-radius: 12px;
@@ -2848,6 +2861,16 @@ a:focus-visible {
 .arcana-home .ah-cont-body .ah-meta { font-family: var(--ah-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--ah-ink-3); text-transform: uppercase; margin-top: 4px; }
 .arcana-home .ah-cont-arrow { color: var(--ah-ink-3); display: inline-flex; }
 .arcana-home .ah-cont-item:hover .ah-cont-arrow { color: var(--ah-lav); }
+.arcana-home .ah-cont-footer { display: grid; gap: 8px; margin-top: 12px; }
+.arcana-home .ah-cont-footer-action {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 38px; border-radius: 12px;
+  border: 1px solid var(--ah-line-soft); color: var(--ah-lav);
+  background: oklch(0.15 0.05 290 / 0.35); cursor: pointer;
+  font-family: var(--ah-sans); font-size: 12.5px; font-weight: 600;
+}
+.arcana-home .ah-cont-footer-action:hover:not(:disabled) { border-color: var(--ah-lav-dim); background: oklch(0.18 0.06 290 / 0.48); }
+.arcana-home .ah-cont-footer-action:disabled { cursor: wait; opacity: 0.65; }
 .arcana-home .ah-empty { color: var(--ah-ink-2); font-size: 13px; line-height: 1.5; padding: 8px 2px; }
 
 /* Spread picker */
@@ -2904,4 +2927,7 @@ a:focus-visible {
 }
 @media (max-width: 640px) {
   .arcana-home .ah-main { padding: var(--ah-gutter) 18px 48px; }
+  .arcana-home .ah-card-title-actions { flex-direction: column; }
+  .arcana-home .ah-card-actions { width: 100%; justify-content: stretch; }
+  .arcana-home .ah-card-action { flex: 1; }
 }

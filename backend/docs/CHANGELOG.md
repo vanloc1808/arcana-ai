@@ -7,14 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.17] - 2026-05-24
 
+### Added
+- "Continue where you left off" now includes a New chat button, a bottom-positioned All chats toggle, and a paginated load-more control so users can start fresh or expand the section beyond the four most recent sessions.
+
 ### Changed
 - Redesigned the home/welcome experience (shown before a reading is opened) with a cosmic celestial theme: the static "Welcome to ArcanaAI" hero is replaced by a personalized, time-aware poetic greeting; a lunar/time strip shows the live moon phase and illumination; the center now follows a three-column rhythm (Continue where you left off · Card of the Day as the gold-accented centerpiece · Tonight's spread picker) over a twinkling starfield, followed by a "Shuffle the deck" ritual call-to-action and a nightly whisper. Continue-reading entries open the user's recent sessions and the Card of the Day uses the real daily card.
+- Card of the Day now uses the same section title styling as the other home cards for a more consistent layout.
 
 ### Removed
 - Removed the duplicate left-side chat history panel from the home chat shell; recent sessions remain available through "Continue where you left off".
 
 ### Fixed
 - Home chat error banners now use darker red text so failure messages remain readable against the light red alert background.
+- Clicking the ArcanaAI logo while inside an active chat now returns to the homepage/history UI instead of leaving the current chat open.
+- Chat session timestamps in "Continue where you left off" now treat timezone-less server timestamps as UTC before formatting them in the user's browser timezone.
 
 ## [0.0.16] - 2026-05-24
 

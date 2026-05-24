@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useChatSessions, Card } from '@/hooks/useChatSessions';
 import { FiSend, FiLoader } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
@@ -61,6 +61,8 @@ const MessageContent = ({ content }: { content: string }) => {
 function HomeContent() {
   const {
     sessions,
+    hasMoreSessions,
+    isLoadingMoreSessions,
     currentSession,
     messages,
     loading,
@@ -71,18 +73,28 @@ function HomeContent() {
     createSession,
     fetchMessages,
     sendMessage,
+    loadMoreSessions,
   } = useChatSessions();
 
   const [input, setInput] = useState('');
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const scrollToTop = useCallback(() => {
+    requestAnimationFrame(() => {
+      contentScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    });
+  }, []);
 
   useEffect(() => {
     if (messages.length > 0 || streamingContent) {
@@ -132,8 +144,10 @@ function HomeContent() {
 
     if (historyParam === 'true') {
       setCurrentSession(null);
+      router.replace('/', { scroll: false });
+      scrollToTop();
     }
-  }, [searchParams, sessions, handleSessionClick, setCurrentSession]);
+  }, [searchParams, sessions, handleSessionClick, setCurrentSession, router, scrollToTop]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,7 +182,10 @@ function HomeContent() {
               </div>
             )}
 
-            <div className={`flex-1 ${currentSession ? 'p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto' : 'overflow-y-auto'}`}>
+            <div
+              ref={contentScrollRef}
+              className={`flex-1 ${currentSession ? 'p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto' : 'overflow-y-auto'}`}
+            >
               {currentSession ? (
                 <>
                   {messages.map(message => (
@@ -235,6 +252,9 @@ function HomeContent() {
                   onStartReading={createSession}
                   sessions={sessions}
                   onOpenSession={handleSessionClick}
+                  hasMoreSessions={hasMoreSessions}
+                  isLoadingMoreSessions={isLoadingMoreSessions}
+                  onLoadMoreSessions={loadMoreSessions}
                 />
               )}
               <div ref={messagesEndRef} />
