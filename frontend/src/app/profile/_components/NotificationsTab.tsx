@@ -190,24 +190,51 @@ function NotifRow({ icon, title, desc, channels, on, onToggle, required }: {
 }
 
 function Switch({ on, onToggle, disabled }: { on: boolean; onToggle: () => void; disabled?: boolean }) {
+    const trackWidth = 40;
+    const trackHeight = 22;
+    const thumbSize = 16;
+    const thumbInset = 3;
+    const thumbTravel = trackWidth - thumbSize - thumbInset * 2;
+
     return (
         <button
+            className="unstyled"
+            type="button"
+            role="switch"
+            aria-checked={on}
             onClick={disabled ? undefined : onToggle}
+            disabled={disabled}
             style={{
-                width: 44, height: 26, borderRadius: 999, position: 'relative',
+                width: trackWidth,
+                height: trackHeight,
+                minWidth: 0,
+                minHeight: 0,
+                borderRadius: 999,
+                position: 'relative',
+                display: 'inline-block',
+                boxSizing: 'border-box',
                 background: on ? '#a855f7' : '#1d2049',
                 border: `1px solid ${on ? '#a855f7' : '#2a2d5a'}`,
                 cursor: disabled ? 'not-allowed' : 'pointer',
-                transition: 'all 160ms ease',
-                opacity: disabled ? 0.7 : 1, padding: 0, flexShrink: 0,
+                transition: 'background 160ms ease, border-color 160ms ease, opacity 160ms ease',
+                opacity: disabled ? 0.7 : 1,
+                padding: 0,
+                lineHeight: 0,
+                flexShrink: 0,
                 boxShadow: on ? '0 0 16px -2px rgba(168,85,247,0.35)' : 'none',
             }}
         >
             <div style={{
-                position: 'absolute', top: 2, left: on ? 20 : 2,
-                width: 20, height: 20, borderRadius: '50%',
-                background: 'white', transition: 'left 160ms ease',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                position: 'absolute',
+                top: thumbInset,
+                left: thumbInset,
+                width: thumbSize,
+                height: thumbSize,
+                borderRadius: '50%',
+                background: disabled ? '#c7c2d9' : '#f8f6ff',
+                transform: `translateX(${on ? thumbTravel : 0}px)`,
+                transition: 'transform 160ms ease',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
             }} />
         </button>
     );
