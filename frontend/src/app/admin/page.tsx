@@ -1,275 +1,225 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import AdminLayout, { AdminLoadingScreen } from '@/components/AdminLayout';
-import api from '@/lib/api';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
+import { PageHeader, StatCard, Icon, type IconName } from "@/components/admin/AdminUI";
+import api from "@/lib/api";
+
+interface RecentUser { id: number; username: string; email: string; created_at: string; }
+interface RecentSession { id: number; title: string; username: string; messages_count: number; created_at: string; }
+interface RecentReading { id: number; title: string; username: string; spread_name: string; created_at: string; }
 
 interface DashboardStats {
     total_users?: number;
-    active_readings?: number;
+    active_users?: number;
+    total_chat_sessions?: number;
+    total_messages?: number;
     total_cards?: number;
-    shared_readings?: number;
+    total_decks?: number;
+    total_spreads?: number;
+    total_shared_readings?: number;
+    total_views?: number;
+    recent_users?: RecentUser[];
+    recent_chat_sessions?: RecentSession[];
+    recent_shared_readings?: RecentReading[];
 }
 
-const MODULE_ITEMS = [
-    {
-        href: '/admin/users',
-        label: 'Users',
-        desc: 'Manage and configure users',
-        icon: '◈',
-        color: 'rgba(139,92,246,0.12)',
-        borderColor: 'rgba(139,92,246,0.2)',
-        glow: 'rgba(139,92,246,0.08)',
-    },
-    {
-        href: '/admin/decks',
-        label: 'Decks',
-        desc: 'Manage and configure decks',
-        icon: '⬡',
-        color: 'rgba(201,168,76,0.1)',
-        borderColor: 'rgba(201,168,76,0.2)',
-        glow: 'rgba(201,168,76,0.08)',
-    },
-    {
-        href: '/admin/cards',
-        label: 'Cards',
-        desc: 'Manage and configure cards',
-        icon: '◇',
-        color: 'rgba(20,184,166,0.1)',
-        borderColor: 'rgba(20,184,166,0.2)',
-        glow: 'rgba(20,184,166,0.08)',
-    },
-    {
-        href: '/admin/chat-sessions',
-        label: 'Chat Sessions',
-        desc: 'Manage and configure sessions',
-        icon: '◉',
-        color: 'rgba(56,189,248,0.1)',
-        borderColor: 'rgba(56,189,248,0.2)',
-        glow: 'rgba(56,189,248,0.08)',
-    },
-    {
-        href: '/admin/spreads',
-        label: 'Spreads',
-        desc: 'Manage and configure spreads',
-        icon: '⊞',
-        color: 'rgba(245,158,11,0.1)',
-        borderColor: 'rgba(245,158,11,0.2)',
-        glow: 'rgba(245,158,11,0.08)',
-    },
-    {
-        href: '/admin/shared-readings',
-        label: 'Shared Readings',
-        desc: 'Manage shared readings',
-        icon: '↑',
-        color: 'rgba(244,63,94,0.1)',
-        borderColor: 'rgba(244,63,94,0.2)',
-        glow: 'rgba(244,63,94,0.08)',
-    },
-];
+interface DeckLite { id: number; name: string; cards_count: number; }
 
-const STAT_CARDS = [
-    { label: 'Total Users',      valueKey: 'total_users',      badge: '+12%', icon: '◈', color: 'violet' },
-    { label: 'Active Readings',  valueKey: 'active_readings',  badge: 'Live', icon: '◉', color: 'teal'   },
-    { label: 'Total Cards',      valueKey: 'total_cards',      badge: '+5%',  icon: '◇', color: 'gold'   },
-    { label: 'Shared Readings',  valueKey: 'shared_readings',  badge: '+28%', icon: '↑', color: 'rose'   },
-] as const;
+type ActivityType = "user" | "session" | "reading";
+interface ActivityItem { id: string; type: ActivityType; title: string; detail: string; at: number; }
 
-const COLOR_MAP = {
-    violet: { value: '#a78bfa', bg: 'rgba(139,92,246,0.15)', glow: '#8b5cf6' },
-    teal:   { value: '#5eead4', bg: 'rgba(20,184,166,0.12)',  glow: '#14b8a6' },
-    gold:   { value: '#e8cc82', bg: 'rgba(201,168,76,0.12)',  glow: '#c9a84c' },
-    rose:   { value: '#fb7185', bg: 'rgba(244,63,94,0.12)',   glow: '#f43f5e' },
-};
+function timeAgo(iso: string): string {
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return "";
+    const s = Math.max(1, Math.floor((Date.now() - then) / 1000));
+    if (s < 60) return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    if (d < 7) return `${d}d ago`;
+    return new Date(iso).toLocaleDateString();
+}
+
+const ACTIVITY_ICON: Record<ActivityType, IconName> = { user: "users", session: "chat", reading: "shared" };
 
 export default function AdminDashboard() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
     const [stats, setStats] = useState<DashboardStats>({});
+    const [decks, setDecks] = useState<DeckLite[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (isAuthLoading) return;
-        if (!isAuthenticated) { router.push('/login'); return; }
-        if (!user?.is_admin) { router.push('/'); return; }
+        if (!isAuthenticated) { router.push("/login"); return; }
+        if (!user?.is_admin) { router.push("/"); return; }
         loadData();
     }, [isAuthenticated, user, router, isAuthLoading]);
 
     const loadData = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/admin/dashboard');
-            setStats(res.data ?? {});
+            const [dashRes, decksRes] = await Promise.all([
+                api.get("/admin/dashboard"),
+                api.get("/admin/decks?limit=100"),
+            ]);
+            setStats(dashRes.data ?? {});
+            setDecks(decksRes.data ?? []);
         } catch {
-            console.error('Error loading admin data');
+            console.error("Error loading admin data");
         } finally {
             setLoading(false);
         }
     };
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading Admin Portal…" />;
+    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading admin console…" />;
     if (!user.is_admin) return null;
-    if (loading) return <AdminLoadingScreen label="Consulting the Oracle…" />;
+    if (loading) return <AdminLoadingScreen label="Consulting the oracle…" />;
+
+    const newUsers = stats.recent_users?.length ?? 0;
+    const newReadings = stats.recent_shared_readings?.length ?? 0;
+
+    const activity: ActivityItem[] = [
+        ...(stats.recent_users ?? []).map((u): ActivityItem => ({
+            id: `u${u.id}`, type: "user", title: "New user joined",
+            detail: `@${u.username} · ${u.email}`, at: new Date(u.created_at).getTime(),
+        })),
+        ...(stats.recent_chat_sessions ?? []).map((s): ActivityItem => ({
+            id: `s${s.id}`, type: "session", title: s.title || "New chat session",
+            detail: `@${s.username} · ${s.messages_count} messages`, at: new Date(s.created_at).getTime(),
+        })),
+        ...(stats.recent_shared_readings ?? []).map((r): ActivityItem => ({
+            id: `r${r.id}`, type: "reading", title: r.title || "Reading shared",
+            detail: `@${r.username}${r.spread_name ? ` · ${r.spread_name}` : ""}`, at: new Date(r.created_at).getTime(),
+        })),
+    ].sort((a, b) => b.at - a.at).slice(0, 7);
+
+    const topDecks = [...decks].sort((a, b) => b.cards_count - a.cards_count).slice(0, 6);
+    const maxDeck = topDecks[0]?.cards_count || 1;
+
+    const quickLinks: { href: string; icon: IconName; title: string; sub: string }[] = [
+        { href: "/admin/users", icon: "users", title: "Users", sub: `${(stats.total_users ?? 0).toLocaleString()} total` },
+        { href: "/admin/decks", icon: "decks", title: "Decks", sub: `${stats.total_decks ?? 0} collections` },
+        { href: "/admin/cards", icon: "cards", title: "Cards", sub: `${(stats.total_cards ?? 0).toLocaleString()} across all decks` },
+        { href: "/admin/spreads", icon: "spreads", title: "Spreads", sub: `${stats.total_spreads ?? 0} layouts` },
+        { href: "/admin/chat-sessions", icon: "chat", title: "Chat sessions", sub: `${(stats.total_chat_sessions ?? 0).toLocaleString()} total` },
+        { href: "/admin/shared-readings", icon: "shared", title: "Shared readings", sub: `${(stats.total_shared_readings ?? 0).toLocaleString()} links` },
+    ];
 
     return (
-        <AdminLayout activePath="/admin" breadcrumb="Dashboard" username={user.username ?? 'Admin'}>
+        <AdminLayout activePath="/admin" breadcrumb="Overview" username={user.username ?? "Admin"}>
+            <div className="view">
+                <PageHeader
+                    kicker="Dashboard"
+                    title="Overview"
+                    subtitle="Realm-wide health, activity, and engagement at a glance."
+                />
 
-            {/* Hero */}
-            <div className="text-center mb-14" style={{ animation: 'adminFadeIn 0.8s ease both' }}>
-                <div className="flex items-center justify-center gap-4 mb-5">
-                    <div style={{ height: '1px', width: '80px', background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.4))' }} />
-                    <div style={{ color: '#c9a84c', fontSize: '12px', letterSpacing: '8px' }}>✦ ✦ ✦</div>
-                    <div style={{ height: '1px', width: '80px', background: 'linear-gradient(90deg, rgba(201,168,76,0.4), transparent)' }} />
+                <div className="stats-grid">
+                    <StatCard
+                        label="Total users" value={(stats.total_users ?? 0).toLocaleString()}
+                        delta={newUsers ? `+${newUsers}` : null} deltaDir={newUsers ? "up" : "flat"}
+                        caption="new this week" accent="violet"
+                    />
+                    <StatCard
+                        label="Chat sessions" value={(stats.total_chat_sessions ?? 0).toLocaleString()}
+                        caption={`${(stats.total_messages ?? 0).toLocaleString()} messages exchanged`} accent="teal"
+                    />
+                    <StatCard
+                        label="Cards in catalog" value={(stats.total_cards ?? 0).toLocaleString()}
+                        caption={`across ${stats.total_decks ?? 0} decks`} accent="amber"
+                    />
+                    <StatCard
+                        label="Shared readings" value={(stats.total_shared_readings ?? 0).toLocaleString()}
+                        delta={newReadings ? `+${newReadings}` : null} deltaDir={newReadings ? "up" : "flat"}
+                        caption={`${(stats.total_views ?? 0).toLocaleString()} total views`} accent="rose"
+                    />
                 </div>
-                <h1
-                    style={{
-                        fontFamily: "'Cinzel', serif",
-                        fontSize: 'clamp(24px, 5vw, 36px)',
-                        fontWeight: 400,
-                        letterSpacing: '0.08em',
-                        background: 'linear-gradient(135deg, #f0e6ff, #c4a8ff, #f0e6ff)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                        marginBottom: '10px',
-                    }}
-                >
-                    The Command Arcana
-                </h1>
-                <p style={{ fontSize: '16px', color: 'rgba(200,180,240,0.65)', fontStyle: 'italic', letterSpacing: '0.04em' }}>
-                    Govern your Tarot realm from this central sanctum
-                </p>
-            </div>
 
-            {/* Stat cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-9">
-                {STAT_CARDS.map(({ label, valueKey, badge, icon, color }, i) => {
-                    const c = COLOR_MAP[color];
-                    const value = stats[valueKey];
-                    return (
-                        <div
-                            key={label}
-                            className="rounded-[14px] relative overflow-hidden cursor-default"
-                            style={{
-                                background: '#111122',
-                                border: '1px solid rgba(180,140,255,0.12)',
-                                padding: '24px 22px',
-                                animation: `adminFadeUp 0.5s ease ${0.1 + i * 0.1}s both`,
-                            }}
-                        >
-                            {/* Glow orb */}
-                            <div
-                                className="absolute rounded-full"
-                                style={{ top: '-20px', right: '-20px', width: '80px', height: '80px', background: c.glow, opacity: 0.08 }}
-                            />
-                            <div className="flex items-center justify-between mb-4">
-                                <div
-                                    className="flex items-center justify-center rounded-[10px]"
-                                    style={{ width: '38px', height: '38px', background: c.bg, color: c.value, fontSize: '16px' }}
-                                >
-                                    {icon}
-                                </div>
-                                <div
-                                    style={{
-                                        fontSize: '10px',
-                                        fontFamily: "'Cinzel', serif",
-                                        letterSpacing: '0.1em',
-                                        padding: '3px 8px',
-                                        borderRadius: '20px',
-                                        color: '#4ade80',
-                                        background: 'rgba(74,222,128,0.1)',
-                                        border: '1px solid rgba(74,222,128,0.2)',
-                                    }}
-                                >
-                                    {badge}
-                                </div>
-                            </div>
-                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '32px', fontWeight: 600, letterSpacing: '0.02em', color: c.value, lineHeight: 1, marginBottom: '4px' }}>
-                                {value !== undefined ? value.toLocaleString() : '—'}
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'rgba(160,140,200,0.4)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                                {label}
+                <div className="grid-2">
+                    <div className="card panel">
+                        <div className="panel-header">
+                            <div>
+                                <div className="panel-eyebrow">Live</div>
+                                <h3 className="panel-title">Recent activity</h3>
                             </div>
                         </div>
-                    );
-                })}
-            </div>
+                        {activity.length === 0 ? (
+                            <div className="table-empty">No recent activity.</div>
+                        ) : (
+                            <ul className="activity-list">
+                                {activity.map((a) => (
+                                    <li key={a.id} className="activity-item">
+                                        <div className={`activity-dot dot-${a.type}`}><Icon name={ACTIVITY_ICON[a.type]} size={12} /></div>
+                                        <div className="activity-text">
+                                            <div className="activity-title">{a.title}</div>
+                                            <div className="activity-detail">{a.detail}</div>
+                                        </div>
+                                        <div className="activity-time">{timeAgo(new Date(a.at).toISOString())}</div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
 
-            {/* Modules */}
-            <div className="flex items-center gap-3.5 mb-5">
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', fontWeight: 600, letterSpacing: '0.2em', color: 'rgba(200,180,240,0.65)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                    Management Modules
+                    <div className="card panel">
+                        <div className="panel-header">
+                            <div>
+                                <div className="panel-eyebrow">Quick links</div>
+                                <h3 className="panel-title">Manage your realm</h3>
+                            </div>
+                        </div>
+                        <div className="quicklinks">
+                            {quickLinks.map((q) => (
+                                <Link key={q.href} href={q.href} className="quicklink">
+                                    <div className="quicklink-icon"><Icon name={q.icon} size={18} /></div>
+                                    <div>
+                                        <div className="ql-title">{q.title}</div>
+                                        <div className="ql-sub">{q.sub}</div>
+                                    </div>
+                                    <Icon name="chevron_right" size={14} />
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-                <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(180,140,255,0.12), transparent)' }} />
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {MODULE_ITEMS.map((item, i) => (
-                    <a
-                        key={item.href}
-                        href={item.href}
-                        className="flex items-center gap-[18px] rounded-[14px] relative overflow-hidden no-underline group"
-                        style={{
-                            background: '#111122',
-                            border: '1px solid rgba(180,140,255,0.12)',
-                            padding: '28px 26px',
-                            color: 'inherit',
-                            textDecoration: 'none',
-                            transition: 'all 0.3s ease',
-                            animation: `adminFadeUp 0.5s ease ${0.45 + i * 0.05}s both`,
-                        }}
-                        onMouseEnter={e => {
-                            const el = e.currentTarget;
-                            el.style.borderColor = 'rgba(180,140,255,0.35)';
-                            el.style.background = '#161630';
-                            el.style.transform = 'translateY(-3px)';
-                            el.style.boxShadow = '0 20px 50px rgba(0,0,0,0.5)';
-                        }}
-                        onMouseLeave={e => {
-                            const el = e.currentTarget;
-                            el.style.borderColor = 'rgba(180,140,255,0.12)';
-                            el.style.background = '#111122';
-                            el.style.transform = 'translateY(0)';
-                            el.style.boxShadow = 'none';
-                        }}
-                    >
-                        <div
-                            className="flex items-center justify-center rounded-[14px] flex-shrink-0 transition-transform duration-300"
-                            style={{
-                                width: '52px', height: '52px', fontSize: '22px',
-                                background: item.color, border: `1px solid ${item.borderColor}`,
-                            }}
-                        >
-                            {item.icon}
+                <div className="card panel">
+                    <div className="panel-header">
+                        <div>
+                            <div className="panel-eyebrow">Distribution</div>
+                            <h3 className="panel-title">Cards by deck</h3>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '15px', fontWeight: 500, letterSpacing: '0.06em', marginBottom: '5px', color: '#f0e6ff' }}>
-                                {item.label}
-                            </div>
-                            <div style={{ fontSize: '13px', color: 'rgba(160,140,200,0.4)', fontStyle: 'italic', letterSpacing: '0.02em' }}>
-                                {item.desc}
-                            </div>
+                        <Link href="/admin/decks" className="panel-link">View decks <Icon name="chevron_right" size={11} /></Link>
+                    </div>
+                    {topDecks.length === 0 ? (
+                        <div className="table-empty">No decks yet.</div>
+                    ) : (
+                        <div className="suit-list">
+                            {topDecks.map((d) => (
+                                <div key={d.id} className="suit-row">
+                                    <div className="suit-name">{d.name}</div>
+                                    <div className="suit-bar">
+                                        <div className="suit-bar-fill" style={{ width: `${(d.cards_count / maxDeck) * 100}%` }} />
+                                    </div>
+                                    <div className="suit-count">{d.cards_count}</div>
+                                </div>
+                            ))}
                         </div>
-                        <div style={{ color: 'rgba(160,140,200,0.4)', fontSize: '16px', marginLeft: 'auto', transition: 'all 0.3s', opacity: 0 }}
-                             className="group-hover:opacity-100 group-hover:translate-x-1">
-                            →
-                        </div>
-                    </a>
-                ))}
+                    )}
+                    <div className="panel-foot">
+                        <div className="foot-stat"><span className="foot-label">Decks</span><span className="foot-value">{stats.total_decks ?? 0}</span></div>
+                        <div className="foot-stat"><span className="foot-label">Cards</span><span className="foot-value">{(stats.total_cards ?? 0).toLocaleString()}</span></div>
+                        <div className="foot-stat"><span className="foot-label">Spreads</span><span className="foot-value">{stats.total_spreads ?? 0}</span></div>
+                    </div>
+                </div>
             </div>
-
-            <style>{`
-                @keyframes adminFadeUp {
-                    from { opacity: 0; transform: translateY(20px); }
-                    to   { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes adminFadeIn {
-                    from { opacity: 0; }
-                    to   { opacity: 1; }
-                }
-            `}</style>
         </AdminLayout>
     );
 }

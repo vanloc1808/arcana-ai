@@ -1,0 +1,931 @@
+/* ───── ArcanaAI Admin — design tokens & shell (scoped to .admin-shell) ───── */
+
+.admin-shell {
+  /* Type stacks */
+  --ui-font: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --display-font: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --mono-font: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+
+  /* Dark theme (default) — cool slate with violet primary */
+  --bg-0: #0b0d14;
+  --bg-1: #11141e;
+  --bg-2: #181b27;
+  --bg-3: #1e2231;
+  --bg-4: #262a3a;
+
+  --border-1: rgba(167, 160, 200, 0.08);
+  --border-2: rgba(167, 160, 200, 0.14);
+  --border-3: rgba(167, 160, 200, 0.22);
+
+  --text-1: #eceaf4;
+  --text-2: #a8a4be;
+  --text-3: #6d6a82;
+  --text-4: #4b4960;
+
+  --accent: #a78bfa;
+  --accent-2: #c4b5fd;
+  --accent-soft: rgba(167, 139, 250, 0.12);
+  --accent-border: rgba(167, 139, 250, 0.28);
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger:  #f87171;
+  --info:    #60a5fa;
+  --gold:    #f4b672;
+
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+
+  --shadow-1: 0 1px 0 rgba(255,255,255,0.02) inset, 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-2: 0 2px 4px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.35);
+
+  --sidebar-w: 256px;
+
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-family: var(--ui-font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
+  min-height: 100vh;
+}
+
+/* Light theme override */
+.admin-shell[data-theme="light"] {
+  --bg-0: #f6f4ef;
+  --bg-1: #ffffff;
+  --bg-2: #ffffff;
+  --bg-3: #f1ede4;
+  --bg-4: #ebe6da;
+  --border-1: rgba(40, 32, 56, 0.06);
+  --border-2: rgba(40, 32, 56, 0.10);
+  --border-3: rgba(40, 32, 56, 0.18);
+  --text-1: #1a1525;
+  --text-2: #3c3552;
+  --text-3: #635c78;
+  --text-4: #9c97ab;
+  --accent: #6d4dc7;
+  --accent-2: #8264d6;
+  --accent-soft: rgba(109, 77, 199, 0.08);
+  --accent-border: rgba(109, 77, 199, 0.24);
+  --shadow-1: 0 1px 2px rgba(20, 10, 40, 0.06);
+  --shadow-2: 0 2px 4px rgba(20, 10, 40, 0.06), 0 8px 24px rgba(20, 10, 40, 0.08);
+}
+
+/* High-contrast variant */
+.admin-shell[data-theme="hc"] {
+  --bg-0: #060710;
+  --bg-1: #0b0d18;
+  --bg-2: #141826;
+  --bg-3: #1c2134;
+  --border-2: rgba(255, 255, 255, 0.18);
+  --border-3: rgba(255, 255, 255, 0.32);
+  --text-1: #ffffff;
+  --text-2: #c8c3dc;
+  --text-3: #8e8aa6;
+  --accent: #b89dff;
+  --accent-2: #d4c5ff;
+}
+
+/* Accent overrides (applied only for non-default accents) */
+.admin-shell[data-accent="teal"] {
+  --accent: #5eead4; --accent-2: #99f6e4;
+  --accent-soft: rgba(94,234,212,0.12); --accent-border: rgba(94,234,212,0.28);
+}
+.admin-shell[data-accent="gold"] {
+  --accent: #f4b672; --accent-2: #fcd9a8;
+  --accent-soft: rgba(244,182,114,0.12); --accent-border: rgba(244,182,114,0.28);
+}
+.admin-shell[data-accent="rose"] {
+  --accent: #f9a8d4; --accent-2: #fbcfe8;
+  --accent-soft: rgba(249,168,212,0.12); --accent-border: rgba(249,168,212,0.28);
+}
+
+.admin-shell * { box-sizing: border-box; }
+.admin-shell button { font-family: inherit; cursor: pointer; }
+
+/* Neutralize global element styling leaked from globals.css.
+   globals.css sets `span, p, li, h1-h6 { color: var(--foreground) }` which
+   forces near-white (#ededed) onto every element, making light-theme sidebar
+   text invisible. Reset all of them to inherit so admin tokens take effect. */
+.admin-shell a {
+  color: inherit;
+  min-height: 0;
+  padding: 0;
+  text-decoration: none;
+}
+.admin-shell a:hover { text-decoration: none; }
+
+.admin-shell span,
+.admin-shell p,
+.admin-shell li,
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
+.admin-shell h4,
+.admin-shell h5,
+.admin-shell h6 {
+  color: inherit;
+}
+
+/* ─── App layout ─────────────────────────────────────────────────────── */
+.admin-shell .app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100vh;
+}
+
+.admin-shell .main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background:
+    radial-gradient(1200px 600px at 80% -200px, rgba(167, 139, 250, 0.06), transparent 60%),
+    radial-gradient(800px 400px at -10% 30%, rgba(94, 234, 212, 0.03), transparent 70%),
+    var(--bg-0);
+}
+
+.admin-shell .content {
+  flex: 1;
+  padding: 28px 36px 48px;
+  max-width: 1480px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ─── Sidebar ────────────────────────────────────────────────────────── */
+.admin-shell .sidebar {
+  background: var(--bg-1);
+  border-right: 1px solid var(--border-1);
+  padding: 18px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 40;
+}
+
+.admin-shell .sidebar-brand {
+  display: flex; align-items: center; gap: 11px;
+  padding: 4px 8px 18px;
+  text-decoration: none;
+}
+.admin-shell .brand-mark {
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  color: white;
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.admin-shell .brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+.admin-shell .brand-name {
+  font-family: var(--display-font);
+  font-size: 19px; font-weight: 600; letter-spacing: 0.005em;
+  color: var(--text-1);
+}
+.admin-shell .brand-sub {
+  font-size: 11px; color: var(--text-3);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+
+.admin-shell .sidebar-section-label {
+  font-size: 10.5px; font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 6px 10px 8px;
+}
+
+.admin-shell .sidebar-nav { display: flex; flex-direction: column; gap: 1px; }
+
+.admin-shell .sidebar-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 8px 10px;
+  background: transparent; border: 0;
+  color: var(--text-2);
+  font-size: 13.5px; font-weight: 500;
+  border-radius: 8px;
+  text-align: left;
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+  position: relative;
+}
+.admin-shell .sidebar-item:hover { background: var(--bg-3); color: var(--text-1); }
+.admin-shell .sidebar-item.is-active {
+  background: var(--accent-soft);
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+.admin-shell .sidebar-item.is-active svg { color: var(--accent); }
+.admin-shell .sidebar-item-label { flex: 1; }
+.admin-shell .sidebar-item-count {
+  font-family: var(--mono-font);
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-shell .sidebar-ornament { margin-top: 16px; padding: 4px 4px 0; }
+.admin-shell .ornament-card {
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.06), rgba(244, 182, 114, 0.04));
+  position: relative;
+  overflow: hidden;
+}
+.admin-shell .ornament-card::before {
+  content: "";
+  position: absolute; inset: -1px;
+  background: radial-gradient(120px 80px at 80% -20%, rgba(244, 182, 114, 0.15), transparent 60%);
+  pointer-events: none;
+}
+.admin-shell .ornament-glyph {
+  font-family: var(--display-font);
+  color: var(--gold);
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+.admin-shell .ornament-title {
+  font-size: 10.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.admin-shell .ornament-card-name {
+  font-family: var(--display-font);
+  font-size: 19px; color: var(--text-1);
+  margin-top: 2px; line-height: 1.1;
+}
+.admin-shell .ornament-card-meaning {
+  font-size: 11.5px; color: var(--text-2); margin-top: 4px;
+}
+
+.admin-shell .sidebar-footer { margin-top: auto; padding-top: 14px; }
+.admin-shell .user-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+}
+.admin-shell .user-avatar {
+  width: 30px; height: 30px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, oklch(0.55 0.13 262), oklch(0.42 0.10 292));
+  color: white;
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 600;
+}
+.admin-shell .user-chip-text { flex: 1; min-width: 0; }
+.admin-shell .user-chip-name {
+  font-size: 12.5px; font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.admin-shell .user-chip-role {
+  font-size: 10.5px; color: var(--text-3); letter-spacing: 0.04em;
+}
+
+/* ─── Top bar ────────────────────────────────────────────────────────── */
+.admin-shell .topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 36px;
+  border-bottom: 1px solid var(--border-1);
+  background: color-mix(in srgb, var(--bg-0) 70%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 30;
+}
+
+.admin-shell .topbar-left { flex: 1; min-width: 0; }
+.admin-shell .breadcrumb {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-3);
+}
+.admin-shell .breadcrumb-root { color: var(--text-3); text-decoration: none; }
+.admin-shell .breadcrumb-root:hover { color: var(--text-2); }
+.admin-shell .breadcrumb-current { color: var(--text-1); font-weight: 500; }
+
+.admin-shell .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+.admin-shell .search-input {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: 8px;
+  min-width: 320px;
+  color: var(--text-3);
+  transition: border-color 0.12s;
+}
+.admin-shell .search-input:focus-within {
+  border-color: var(--accent-border);
+  background: var(--bg-3);
+}
+.admin-shell .search-input input {
+  background: transparent; border: 0; outline: none;
+  flex: 1; min-width: 0;
+  font-family: inherit; font-size: 13px;
+  color: var(--text-1);
+}
+.admin-shell .search-input input::placeholder { color: var(--text-3); }
+
+.admin-shell .topbar-icon-btn {
+  position: relative;
+  background: transparent; border: 1px solid var(--border-1);
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  color: var(--text-2);
+  display: grid; place-items: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.admin-shell .topbar-icon-btn:hover {
+  background: var(--bg-2); color: var(--text-1); border-color: var(--border-2);
+}
+.admin-shell .topbar-icon-btn.is-active {
+  background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border);
+}
+.admin-shell .topbar-badge {
+  position: absolute; top: -3px; right: -3px;
+  background: var(--accent); color: white;
+  font-size: 9px; font-weight: 700;
+  min-width: 15px; height: 15px;
+  border-radius: 99px;
+  display: grid; place-items: center;
+  padding: 0 4px;
+  box-shadow: 0 0 0 2px var(--bg-0);
+}
+
+.admin-shell .topbar-menu-btn { display: none; }
+
+/* ─── Page header ───────────────────────────────────────────────────── */
+.admin-shell .view { display: flex; flex-direction: column; gap: 24px; }
+
+.admin-shell .page-header {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 24px; padding-top: 8px;
+}
+.admin-shell .page-header-kicker {
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin-bottom: 6px;
+}
+.admin-shell .page-header-title {
+  font-family: var(--display-font);
+  font-size: 36px; font-weight: 500; letter-spacing: -0.005em;
+  color: var(--text-1); margin: 0; line-height: 1.05;
+}
+.admin-shell .page-header-subtitle {
+  color: var(--text-2); font-size: 14px; margin-top: 8px; max-width: 60ch;
+}
+.admin-shell .page-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ─── Buttons ─────────────────────────────────────────────────────────── */
+.admin-shell .btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 13px;
+  font-size: 13px; font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.12s;
+  white-space: nowrap; letter-spacing: 0.005em;
+}
+.admin-shell .btn-sm { padding: 4px 9px; font-size: 12px; }
+.admin-shell .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+.admin-shell .btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.admin-shell .btn-secondary { background: var(--bg-2); color: var(--text-1); border-color: var(--border-2); }
+.admin-shell .btn-secondary:hover { background: var(--bg-3); border-color: var(--border-3); }
+.admin-shell .btn-ghost { background: transparent; color: var(--text-2); border-color: var(--border-1); }
+.admin-shell .btn-ghost:hover { background: var(--bg-2); color: var(--text-1); border-color: var(--border-2); }
+.admin-shell .btn-danger {
+  background: rgba(248, 113, 113, 0.10); color: var(--danger); border-color: rgba(248, 113, 113, 0.22);
+}
+.admin-shell .btn-danger:hover { background: rgba(248, 113, 113, 0.18); }
+
+/* ─── Card / panel ────────────────────────────────────────────────────── */
+.admin-shell .card {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.admin-shell .panel { padding: 18px 20px; }
+.admin-shell .panel-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; margin-bottom: 14px;
+}
+.admin-shell .panel-eyebrow {
+  font-size: 10.5px; letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; margin-bottom: 4px;
+}
+.admin-shell .panel-title {
+  font-family: var(--ui-font);
+  font-size: 15.5px; font-weight: 600; color: var(--text-1);
+  margin: 0; letter-spacing: -0.005em;
+}
+.admin-shell .panel-link {
+  background: transparent; border: 0; color: var(--text-3);
+  font-size: 12.5px; display: inline-flex; align-items: center; gap: 4px;
+  text-decoration: none;
+}
+.admin-shell .panel-link:hover { color: var(--accent); }
+.admin-shell .panel-foot {
+  display: flex; gap: 28px;
+  border-top: 1px solid var(--border-1);
+  margin-top: 14px; padding-top: 12px;
+  flex-wrap: wrap;
+}
+.admin-shell .foot-stat { display: flex; flex-direction: column; gap: 2px; }
+.admin-shell .foot-label {
+  font-size: 11px; color: var(--text-3);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.admin-shell .foot-value {
+  font-family: var(--mono-font);
+  font-size: 14px; color: var(--text-1);
+  font-variant-numeric: tabular-nums; font-weight: 500;
+}
+
+/* ─── Stat cards ─────────────────────────────────────────────────────── */
+.admin-shell .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.admin-shell .stats-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.admin-shell .stats-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.admin-shell .stats-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.admin-shell .stat-card { padding: 16px 18px 18px; }
+.admin-shell .stat-card-label {
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.admin-shell .stat-card-value-row {
+  display: flex; align-items: baseline; gap: 10px; margin-top: 8px;
+}
+.admin-shell .stat-card-value {
+  font-family: var(--display-font);
+  font-size: 36px; font-weight: 500; letter-spacing: -0.01em;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.admin-shell .stat-card-delta {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--mono-font);
+  font-size: 11px; font-weight: 600;
+  padding: 2px 7px; border-radius: 99px;
+}
+.admin-shell .stat-card-delta.up { color: var(--success); background: rgba(52, 211, 153, 0.10); }
+.admin-shell .stat-card-delta.down { color: var(--danger); background: rgba(248, 113, 113, 0.10); }
+.admin-shell .stat-card-delta.flat { color: var(--text-3); background: var(--bg-4); }
+.admin-shell .stat-card-caption { font-size: 12px; color: var(--text-3); margin-top: 6px; }
+
+/* ─── Grids ──────────────────────────────────────────────────────────── */
+.admin-shell .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* ─── Suit / distribution rows ───────────────────────────────────────── */
+.admin-shell .suit-list { display: flex; flex-direction: column; gap: 13px; }
+.admin-shell .suit-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 50px;
+  align-items: center; gap: 14px; font-size: 13px;
+}
+.admin-shell .suit-name {
+  color: var(--text-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.admin-shell .suit-bar { height: 8px; background: var(--bg-4); border-radius: 4px; overflow: hidden; }
+.admin-shell .suit-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 8px var(--accent-soft);
+}
+.admin-shell .suit-count {
+  font-family: var(--mono-font);
+  text-align: right; font-variant-numeric: tabular-nums;
+  color: var(--text-1); font-size: 13px;
+}
+
+/* ─── Activity list ──────────────────────────────────────────────────── */
+.admin-shell .activity-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column;
+}
+.admin-shell .activity-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-1);
+}
+.admin-shell .activity-item:first-child { border-top: 0; padding-top: 4px; }
+.admin-shell .activity-dot {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: grid; place-items: center; flex-shrink: 0;
+  background: var(--bg-3); border: 1px solid var(--border-1); color: var(--text-2);
+}
+.admin-shell .activity-dot.dot-user { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-border); }
+.admin-shell .activity-dot.dot-reading { color: var(--gold); background: rgba(244, 182, 114, 0.10); border-color: rgba(244, 182, 114, 0.22); }
+.admin-shell .activity-dot.dot-session { color: var(--success); background: rgba(52, 211, 153, 0.10); border-color: rgba(52, 211, 153, 0.22); }
+.admin-shell .activity-text { flex: 1; min-width: 0; }
+.admin-shell .activity-title { font-size: 13px; color: var(--text-1); font-weight: 500; }
+.admin-shell .activity-detail {
+  font-size: 12px; color: var(--text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.admin-shell .activity-time {
+  font-size: 11.5px; color: var(--text-3);
+  font-variant-numeric: tabular-nums; font-family: var(--mono-font);
+  white-space: nowrap;
+}
+
+/* ─── Quick links ────────────────────────────────────────────────────── */
+.admin-shell .quicklinks { display: flex; flex-direction: column; gap: 6px; }
+.admin-shell .quicklink {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px; cursor: pointer; text-decoration: none;
+  color: var(--text-1);
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+.admin-shell .quicklink:hover { background: var(--bg-3); border-color: var(--border-2); }
+.admin-shell .quicklink-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); flex-shrink: 0;
+}
+.admin-shell .ql-title { font-size: 13.5px; font-weight: 500; color: var(--text-1); }
+.admin-shell .ql-sub { font-size: 11.5px; color: var(--text-3); }
+.admin-shell .quicklink svg:last-child { color: var(--text-3); margin-left: auto; }
+
+/* ─── Toolbar ────────────────────────────────────────────────────────── */
+.admin-shell .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.admin-shell .toolbar .search-input { min-width: 280px; }
+
+.admin-shell .filter-group {
+  display: flex; gap: 2px; padding: 3px;
+  background: var(--bg-2); border: 1px solid var(--border-1); border-radius: 8px;
+}
+.admin-shell .filter-chip {
+  background: transparent; border: 0; color: var(--text-2);
+  padding: 4px 11px; border-radius: 6px;
+  font-size: 12.5px; font-weight: 500;
+}
+.admin-shell .filter-chip:hover { color: var(--text-1); }
+.admin-shell .filter-chip.is-active {
+  background: var(--bg-3); color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--border-2);
+}
+
+/* ─── Tables ─────────────────────────────────────────────────────────── */
+.admin-shell .table-wrap { padding: 0; overflow: hidden; }
+.admin-shell .table-scroll { overflow-x: auto; }
+.admin-shell .table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.admin-shell .table thead th {
+  text-align: left;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3);
+  padding: 12px 16px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border-1);
+  white-space: nowrap;
+}
+.admin-shell .table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-1);
+  color: var(--text-1); vertical-align: middle;
+}
+.admin-shell .table tbody tr:last-child td { border-bottom: 0; }
+.admin-shell .table tbody tr:hover { background: var(--bg-3); }
+.admin-shell .table tbody td.muted { color: var(--text-2); }
+.admin-shell .table tbody td.mono {
+  font-family: var(--mono-font);
+  font-variant-numeric: tabular-nums; color: var(--text-2);
+}
+.admin-shell .table-empty {
+  padding: 36px; text-align: center; color: var(--text-3); font-style: italic;
+}
+
+.admin-shell .cell-user { display: flex; align-items: center; gap: 11px; }
+.admin-shell .cell-user-name { font-size: 13.5px; font-weight: 500; color: var(--text-1); }
+.admin-shell .cell-user-handle { color: var(--text-3); font-weight: 400; margin-left: 4px; }
+.admin-shell .cell-user-email { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+
+.admin-shell .avatar {
+  border-radius: 99px; color: white;
+  display: grid; place-items: center;
+  font-weight: 600; flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.admin-shell .row-actions {
+  display: inline-flex; gap: 2px; opacity: 0.6; transition: opacity 0.12s;
+}
+.admin-shell tr:hover .row-actions,
+.admin-shell .deck-card:hover .row-actions,
+.admin-shell .spread-card:hover .row-actions { opacity: 1; }
+.admin-shell .row-action {
+  background: transparent; border: 1px solid transparent;
+  color: var(--text-2);
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: grid; place-items: center;
+}
+.admin-shell .row-action:hover { background: var(--bg-3); color: var(--text-1); border-color: var(--border-2); }
+.admin-shell .row-action.danger:hover { color: var(--danger); background: rgba(248, 113, 113, 0.08); border-color: rgba(248, 113, 113, 0.20); }
+
+/* ─── Pagination ─────────────────────────────────────────────────────── */
+.admin-shell .pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: -4px; gap: 12px; flex-wrap: wrap;
+}
+.admin-shell .pagination-info { font-size: 12.5px; color: var(--text-3); }
+.admin-shell .pagination-controls { display: flex; gap: 4px; }
+.admin-shell .page-btn {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  color: var(--text-2);
+  padding: 6px 11px; border-radius: 7px;
+  font-size: 12.5px; font-family: var(--mono-font); min-width: 32px;
+}
+.admin-shell .page-btn:hover:not(:disabled) { background: var(--bg-3); color: var(--text-1); }
+.admin-shell .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.admin-shell .page-btn.is-active {
+  background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border);
+}
+
+/* ─── Deck cards ─────────────────────────────────────────────────────── */
+.admin-shell .deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.admin-shell .deck-card {
+  overflow: hidden; display: flex; flex-direction: column;
+  transition: transform 0.18s, border-color 0.18s;
+}
+.admin-shell .deck-card:hover { transform: translateY(-2px); border-color: var(--border-3); }
+.admin-shell .deck-cover {
+  aspect-ratio: 4 / 2.2; position: relative;
+  display: grid; place-items: center; padding: 20px; text-align: center;
+}
+.admin-shell .deck-cover::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,255,255,0.10), transparent 60%),
+    radial-gradient(circle at 90% 90%, rgba(0,0,0,0.4), transparent 50%);
+  pointer-events: none;
+}
+.admin-shell .deck-cover-mark { filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3)); position: relative; z-index: 1; }
+.admin-shell .deck-cover-name {
+  font-family: var(--display-font);
+  font-size: 20px; font-weight: 600; color: white;
+  position: absolute; bottom: 14px; left: 16px; right: 16px;
+  text-align: left; z-index: 1; text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.admin-shell .deck-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.admin-shell .deck-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.admin-shell .deck-meta-count { font-family: var(--mono-font); font-size: 11.5px; color: var(--text-3); }
+.admin-shell .deck-desc { font-size: 12.5px; color: var(--text-2); line-height: 1.5; margin: 0; flex: 1; }
+.admin-shell .deck-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11.5px; color: var(--text-3);
+}
+
+/* ─── Card cell (in cards table) ─────────────────────────────────────── */
+.admin-shell .cell-card { display: flex; align-items: center; gap: 12px; }
+.admin-shell .card-thumb {
+  width: 36px; height: 50px;
+  border-radius: 5px; border: 1px solid;
+  display: grid; place-items: center;
+  font-family: var(--display-font);
+  font-size: 15px; font-weight: 600; flex-shrink: 0;
+}
+.admin-shell .cell-card-name { font-size: 13.5px; font-weight: 500; color: var(--text-1); }
+.admin-shell .cell-card-id { font-family: var(--mono-font); font-size: 11px; color: var(--text-3); }
+.admin-shell .keywords { display: flex; flex-wrap: wrap; gap: 4px; }
+.admin-shell .keyword {
+  font-size: 11px; padding: 2px 7px;
+  background: var(--bg-4); border-radius: 99px; color: var(--text-2);
+}
+
+/* ─── Sessions cells ─────────────────────────────────────────────────── */
+.admin-shell .cell-session { display: flex; align-items: center; gap: 10px; }
+.admin-shell .session-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center; border: 1px solid var(--accent-border);
+  flex-shrink: 0;
+}
+.admin-shell .cell-session-title {
+  font-size: 13.5px; color: var(--text-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px;
+}
+
+/* ─── Spreads ────────────────────────────────────────────────────────── */
+.admin-shell .spread-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.admin-shell .spread-card { padding: 0; overflow: hidden; }
+.admin-shell .spread-mini {
+  position: relative; height: 140px;
+  background:
+    repeating-linear-gradient(45deg, transparent 0 12px, rgba(167,139,250,0.04) 12px 13px),
+    var(--bg-1);
+  border-bottom: 1px solid var(--border-1);
+}
+.admin-shell .spread-mini-card {
+  position: absolute;
+  width: 16%; height: 22%;
+  background: linear-gradient(135deg, var(--accent-soft), rgba(167,139,250,0.03));
+  border: 1px solid var(--accent-border);
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.admin-shell .spread-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.admin-shell .spread-meta-row { display: flex; align-items: center; justify-content: space-between; }
+.admin-shell .spread-name {
+  font-family: var(--display-font);
+  font-size: 19px; font-weight: 600; color: var(--text-1);
+  margin: 2px 0 0; letter-spacing: -0.005em;
+}
+.admin-shell .spread-desc { font-size: 12.5px; color: var(--text-2); line-height: 1.5; margin: 0; }
+.admin-shell .spread-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 4px; font-size: 11.5px;
+}
+
+/* ─── Shared readings cells ──────────────────────────────────────────── */
+.admin-shell .cell-reading-title { font-size: 13.5px; color: var(--text-1); font-weight: 500; }
+.admin-shell .cell-reading-sub { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+.admin-shell .cell-stack { display: flex; flex-direction: column; gap: 1px; }
+
+/* utility */
+.admin-shell .muted { color: var(--text-3); }
+.admin-shell .mono { font-family: var(--mono-font); font-variant-numeric: tabular-nums; }
+
+/* footer ornament strip */
+.admin-shell .footer-mark {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 32px 0 8px;
+  color: var(--text-4);
+  font-family: var(--display-font);
+  font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase;
+}
+.admin-shell .footer-mark::before, .admin-shell .footer-mark::after {
+  content: ""; height: 1px; width: 60px;
+  background: linear-gradient(90deg, transparent, var(--border-2));
+}
+.admin-shell .footer-mark::after { background: linear-gradient(90deg, var(--border-2), transparent); }
+
+/* ─── Settings panel (theme switcher) ────────────────────────────────── */
+.admin-shell .settings-pop {
+  position: absolute; top: 52px; right: 0;
+  width: 264px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2);
+  padding: 14px;
+  z-index: 50;
+}
+.admin-shell .settings-wrap { position: relative; }
+.admin-shell .settings-section + .settings-section { margin-top: 14px; }
+.admin-shell .settings-label {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.10em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 8px;
+}
+.admin-shell .settings-segment {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  gap: 2px; padding: 3px;
+  background: var(--bg-1); border: 1px solid var(--border-1); border-radius: 8px;
+}
+.admin-shell .settings-seg-btn {
+  background: transparent; border: 0; color: var(--text-2);
+  padding: 6px 4px; border-radius: 6px;
+  font-size: 12px; font-weight: 500;
+}
+.admin-shell .settings-seg-btn:hover { color: var(--text-1); }
+.admin-shell .settings-seg-btn.is-active {
+  background: var(--bg-3); color: var(--text-1); box-shadow: inset 0 0 0 1px var(--border-2);
+}
+.admin-shell .settings-swatches { display: flex; gap: 8px; }
+.admin-shell .swatch {
+  width: 28px; height: 28px; border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer; padding: 0;
+}
+.admin-shell .swatch.is-active { border-color: var(--text-1); }
+
+/* ─── Loading screen ─────────────────────────────────────────────────── */
+.admin-loading {
+  min-height: 100vh;
+  display: grid; place-items: center;
+  background: #0b0d14;
+  font-family: "Manrope", system-ui, sans-serif;
+}
+.admin-loading-spinner {
+  width: 44px; height: 44px; border-radius: 99px;
+  border: 2px solid rgba(167, 139, 250, 0.18);
+  border-top-color: #a78bfa;
+  margin: 0 auto 16px;
+  animation: adminSpin 0.8s linear infinite;
+}
+.admin-loading-label {
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #6d6a82;
+}
+@keyframes adminSpin { to { transform: rotate(360deg); } }
+
+/* ─── Admin dialogs / forms (Radix portals render outside .admin-shell) ─ */
+.admin-dialog {
+  background: #181b27 !important;
+  border: 1px solid rgba(167, 160, 200, 0.18) !important;
+  border-radius: 16px !important;
+  color: #eceaf4 !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.45) !important;
+  font-family: "Manrope", system-ui, sans-serif;
+}
+.admin-dialog-title {
+  font-family: "Cormorant Garamond", Georgia, serif !important;
+  font-size: 24px !important; font-weight: 500 !important;
+  letter-spacing: -0.005em !important; color: #eceaf4 !important;
+}
+.admin-field-label {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #6d6a82;
+}
+.admin-input {
+  width: 100%; margin-top: 6px; padding: 9px 12px;
+  background: #11141e; border: 1px solid rgba(167, 160, 200, 0.14);
+  border-radius: 8px; color: #eceaf4; font-size: 14px; outline: none;
+  font-family: "Manrope", system-ui, sans-serif;
+  transition: border-color 0.12s, background 0.12s;
+}
+.admin-input:focus { border-color: rgba(167, 139, 250, 0.45); background: #1e2231; }
+.admin-input::placeholder { color: #6d6a82; }
+.admin-check-label {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 13px; color: #a8a4be;
+  font-family: "Manrope", system-ui, sans-serif;
+}
+.admin-check { width: 16px; height: 16px; accent-color: #a78bfa; }
+.admin-dialog-submit {
+  width: 100%; padding: 10px; border-radius: 10px; margin-top: 8px;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+  background: #a78bfa; border: 1px solid #a78bfa; color: #fff; cursor: pointer;
+  font-family: "Manrope", system-ui, sans-serif;
+  transition: background 0.12s;
+}
+.admin-dialog-submit:hover { background: #c4b5fd; border-color: #c4b5fd; }
+.admin-dialog-error {
+  padding: 10px 14px; border-radius: 8px; font-size: 13px;
+  color: #fca5a5; background: rgba(248,113,113,0.10); border: 1px solid rgba(248,113,113,0.22);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .admin-shell .grid-2 { grid-template-columns: 1fr; }
+  .admin-shell .stats-grid,
+  .admin-shell .stats-grid-3,
+  .admin-shell .stats-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 860px) {
+  .admin-shell .app { grid-template-columns: 1fr; }
+  .admin-shell .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 256px;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    z-index: 60;
+  }
+  .admin-shell.sidebar-open .sidebar { transform: translateX(0); }
+  .admin-shell .sidebar-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 55; border: 0;
+  }
+  .admin-shell .topbar-menu-btn { display: grid; }
+  .admin-shell .topbar { padding: 12px 18px; }
+  .admin-shell .content { padding: 20px 18px 40px; }
+  .admin-shell .search-input { min-width: 0; }
+  .admin-shell .page-header { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .admin-shell .page-header-title { font-size: 30px; }
+}
+
+@media (max-width: 560px) {
+  .admin-shell .stats-grid,
+  .admin-shell .stats-grid-3,
+  .admin-shell .stats-grid-4 { grid-template-columns: 1fr; }
+  .admin-shell .topbar .topbar-right .search-input { display: none; }
+}

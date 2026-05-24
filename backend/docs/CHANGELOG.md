@@ -30,6 +30,8 @@ Covers commits from 2026-05-19 through 2026-05-21 (ISO week 2026-W21).
 
 ### Changed
 - Tarot deck seeding migration made PostgreSQL-compatible and restricted to the two new decks
+- Admin portal redesigned for readability: replaced the low-contrast gold-on-black cosmic theme with a cool-slate console (Manrope/Cormorant Garamond/JetBrains Mono type, single violet accent, high-contrast text). All sections rebuilt — Overview (real stat cards, recent activity feed, cards-by-deck distribution, quick links), Users (searchable/filterable table with status & plan pills and pagination), Decks and Spreads as card grids, and redesigned Cards, Chat Sessions, and Shared Readings tables
+- Admin portal gains an appearance switcher (gear icon, top-right): Dark / Light / High-contrast themes plus an accent color picker; the default follows the operating-system theme and the choice is remembered per browser
 
 ### Removed
 - Header search icon button

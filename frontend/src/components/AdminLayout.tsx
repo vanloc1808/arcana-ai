@@ -1,19 +1,150 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
+import "@/app/admin/admin.css";
+import api from "@/lib/api";
+import { Icon, SearchInput, type IconName } from "@/components/admin/AdminUI";
 
-const NAV_ITEMS = [
-    { href: '/admin',                 label: 'Overview',        icon: '⬡' },
-    { href: '/admin/users',           label: 'Users',           icon: '◈' },
-    { href: '/admin/decks',           label: 'Decks',           icon: '⬡' },
-    { href: '/admin/cards',           label: 'Cards',           icon: '◇' },
-    { href: '/admin/chat-sessions',   label: 'Chat Sessions',   icon: '◉' },
-    { href: '/admin/spreads',         label: 'Spreads',         icon: '⊞' },
-    { href: '/admin/shared-readings', label: 'Shared Readings', icon: '↑' },
+/* ─── Theme handling ────────────────────────────────────────────────────── */
+type ThemePref = "system" | "dark" | "light" | "hc";
+type ResolvedTheme = "dark" | "light" | "hc";
+type Accent = "violet" | "teal" | "gold" | "rose";
+
+const THEME_KEY = "arcana-admin-theme";
+const ACCENT_KEY = "arcana-admin-accent";
+
+function systemTheme(): "dark" | "light" {
+    if (typeof window === "undefined") return "dark";
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function useAdminTheme() {
+    const [pref, setPref] = useState<ThemePref>("system");
+    const [accent, setAccentState] = useState<Accent>("violet");
+    const [systemMode, setSystemMode] = useState<"dark" | "light">("dark");
+
+    useEffect(() => {
+        const savedPref = localStorage.getItem(THEME_KEY) as ThemePref | null;
+        const savedAccent = localStorage.getItem(ACCENT_KEY) as Accent | null;
+        if (savedPref) setPref(savedPref);
+        if (savedAccent) setAccentState(savedAccent);
+        setSystemMode(systemTheme());
+
+        const mq = window.matchMedia("(prefers-color-scheme: light)");
+        const onChange = () => setSystemMode(mq.matches ? "light" : "dark");
+        mq.addEventListener("change", onChange);
+        return () => mq.removeEventListener("change", onChange);
+    }, []);
+
+    const setThemePref = useCallback((next: ThemePref) => {
+        setPref(next);
+        localStorage.setItem(THEME_KEY, next);
+    }, []);
+    const setAccent = useCallback((next: Accent) => {
+        setAccentState(next);
+        localStorage.setItem(ACCENT_KEY, next);
+    }, []);
+
+    const resolved: ResolvedTheme = pref === "system" ? systemMode : pref;
+    return { pref, setThemePref, accent, setAccent, resolved };
+}
+
+/* ─── Settings (theme switcher) popover ─────────────────────────────────── */
+const THEME_OPTS: { value: ThemePref; label: string; icon: IconName }[] = [
+    { value: "system", label: "System", icon: "monitor" },
+    { value: "dark", label: "Dark", icon: "moon" },
+    { value: "light", label: "Light", icon: "sun" },
+    { value: "hc", label: "Contrast", icon: "sparkle" },
+];
+const ACCENT_OPTS: { value: Accent; color: string }[] = [
+    { value: "violet", color: "#a78bfa" },
+    { value: "teal", color: "#5eead4" },
+    { value: "gold", color: "#f4b672" },
+    { value: "rose", color: "#f9a8d4" },
 ];
 
+function SettingsPopover({ theme }: { theme: ReturnType<typeof useAdminTheme> }) {
+    const [open, setOpen] = useState(false);
+    const wrapRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const onClick = (e: MouseEvent) => {
+            if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener("mousedown", onClick);
+        return () => document.removeEventListener("mousedown", onClick);
+    }, [open]);
+
+    return (
+        <div className="settings-wrap" ref={wrapRef}>
+            <button
+                className={`topbar-icon-btn ${open ? "is-active" : ""}`}
+                aria-label="Appearance settings"
+                aria-expanded={open}
+                onClick={() => setOpen((o) => !o)}
+            >
+                <Icon name="settings" size={16} />
+            </button>
+            {open && (
+                <div className="settings-pop" role="dialog" aria-label="Appearance">
+                    <div className="settings-section">
+                        <div className="settings-label">Theme</div>
+                        <div className="settings-segment">
+                            {THEME_OPTS.map((o) => (
+                                <button
+                                    key={o.value}
+                                    className={`settings-seg-btn ${theme.pref === o.value ? "is-active" : ""}`}
+                                    onClick={() => theme.setThemePref(o.value)}
+                                    title={o.label}
+                                >
+                                    {o.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="settings-section">
+                        <div className="settings-label">Accent</div>
+                        <div className="settings-swatches">
+                            {ACCENT_OPTS.map((o) => (
+                                <button
+                                    key={o.value}
+                                    className={`swatch ${theme.accent === o.value ? "is-active" : ""}`}
+                                    style={{ background: o.color }}
+                                    aria-label={`${o.value} accent`}
+                                    onClick={() => theme.setAccent(o.value)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ─── Sidebar nav ───────────────────────────────────────────────────────── */
+interface SidebarCounts {
+    total_users?: number;
+    total_decks?: number;
+    total_cards?: number;
+    total_chat_sessions?: number;
+    total_spreads?: number;
+    total_shared_readings?: number;
+}
+
+const NAV_ITEMS: { href: string; label: string; icon: IconName; countKey?: keyof SidebarCounts }[] = [
+    { href: "/admin", label: "Overview", icon: "overview" },
+    { href: "/admin/users", label: "Users", icon: "users", countKey: "total_users" },
+    { href: "/admin/decks", label: "Decks", icon: "decks", countKey: "total_decks" },
+    { href: "/admin/cards", label: "Cards", icon: "cards", countKey: "total_cards" },
+    { href: "/admin/chat-sessions", label: "Chat Sessions", icon: "chat", countKey: "total_chat_sessions" },
+    { href: "/admin/spreads", label: "Spreads", icon: "spreads", countKey: "total_spreads" },
+    { href: "/admin/shared-readings", label: "Shared Readings", icon: "shared", countKey: "total_shared_readings" },
+];
+
+/* ─── Layout ────────────────────────────────────────────────────────────── */
 interface AdminLayoutProps {
     children: React.ReactNode;
     activePath: string;
@@ -21,375 +152,122 @@ interface AdminLayoutProps {
     username?: string;
 }
 
-export default function AdminLayout({
-    children,
-    activePath,
-    breadcrumb,
-    username = 'Admin',
-}: AdminLayoutProps) {
-    const [mobileOpen, setMobileOpen] = useState(false);
-    const initial = username[0]?.toUpperCase() ?? 'A';
+export default function AdminLayout({ children, activePath, breadcrumb, username = "Admin" }: AdminLayoutProps) {
+    const theme = useAdminTheme();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [counts, setCounts] = useState<SidebarCounts>({});
+    const [search, setSearch] = useState("");
+    const initial = username[0]?.toUpperCase() ?? "A";
+
+    useEffect(() => {
+        let cancelled = false;
+        api.get("/admin/dashboard")
+            .then((res) => { if (!cancelled) setCounts(res.data ?? {}); })
+            .catch(() => { /* counts are best-effort */ });
+        return () => { cancelled = true; };
+    }, []);
 
     return (
         <div
-            className="min-h-screen flex overflow-x-hidden"
-            style={{ background: '#080810', fontFamily: "'Cormorant Garamond', Georgia, serif", color: '#f0e6ff' }}
+            className={`admin-shell ${sidebarOpen ? "sidebar-open" : ""}`}
+            data-theme={theme.resolved}
+            data-accent={theme.accent !== "violet" ? theme.accent : undefined}
         >
-            {/* Starfield */}
-            <div
-                className="fixed inset-0 pointer-events-none z-0"
-                style={{
-                    backgroundImage: `
-                        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.5) 0%, transparent 100%),
-                        radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.4) 0%, transparent 100%),
-                        radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
-                        radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.4) 0%, transparent 100%),
-                        radial-gradient(1px 1px at 90% 50%, rgba(255,255,255,0.3) 0%, transparent 100%),
-                        radial-gradient(1px 1px at 40% 15%, rgba(255,255,255,0.5) 0%, transparent 100%),
-                        radial-gradient(1px 1px at 70% 90%, rgba(255,255,255,0.3) 0%, transparent 100%),
-                        radial-gradient(1.5px 1.5px at 50% 50%, rgba(180,140,255,0.4) 0%, transparent 100%),
-                        radial-gradient(1px 1px at 25% 60%, rgba(255,255,255,0.35) 0%, transparent 100%),
-                        radial-gradient(1px 1px at 85% 75%, rgba(255,255,255,0.3) 0%, transparent 100%)
-                    `,
-                }}
-            />
-            {/* Nebula glow */}
-            <div
-                className="fixed pointer-events-none z-0"
-                style={{
-                    top: '-30%', left: '-20%', width: '60%', height: '60%',
-                    background: 'radial-gradient(ellipse, rgba(90,50,180,0.12) 0%, transparent 70%)',
-                }}
-            />
+            <div className="app">
+                {sidebarOpen && <button className="sidebar-backdrop" aria-label="Close menu" onClick={() => setSidebarOpen(false)} />}
 
-            {/* Mobile backdrop */}
-            {mobileOpen && (
-                <div
-                    className="lg:hidden fixed inset-0 z-20 bg-black/50"
-                    onClick={() => setMobileOpen(false)}
-                />
-            )}
-
-            {/* ── Sidebar ── */}
-            <aside
-                className={`fixed top-0 left-0 bottom-0 z-30 flex flex-col overflow-hidden transition-transform duration-200 ${
-                    mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-                }`}
-                style={{
-                    width: '220px',
-                    background: 'linear-gradient(180deg, #0c0c1e 0%, #090912 100%)',
-                    borderRight: '1px solid rgba(180,140,255,0.12)',
-                }}
-            >
-                {/* Gold top line */}
-                <div
-                    className="absolute top-0 left-0 right-0 h-px"
-                    style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.6), transparent)' }}
-                />
-
-                {/* Brand */}
-                <div
-                    className="px-6 pt-8 pb-7 relative"
-                    style={{ borderBottom: '1px solid rgba(180,140,255,0.12)' }}
-                >
-                    <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center mb-3"
-                        style={{
-                            background: 'linear-gradient(135deg, #8b5cf6, #4f2fa0)',
-                            boxShadow: '0 0 20px rgba(139,92,246,0.2), 0 0 40px rgba(139,92,246,0.1)',
-                            animation: 'adminPulseGlow 3s ease-in-out infinite',
-                        }}
-                    >
-                        <span style={{ color: '#e8cc82', fontSize: '14px' }}>✦</span>
-                    </div>
-                    <div
-                        style={{
-                            fontFamily: "'Cinzel', serif",
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            letterSpacing: '0.18em',
-                            color: '#f0e6ff',
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        Admin Portal
-                    </div>
-                    <div
-                        style={{
-                            fontSize: '10px',
-                            letterSpacing: '0.25em',
-                            color: 'rgba(160,140,200,0.4)',
-                            textTransform: 'uppercase',
-                            marginTop: '3px',
-                        }}
-                    >
-                        Management Dashboard
-                    </div>
-                </div>
-
-                {/* Nav */}
-                <div className="flex-1 p-3 pt-5 overflow-y-auto">
-                    <div
-                        style={{
-                            fontFamily: "'Cinzel', serif",
-                            fontSize: '8px',
-                            letterSpacing: '0.3em',
-                            color: 'rgba(160,140,200,0.4)',
-                            textTransform: 'uppercase',
-                            padding: '0 12px',
-                            marginBottom: '8px',
-                        }}
-                    >
-                        Navigation
-                    </div>
-                    {NAV_ITEMS.map((item) => {
-                        const isActive = activePath === item.href;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                onClick={() => setMobileOpen(false)}
-                                className="flex items-center gap-3 rounded-lg mb-0.5 relative transition-all duration-200"
-                                style={{
-                                    padding: '10px 14px',
-                                    fontSize: '14px',
-                                    letterSpacing: '0.02em',
-                                    background: isActive
-                                        ? 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))'
-                                        : 'transparent',
-                                    color: isActive ? '#a78bfa' : 'rgba(200,180,240,0.65)',
-                                    border: isActive
-                                        ? '1px solid rgba(139,92,246,0.25)'
-                                        : '1px solid transparent',
-                                }}
-                            >
-                                {isActive && (
-                                    <div
-                                        className="absolute left-0 rounded-sm"
-                                        style={{
-                                            top: '25%', bottom: '25%', width: '2px',
-                                            background: 'linear-gradient(180deg, #8b5cf6, #a78bfa)',
-                                        }}
-                                    />
-                                )}
-                                <span style={{ fontSize: '14px', width: '20px', textAlign: 'center', opacity: 0.8 }}>
-                                    {item.icon}
-                                </span>
-                                {item.label}
-                            </Link>
-                        );
-                    })}
-                </div>
-
-                {/* Footer */}
-                <div
-                    className="flex items-center gap-2.5 px-6 py-5"
-                    style={{ borderTop: '1px solid rgba(180,140,255,0.12)' }}
-                >
-                    <div
-                        className="flex-shrink-0 flex items-center justify-center rounded-full"
-                        style={{
-                            width: '30px', height: '30px',
-                            background: 'linear-gradient(135deg, #8b5cf6, #2d1b69)',
-                            border: '1px solid rgba(201,168,76,0.4)',
-                            fontFamily: "'Cinzel', serif",
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: '#e8cc82',
-                        }}
-                    >
-                        {initial}
-                    </div>
-                    <div className="overflow-hidden">
-                        <div
-                            style={{
-                                fontSize: '12px', fontWeight: 500, color: '#f0e6ff',
-                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                            }}
-                        >
-                            {username}
+                <aside className="sidebar">
+                    <Link href="/admin" className="sidebar-brand" onClick={() => setSidebarOpen(false)}>
+                        <div className="brand-mark">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2L13.8 8.2L20 10L13.8 11.8L12 18L10.2 11.8L4 10L10.2 8.2L12 2Z" fill="currentColor" />
+                                <circle cx="12" cy="12" r="11" stroke="currentColor" strokeWidth="0.8" opacity="0.4" />
+                            </svg>
                         </div>
-                        <div style={{ fontSize: '10px', color: 'rgba(160,140,200,0.4)', letterSpacing: '0.05em' }}>
-                            Super Admin
+                        <div className="brand-text">
+                            <div className="brand-name">ArcanaAI</div>
+                            <div className="brand-sub">Admin console</div>
+                        </div>
+                    </Link>
+
+                    <div className="sidebar-section-label">Workspace</div>
+                    <nav className="sidebar-nav">
+                        {NAV_ITEMS.map((item) => {
+                            const isActive = activePath === item.href;
+                            const count = item.countKey ? counts[item.countKey] : undefined;
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={`sidebar-item ${isActive ? "is-active" : ""}`}
+                                    onClick={() => setSidebarOpen(false)}
+                                >
+                                    <Icon name={item.icon} size={16} />
+                                    <span className="sidebar-item-label">{item.label}</span>
+                                    {count != null && <span className="sidebar-item-count">{count.toLocaleString()}</span>}
+                                </Link>
+                            );
+                        })}
+                    </nav>
+
+                    <div className="sidebar-ornament">
+                        <div className="ornament-card">
+                            <div className="ornament-glyph">✦</div>
+                            <div className="ornament-title">Card of the day</div>
+                            <div className="ornament-card-name">The Star</div>
+                            <div className="ornament-card-meaning">Hope · Renewal · Serenity</div>
                         </div>
                     </div>
-                </div>
-            </aside>
 
-            {/* Mobile top bar */}
-            <div
-                className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14"
-                style={{ background: '#0c0c1e', borderBottom: '1px solid rgba(180,140,255,0.12)' }}
-            >
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', letterSpacing: '0.15em', color: '#f0e6ff' }}>
-                    ADMIN PORTAL
-                </div>
-                <button
-                    onClick={() => setMobileOpen(!mobileOpen)}
-                    className="p-2 rounded-lg"
-                    style={{ color: 'rgba(200,180,240,0.65)' }}
-                >
-                    {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-                </button>
-            </div>
-
-            {/* ── Main content ── */}
-            <main className="flex-1 relative z-10 min-h-screen pt-14 lg:pt-0 px-6 sm:px-10 pb-16" style={{ marginLeft: '0', paddingLeft: '24px' }}>
-                <div style={{ marginLeft: '0' }} className="lg:ml-[220px]">
-                    {/* Top bar */}
-                    <div className="flex items-center justify-between pt-6 mb-12">
-                        <div className="flex items-center gap-3">
-                            <span style={{ color: '#c9a84c', fontSize: '16px', opacity: 0.7 }}>✦</span>
-                            <div style={{ fontSize: '13px', color: 'rgba(160,140,200,0.4)', letterSpacing: '0.05em' }}>
-                                Admin Portal ›{' '}
-                                <span style={{ color: 'rgba(200,180,240,0.65)' }}>{breadcrumb}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div
-                                className="flex items-center justify-center rounded-lg cursor-pointer"
-                                style={{
-                                    width: '34px', height: '34px',
-                                    border: '1px solid rgba(180,140,255,0.12)',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    color: 'rgba(200,180,240,0.65)',
-                                    fontSize: '14px',
-                                }}
-                            >
-                                🔔
-                            </div>
-                            <div
-                                className="flex items-center justify-center rounded-lg cursor-pointer"
-                                style={{
-                                    width: '34px', height: '34px',
-                                    border: '1px solid rgba(180,140,255,0.12)',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    color: 'rgba(200,180,240,0.65)',
-                                    fontSize: '14px',
-                                }}
-                            >
-                                ⚙
+                    <div className="sidebar-footer">
+                        <div className="user-chip">
+                            <div className="user-avatar">{initial}</div>
+                            <div className="user-chip-text">
+                                <div className="user-chip-name">{username}</div>
+                                <div className="user-chip-role">Administrator</div>
                             </div>
                         </div>
                     </div>
+                </aside>
 
-                    {children}
+                <div className="main">
+                    <header className="topbar">
+                        <button className="topbar-icon-btn topbar-menu-btn" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
+                            <Icon name="menu" size={16} />
+                        </button>
+                        <div className="topbar-left">
+                            <div className="breadcrumb">
+                                <Link href="/admin" className="breadcrumb-root">ArcanaAI</Link>
+                                <Icon name="chevron_right" size={12} />
+                                <span className="breadcrumb-current">{breadcrumb}</span>
+                            </div>
+                        </div>
+                        <div className="topbar-right">
+                            <SearchInput value={search} onChange={setSearch} placeholder="Search users, cards, sessions…" />
+                            <button className="topbar-icon-btn" aria-label="Notifications">
+                                <Icon name="bell" size={16} />
+                            </button>
+                            <SettingsPopover theme={theme} />
+                        </div>
+                    </header>
 
-                    {/* Footer rule */}
-                    <div
-                        className="mt-14 text-center flex items-center justify-center gap-4"
-                        style={{ fontSize: '12px', letterSpacing: '0.25em', color: 'rgba(160,140,200,0.4)' }}
-                    >
-                        <span style={{ display: 'inline-block', width: '60px', height: '1px', background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.4))' }} />
-                        ✦ TAROT ADMIN PORTAL ✦
-                        <span style={{ display: 'inline-block', width: '60px', height: '1px', background: 'linear-gradient(90deg, rgba(201,168,76,0.4), transparent)' }} />
+                    <div className="content">
+                        {children}
+                        <div className="footer-mark">ArcanaAI · Admin console</div>
                     </div>
-                </div>
-            </main>
-
-            <style>{`
-                @keyframes adminPulseGlow {
-                    0%, 100% { box-shadow: 0 0 20px rgba(139,92,246,0.2), 0 0 40px rgba(139,92,246,0.1); }
-                    50%       { box-shadow: 0 0 30px rgba(139,92,246,0.4), 0 0 60px rgba(139,92,246,0.15); }
-                }
-            `}</style>
-        </div>
-    );
-}
-
-/* ── Reusable styled primitives ── */
-
-export function AdminCard({
-    children,
-    className = '',
-    style = {},
-}: {
-    children: React.ReactNode;
-    className?: string;
-    style?: React.CSSProperties;
-}) {
-    return (
-        <div
-            className={`rounded-[14px] ${className}`}
-            style={{
-                background: '#111122',
-                border: '1px solid rgba(180,140,255,0.12)',
-                ...style,
-            }}
-        >
-            {children}
-        </div>
-    );
-}
-
-export function SectionHeader({ title }: { title: string }) {
-    return (
-        <div className="flex items-center gap-3.5 mb-5">
-            <div
-                style={{
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    letterSpacing: '0.2em',
-                    color: 'rgba(200,180,240,0.65)',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                }}
-            >
-                {title}
-            </div>
-            <div
-                className="flex-1 h-px"
-                style={{ background: 'linear-gradient(90deg, rgba(180,140,255,0.12), transparent)' }}
-            />
-        </div>
-    );
-}
-
-export function AdminLoadingScreen({ label = 'Loading…' }: { label?: string }) {
-    return (
-        <div
-            className="min-h-screen flex items-center justify-center"
-            style={{ background: '#080810' }}
-        >
-            <div className="text-center">
-                <div
-                    className="w-14 h-14 rounded-full mx-auto mb-4 animate-spin"
-                    style={{ border: '2px solid rgba(139,92,246,0.15)', borderTopColor: '#8b5cf6' }}
-                />
-                <div
-                    style={{
-                        fontFamily: "'Cinzel', serif",
-                        fontSize: '12px',
-                        letterSpacing: '0.2em',
-                        color: 'rgba(160,140,200,0.4)',
-                        textTransform: 'uppercase',
-                    }}
-                >
-                    {label}
                 </div>
             </div>
         </div>
     );
 }
 
-export const tableHeadStyle: React.CSSProperties = {
-    padding: '12px 16px',
-    fontSize: '11px',
-    fontFamily: "'Cinzel', serif",
-    letterSpacing: '0.15em',
-    textTransform: 'uppercase',
-    color: 'rgba(160,140,200,0.4)',
-    fontWeight: 600,
-    background: 'rgba(139,92,246,0.04)',
-    borderBottom: '1px solid rgba(180,140,255,0.1)',
-    whiteSpace: 'nowrap',
-};
-
-export const tableCellStyle: React.CSSProperties = {
-    padding: '12px 16px',
-    fontSize: '14px',
-    color: 'rgba(200,180,240,0.65)',
-    borderBottom: '1px solid rgba(180,140,255,0.06)',
-    verticalAlign: 'middle',
-};
+export function AdminLoadingScreen({ label = "Loading…" }: { label?: string }) {
+    return (
+        <div className="admin-loading">
+            <div style={{ textAlign: "center" }}>
+                <div className="admin-loading-spinner" />
+                <div className="admin-loading-label">{label}</div>
+            </div>
+        </div>
+    );
+}
