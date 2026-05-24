@@ -908,3 +908,117 @@ def test_user_registration_does_not_require_full_name(client):
     assert data["email"] == "newfullname@example.com"
     # full_name should not be required or included in registration response
     assert "full_name" not in data or data.get("full_name") is None
+
+
+# Profile Management Tests (bio, timezone, reading preferences)
+def test_get_user_profile_includes_preference_defaults(client, auth_headers, test_user):
+    """A fresh profile returns the default reading preferences and empty details."""
+    response = client.get("/auth/me", headers=auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["bio"] is None
+    assert data["timezone"] is None
+    assert data["lunar_phase_awareness"] is True
+    assert data["card_animations"] == "cinematic"
+    assert data["reading_language"] == "English"
+    assert data["reversed_cards"] is True
+
+
+def test_update_user_profile_bio_success(client, auth_headers, test_user, db_session):
+    """Bio can be set and is persisted."""
+    response = client.put("/auth/me", headers=auth_headers, json={"bio": "Reader of the Thoth deck."})
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["bio"] == "Reader of the Thoth deck."
+
+    response = client.get("/auth/me", headers=auth_headers)
+    assert response.json()["bio"] == "Reader of the Thoth deck."
+
+
+def test_update_user_profile_bio_blank_clears(client, auth_headers, test_user, db_session):
+    """Whitespace-only bio is stored as null."""
+    client.put("/auth/me", headers=auth_headers, json={"bio": "Some bio"})
+    response = client.put("/auth/me", headers=auth_headers, json={"bio": "   "})
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["bio"] is None
+
+
+def test_update_user_profile_bio_too_long(client, auth_headers):
+    """Bio over the max length is rejected."""
+    response = client.put("/auth/me", headers=auth_headers, json={"bio": "x" * 501})
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_update_user_profile_bio_rejects_html(client, auth_headers):
+    """Bio containing HTML/script is rejected."""
+    response = client.put("/auth/me", headers=auth_headers, json={"bio": "<script>alert('x')</script>"})
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_update_user_profile_timezone_success(client, auth_headers, test_user, db_session):
+    """A valid IANA timezone is accepted and persisted."""
+    response = client.put("/auth/me", headers=auth_headers, json={"timezone": "Asia/Ho_Chi_Minh"})
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["timezone"] == "Asia/Ho_Chi_Minh"
+
+    response = client.get("/auth/me", headers=auth_headers)
+    assert response.json()["timezone"] == "Asia/Ho_Chi_Minh"
+
+
+def test_update_user_profile_timezone_invalid(client, auth_headers):
+    """An unknown timezone string is rejected."""
+    response = client.put("/auth/me", headers=auth_headers, json={"timezone": "Mars/Olympus_Mons"})
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_update_user_profile_timezone_blank_clears(client, auth_headers, test_user, db_session):
+    """Empty timezone is stored as null."""
+    client.put("/auth/me", headers=auth_headers, json={"timezone": "UTC"})
+    response = client.put("/auth/me", headers=auth_headers, json={"timezone": ""})
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["timezone"] is None
+
+
+def test_update_user_profile_reading_preferences_success(client, auth_headers, test_user, db_session):
+    """All four reading preferences can be updated together."""
+    payload = {
+        "lunar_phase_awareness": False,
+        "card_animations": "minimal",
+        "reading_language": "Vietnamese",
+        "reversed_cards": False,
+    }
+    response = client.put("/auth/me", headers=auth_headers, json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["lunar_phase_awareness"] is False
+    assert data["card_animations"] == "minimal"
+    assert data["reading_language"] == "Vietnamese"
+    assert data["reversed_cards"] is False
+
+    response = client.get("/auth/me", headers=auth_headers)
+    data = response.json()
+    assert data["lunar_phase_awareness"] is False
+    assert data["card_animations"] == "minimal"
+    assert data["reading_language"] == "Vietnamese"
+    assert data["reversed_cards"] is False
+
+
+def test_update_user_profile_card_animations_invalid(client, auth_headers):
+    """An unsupported card animation value is rejected."""
+    response = client.put("/auth/me", headers=auth_headers, json={"card_animations": "explosion"})
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_update_user_profile_reading_language_invalid(client, auth_headers):
+    """An unsupported reading language is rejected."""
+    response = client.put("/auth/me", headers=auth_headers, json={"reading_language": "Klingon"})
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_update_user_profile_partial_preference_leaves_others(client, auth_headers, test_user, db_session):
+    """Updating one preference does not reset the others."""
+    client.put("/auth/me", headers=auth_headers, json={"card_animations": "off"})
+    response = client.put("/auth/me", headers=auth_headers, json={"reading_language": "French"})
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["card_animations"] == "off"  # unchanged by the second request
+    assert data["reading_language"] == "French"

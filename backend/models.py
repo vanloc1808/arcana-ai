@@ -26,6 +26,12 @@ class User(Base):
         is_active (bool): Whether the user is active.
         is_admin (bool): Whether the user has admin privileges.
         favorite_deck_id (int): Foreign key to the user's favorite deck.
+        bio (str): Optional short biography shown on the user's profile.
+        timezone (str): Optional IANA timezone name for the user.
+        lunar_phase_awareness (bool): Whether readings are colored by the current moon phase.
+        card_animations (str): Card reveal animation preference (cinematic, minimal, off).
+        reading_language (str): Preferred language for generated interpretations.
+        reversed_cards (bool): Whether cards may appear reversed in spreads.
         chat_sessions (list[ChatSession]): Related chat sessions.
         favorite_deck (Deck): The user's favorite deck.
         shared_readings (list[SharedReading]): Shared readings by the user.
@@ -62,6 +68,14 @@ class User(Base):
 
     # Avatar storage
     avatar_filename = Column(String, nullable=True)  # Stores the filename of the avatar
+
+    # Profile details and reading preferences (user-editable)
+    bio = Column(Text, nullable=True)
+    timezone = Column(String, nullable=True)  # IANA timezone name, e.g. "Asia/Ho_Chi_Minh"
+    lunar_phase_awareness = Column(Boolean, default=True, server_default="1")
+    card_animations = Column(String, default="cinematic", server_default="cinematic")  # cinematic | minimal | off
+    reading_language = Column(String, default="English", server_default="English")
+    reversed_cards = Column(Boolean, default=True, server_default="1")
 
     # Relationships
     chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")

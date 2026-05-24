@@ -65,6 +65,23 @@ export interface UserProfile {
     number_of_paid_turns: number;
     last_free_turns_reset?: string;
     avatar_url?: string;
+    bio?: string | null;
+    timezone?: string | null;
+    lunar_phase_awareness?: boolean;
+    card_animations?: string;
+    reading_language?: string;
+    reversed_cards?: boolean;
+}
+
+export interface ProfileUpdatePayload {
+    favorite_deck_id?: number;
+    full_name?: string | null;
+    bio?: string | null;
+    timezone?: string | null;
+    lunar_phase_awareness?: boolean;
+    card_animations?: string;
+    reading_language?: string;
+    reversed_cards?: boolean;
 }
 
 // Shared Reading Types

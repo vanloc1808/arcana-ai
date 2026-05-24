@@ -19,7 +19,7 @@ type TabId = 'profile' | 'decks' | 'subscription' | 'history' | 'notifications';
 
 export default function ProfilePage() {
     const { isAuthenticated } = useAuth();
-    const { profile, fetchProfile, updateFullName } = useUserProfile();
+    const { profile, decks, fetchProfile, fetchDecks, updateProfile } = useUserProfile();
     const { isPremium } = useSubscription();
 
     const [activeTab, setActiveTab] = useState<TabId>('profile');
@@ -27,7 +27,8 @@ export default function ProfilePage() {
 
     useEffect(() => {
         fetchProfile();
-    }, [fetchProfile]);
+        fetchDecks();
+    }, [fetchProfile, fetchDecks]);
 
     if (!isAuthenticated) {
         return (
@@ -94,8 +95,9 @@ export default function ProfilePage() {
                         {activeTab === 'profile' && (
                             <ProfileInfoTab
                                 profile={profile}
+                                decks={decks}
                                 fetchProfile={fetchProfile}
-                                updateFullName={updateFullName}
+                                updateProfile={updateProfile}
                                 onAvatarChange={() => {}}
                             />
                         )}

@@ -21,6 +21,7 @@ jest.mock('@/hooks/useUserProfile', () => ({
         fetchProfile: jest.fn(),
         fetchDecks: jest.fn(),
         updateFavoriteDeck: jest.fn().mockResolvedValue(true),
+        updateProfile: jest.fn().mockResolvedValue(true),
     }),
 }));
 
