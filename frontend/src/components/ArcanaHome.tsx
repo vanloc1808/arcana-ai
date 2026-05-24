@@ -202,27 +202,161 @@ function Hero({ name, ready, lastReading, readingCount }: {
     const partOfDay = h < 5 ? 'night' : h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
     const day = now.toLocaleDateString('en-US', { weekday: 'long' });
     const variants = [
-      {
-        title: <>The veil is thin tonight, <span className="ah-it">{name}</span>.</>,
-        sub: 'Three cards rest beneath your fingers — let one speak before you choose.',
-      },
-      {
-        title: <>{day}&apos;s hush finds you, <span className="ah-it">{name}</span>.</>,
-        sub: 'The crescent grows and the hour is quiet — a gentle window for clarity.',
-      },
-      {
-        title: <>What do you wish to <span className="ah-it">remember</span>, {name}?</>,
-        sub: "Your story is written in symbols. We're only here to read it back to you.",
-      },
-      {
-        title: <>Good {partOfDay}, <span className="ah-it">{name}</span>. The cards have been waiting.</>,
-        sub: 'Pick up where the last reading left off, or draw one fresh from the deck.',
-      },
-      {
-        title: <>Step closer to the <span className="ah-it">edge of the page</span>, {name}.</>,
-        sub: 'Tonight the deck remembers what the day forgot. Ask it carefully.',
-      },
-    ];
+    {
+      title: <>The veil is thin tonight, <span className="ah-it">{name}</span>.</>,
+      sub: 'Three cards rest beneath your fingers — let one speak before you choose.',
+    },
+    {
+      title: <>{day}&apos;s hush finds you, <span className="ah-it">{name}</span>.</>,
+      sub: 'The crescent grows and the hour is quiet — a gentle window for clarity.',
+    },
+    {
+      title: <>What do you wish to <span className="ah-it">remember</span>, {name}?</>,
+      sub: "Your story is written in symbols. We're only here to read it back to you.",
+    },
+    {
+      title: <>Good {partOfDay}, <span className="ah-it">{name}</span>. The cards have been waiting.</>,
+      sub: 'Pick up where the last reading left off, or draw one fresh from the deck.',
+    },
+    {
+      title: <>Step closer to the <span className="ah-it">edge of the page</span>, {name}.</>,
+      sub: 'Tonight the deck remembers what the day forgot. Ask it carefully.',
+    },
+
+    // More intimate
+    {
+      title: <>You came back, <span className="ah-it">{name}</span>.</>,
+      sub: 'Some questions take more than one lifetime to answer.',
+    },
+    {
+      title: <>Your energy feels <span className="ah-it">different</span> tonight.</>,
+      sub: 'The cards notice these things before people do.',
+    },
+    {
+      title: <>There&apos;s a quiet ache in the air, <span className="ah-it">{name}</span>.</>,
+      sub: 'Let the deck hold it for a moment.',
+    },
+
+    // Prophetic / fate
+    {
+      title: <>Something is already <span className="ah-it">turning</span>.</>,
+      sub: 'You felt it before you opened this page.',
+    },
+    {
+      title: <>Not every coincidence is an accident, <span className="ah-it">{name}</span>.</>,
+      sub: 'Tonight may reveal which ones matter.',
+    },
+    {
+      title: <>The next chapter presses gently at the door.</>,
+      sub: 'A single card may be enough to open it.',
+    },
+
+    // Ritualistic
+    {
+      title: <>The candles are lit. The deck is awake.</>,
+      sub: 'All that remains is your question.',
+    },
+    {
+      title: <>A reading begins long before the first card is drawn.</>,
+      sub: 'Sometimes it begins with the feeling that brought you here.',
+    },
+    {
+      title: <>Shuffle slowly, <span className="ah-it">{name}</span>.</>,
+      sub: 'The answers dislike being rushed.',
+    },
+
+    // Cosmic / dreamlike
+    {
+      title: <>The stars are quieter than usual tonight.</>,
+      sub: 'That often means the cards will speak louder.',
+    },
+    {
+      title: <>Moonlight and memory make dangerous companions.</>,
+      sub: 'Still… they tend to reveal the truth.',
+    },
+    {
+      title: <>Between sleep and waking, the symbols grow clearer.</>,
+      sub: 'You arrived at exactly the right hour.',
+    },
+
+    // Comforting
+    {
+      title: <>You don&apos;t need to have the right words today.</>,
+      sub: 'The cards understand unfinished feelings.',
+    },
+    {
+      title: <>Rest for a moment, <span className="ah-it">{name}</span>.</>,
+      sub: 'Insight arrives more easily when the world grows quiet.',
+    },
+    {
+      title: <>Some answers are meant to comfort, not control.</>,
+      sub: 'Draw gently.',
+    },
+
+    // Slightly eerie
+    {
+      title: <>The deck remembered you before you arrived.</>,
+      sub: 'That rarely happens without reason.',
+    },
+    {
+      title: <>A strange current follows this evening.</>,
+      sub: 'Let’s see where it leads.',
+    },
+    {
+      title: <>Not every card wants to be turned over.</>,
+      sub: 'But the important ones usually insist.',
+    },
+
+    // Progress-aware / meta
+    {
+      title: <>You&apos;ve drawn {readingCount} reading{readingCount === 1 ? '' : 's'} so far.</>,
+      sub: 'Patterns emerge slowly. Tonight may connect a missing thread.',
+    },
+    {
+      title: <>Your last reading still lingers in the air.</>,
+      sub: lastReading
+        ? `The echo of "${lastReading}" has not fully faded.`
+        : 'Some symbols take time to unfold.',
+    },
+    {
+      title: <>
+        {ready
+          ? <>The deck is ready for you, <span className="ah-it">{name}</span>.</>
+          : <>The cards are still settling.</>}
+      </>,
+      sub: ready
+        ? 'Trust the first instinct. It usually arrives before doubt.'
+        : 'Even silence can be part of the reading.',
+    },
+
+    // Playful mystical
+    {
+      title: <>The universe has terrible timing.</>,
+      sub: 'Fortunately, the tarot compensates for it.',
+    },
+    {
+      title: <>Another night, another attempt to negotiate with fate.</>,
+      sub: 'At least this time you brought cards.',
+    },
+    {
+      title: <>The deck has opinions today.</>,
+      sub: 'You may or may not enjoy hearing them.',
+    },
+
+    // Literary
+    {
+      title: <>Every soul leaves annotations in the margins.</>,
+      sub: 'Tonight we read a few of yours.',
+    },
+    {
+      title: <>Some stories are too honest to be spoken aloud.</>,
+      sub: 'That is why symbols exist.',
+    },
+    {
+      title: <>You stand between memory and possibility, <span className="ah-it">{name}</span>.</>,
+      sub: 'The cards were made for thresholds like this.',
+    },
+  ];
     return variants[dayOfYear(now) % variants.length];
   }, [name]);
 
