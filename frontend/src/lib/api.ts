@@ -272,8 +272,8 @@ export const auth = {
 
 // Chat endpoints
 export const chat = {
-    getSessions: async () => {
-        const response = await api.get("/chat/sessions/");
+    getSessions: async (skip: number = 0, limit: number = 30) => {
+        const response = await api.get("/chat/sessions/", { params: { skip, limit } });
         return response.data;
     },
 

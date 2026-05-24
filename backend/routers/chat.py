@@ -3,7 +3,7 @@ import json
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from langchain_openai import ChatOpenAI
 from sqlalchemy.orm import Session, selectinload
@@ -402,20 +402,25 @@ def create_chat_session(
 def get_chat_sessions(
     request: Request,
     response: Response,
+    skip: int = Query(0, ge=0, description="Number of sessions to skip (offset)."),
+    limit: int = Query(30, ge=1, le=100, description="Maximum number of sessions to return."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Get User's Chat Sessions
 
-    Retrieve all chat sessions belonging to the authenticated user,
-    ordered by creation date (most recent first).
+    Retrieve the authenticated user's chat sessions, ordered by creation date
+    (most recent first). Results are paginated to keep the response bounded for
+    users with a large history.
 
     Args:
+        skip (int): Number of sessions to skip, for offset-based pagination.
+        limit (int): Maximum number of sessions to return (1-100, default 30).
         current_user (User): Authenticated user (automatically injected)
 
     Returns:
-        List[ChatSessionResponse]: List of user's chat sessions
+        List[ChatSessionResponse]: A page of the user's chat sessions
             Each session contains:
             - id (int): Unique session ID
             - title (str): Session title
@@ -451,12 +456,19 @@ def get_chat_sessions(
             db.query(ChatSession)
             .filter(ChatSession.user_id == current_user.id)
             .order_by(ChatSession.created_at.desc())
+            .offset(skip)
+            .limit(limit)
             .all()
         )
 
         logger.logger.info(
             "Retrieved chat sessions",
-            extra={"user_id": current_user.id, "session_count": len(sessions)},
+            extra={
+                "user_id": current_user.id,
+                "session_count": len(sessions),
+                "skip": skip,
+                "limit": limit,
+            },
         )
         return sessions
     except RateLimitExceededError:

@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC
 
 from passlib.context import CryptContext
-from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
@@ -186,6 +186,9 @@ class ChatSession(Base):
     """
 
     __tablename__ = "chat_sessions"
+    # Composite index backing the session-list query, which filters by user_id
+    # and orders by created_at DESC.
+    __table_args__ = (Index("ix_chat_sessions_user_id_created_at", "user_id", "created_at"),)
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String)
