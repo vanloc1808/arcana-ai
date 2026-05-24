@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.16] - 2026-05-24
+
+### Changed
+- Profile editing now uses an explicit "Edit profile" button: fields are read-only by default and unlock for editing only after clicking Edit, which then shows Save/Cancel controls. This replaces the always-editable form so it's clear how to update profile information.
+
 ## [0.0.15] - 2026-05-24
 
 ### Added
