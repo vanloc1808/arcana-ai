@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Removed the duplicate left-side chat history panel from the home chat shell; recent sessions remain available through "Continue where you left off".
+- Removed the redundant reading-page title/actions panel and full turn entitlement panel so the tarot reading form starts without extra boxes.
 
 ### Fixed
 - Home chat error banners now use darker red text so failure messages remain readable against the light red alert background.
