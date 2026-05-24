@@ -6,7 +6,7 @@ When making user-facing changes, update `backend/docs/CHANGELOG.md` as part of t
 
 - Follow the existing [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add entries under the appropriate section: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
-- Bump the version and date when cutting a release; otherwise append to the current unreleased/most recent version.
+- Create the changelog when a new pull request is opened, and update it as the PR evolves. Don't wait until the end to write the changelog entry. Each pull request should be attached with a changelog entry (version) from the moment it's opened, even if it's a draft. This ensures that the changelog is always up to date and reflects the current state of the codebase.
 - Skip changelog updates only for changes with no user-visible impact (internal refactors, test-only changes, CI tweaks, dependency bumps without behavior changes).
 
 ## Pull request hygiene
