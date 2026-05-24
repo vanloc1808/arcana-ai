@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
@@ -46,6 +46,14 @@ const COLUMNS: Column[] = [
 ];
 
 export default function AdminCardsPage() {
+    return (
+        <Suspense fallback={<AdminLoadingScreen label="Loading cards…" />}>
+            <AdminCardsPageContent />
+        </Suspense>
+    );
+}
+
+function AdminCardsPageContent() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
