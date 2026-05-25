@@ -222,26 +222,6 @@ function ChatMessage({ message }: { message: Message }) {
           >
             {message.content}
           </ReactMarkdown>
-          {/* Additional cards from follow-up */}
-          {message.cards && message.cards.length > 0 && (
-            <div className="sess-chat-cards">
-              {message.cards.map((card, i) => (
-                <div key={card.id || i} className="sess-chat-card-chip">
-                  {card.image_url && (
-                    <div style={{ position: 'relative', width: 28, height: 40, borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
-                      <Image src={card.image_url} alt={card.name} fill style={{ objectFit: 'cover' }} sizes="28px" />
-                    </div>
-                  )}
-                  <div>
-                    <div style={{ fontSize: 12, fontFamily: 'var(--sess-serif)', color: 'var(--sess-text)' }}>{card.name}</div>
-                    {card.orientation === 'reversed' && (
-                      <div style={{ fontSize: 10, fontFamily: 'var(--sess-mono)', color: 'var(--sess-plum)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Reversed</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -639,9 +619,31 @@ function SessionDetailInner() {
           )}
 
           {/* ── Follow-up chat messages ── */}
-          {continuationMsgs.map((msg) => (
-            <ChatMessage key={msg.id} message={msg} />
-          ))}
+          {continuationMsgs.map((msg) => {
+            // Card-drawing follow-ups get the same full spread + article treatment
+            if (msg.role === 'assistant' && msg.cards && msg.cards.length > 0) {
+              const msgPositions = getPositions(msg.cards.length);
+              return (
+                <React.Fragment key={msg.id}>
+                  <div className="sess-spread" style={{
+                    gridTemplateColumns: `repeat(${Math.min(msg.cards.length, 3)}, 1fr)`,
+                  }}>
+                    {msg.cards.map((card, i) => (
+                      <SpreadCard
+                        key={card.id || i}
+                        card={card}
+                        position={msgPositions[i] || `Card ${i + 1}`}
+                        index={i}
+                        revealed={true}
+                      />
+                    ))}
+                  </div>
+                  <ReadingArticle content={msg.content} />
+                </React.Fragment>
+              );
+            }
+            return <ChatMessage key={msg.id} message={msg} />;
+          })}
 
           {/* ── Shuffling animation ── */}
           {isDrawingCards && (
