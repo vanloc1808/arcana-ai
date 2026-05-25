@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from models import User
+from models import ChatSession, User
 from routers.auth import create_access_token
 from database import get_db
 
@@ -53,6 +53,29 @@ def test_admin_list_users(client, admin_auth_headers):
     resp = client.get("/admin/users", headers=admin_auth_headers)
     assert resp.status_code == status.HTTP_200_OK
     assert isinstance(resp.json(), list)
+
+
+def test_admin_list_users_no_sessions_filter(client, admin_auth_headers, db_session):
+    no_sessions_user = User(username="nosessionsuser", email="nosessions@example.com", is_active=True)
+    no_sessions_user.password = "password123"
+    has_sessions_user = User(username="hassessionsuser", email="hassessions@example.com", is_active=True)
+    has_sessions_user.password = "password123"
+    db_session.add_all([no_sessions_user, has_sessions_user])
+    db_session.commit()
+    db_session.refresh(no_sessions_user)
+    db_session.refresh(has_sessions_user)
+
+    db_session.add(ChatSession(title="Started chat", user_id=has_sessions_user.id))
+    db_session.commit()
+    no_sessions_user_id = no_sessions_user.id
+    has_sessions_user_id = has_sessions_user.id
+
+    resp = client.get("/admin/users?limit=100&no_sessions=true", headers=admin_auth_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    users = resp.json()
+    user_ids = {u["id"] for u in users}
+    assert no_sessions_user_id in user_ids
+    assert has_sessions_user_id not in user_ids
 
 def test_admin_get_user(client, admin_auth_headers):
     users = client.get("/admin/users", headers=admin_auth_headers).json()
