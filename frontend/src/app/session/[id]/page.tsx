@@ -510,6 +510,13 @@ function SessionDetailInner() {
     [messages, readingMsgIdx]
   );
 
+  const preReadingMsgs = useMemo(() => {
+    if (readingMsgIdx < 0) {
+      return messages;
+    }
+    return messages.slice(0, readingMsgIdx);
+  }, [messages, readingMsgIdx]);
+
   const continuationMsgs = useMemo(() => {
     if (readingMsgIdx < 0) return [];
     return messages.slice(readingMsgIdx + 1);
@@ -572,6 +579,11 @@ function SessionDetailInner() {
           {!hasContent && !loading && !isDrawingCards && (
             <NewSessionComposer sessionId={sessionId} />
           )}
+
+          {/* ── Messages before first card reading (plain chat fallback) ── */}
+          {preReadingMsgs.map((msg) => (
+            <ChatMessage key={msg.id} message={msg} />
+          ))}
 
           {/* ── Question header ── */}
           {questionMsg && (
