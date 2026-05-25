@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - The backend now conditionally includes the `rename_chat` tool only when a session still has its default title; once a title is set by either the user or assistant, subsequent model calls omit the rename tool.
+- Enhance the homepage UI & chat session UI.
 
 ### Fixed
 - Home page center "Card of the day" image now renders reliably for remote deck URLs by bypassing Next image optimization for that slot and falling back gracefully if the image fails to load.
