@@ -479,6 +479,7 @@ class UserResponse(BaseModel):
     full_name: str | None = None
     created_at: datetime
     is_active: bool
+    is_deleted: bool = False
     is_admin: bool = False
     is_specialized_premium: bool = False
     favorite_deck_id: int | None = None
@@ -872,6 +873,7 @@ class AdminUserResponse(BaseModel):
     full_name: str | None = None
     created_at: datetime
     is_active: bool
+    is_deleted: bool = False
     is_admin: bool = False
     is_specialized_premium: bool = False
     receive_error_alerts: bool = False
@@ -899,6 +901,7 @@ class AdminUserUpdate(BaseModel):
     email: str | None = None
     full_name: str | None = None
     is_active: bool | None = None
+    is_deleted: bool | None = None
     is_specialized_premium: bool | None = None
     receive_error_alerts: bool | None = None
     favorite_deck_id: int | None = None
