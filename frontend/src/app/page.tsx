@@ -76,6 +76,7 @@ function HomeContent() {
 
   const [input, setInput] = useState('');
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [isNavigatingToSession, setIsNavigatingToSession] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
@@ -123,9 +124,12 @@ function HomeContent() {
   }, [router]);
 
   const handleStartReading = useCallback(async () => {
+    setIsNavigatingToSession(true);
     const session = await createSession();
     if (session) {
       router.push(`/session/${session.id}`);
+    } else {
+      setIsNavigatingToSession(false);
     }
   }, [createSession, router]);
 
@@ -183,7 +187,7 @@ function HomeContent() {
               ref={contentScrollRef}
               className={`flex-1 ${currentSession ? 'p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto' : 'overflow-y-auto'}`}
             >
-              {currentSession ? (
+              {currentSession && !isNavigatingToSession ? (
                 <>
                   {messages.map(message => (
                     <div
