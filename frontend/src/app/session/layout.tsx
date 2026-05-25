@@ -148,7 +148,7 @@ function LeftRail() {
       <button className="sess-new-btn" onClick={handleNew}>
         <IconPlus />
         <span>New reading</span>
-        <span className="sess-kbd">⌘N</span>
+
       </button>
 
       <div className="sess-rail-section">
