@@ -75,11 +75,12 @@ def test_admin_update_user(client, admin_auth_headers):
 
 def test_admin_delete_user_soft_deletes(client, admin_auth_headers, test_user, db_session):
     """Test admin user delete endpoint soft-deletes the user instead of hard delete."""
-    response = client.delete(f"/admin/users/{test_user.id}", headers=admin_auth_headers)
+    user_id = test_user.id
+    response = client.delete(f"/admin/users/{user_id}", headers=admin_auth_headers)
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["message"] == "User deleted successfully"
 
-    updated_user = db_session.query(User).filter(User.id == test_user.id).first()
+    updated_user = db_session.query(User).filter(User.id == user_id).first()
     assert updated_user is not None
     assert updated_user.is_active is False
     assert updated_user.is_deleted is True
