@@ -19,7 +19,6 @@ depends_on = None
 def upgrade() -> None:
     op.add_column('users', sa.Column('is_deleted', sa.Boolean(), nullable=False, server_default=sa.false()))
     op.create_index(op.f('ix_users_is_deleted'), 'users', ['is_deleted'], unique=False)
-    op.alter_column('users', 'is_deleted', server_default=None)
 
 
 def downgrade() -> None:
