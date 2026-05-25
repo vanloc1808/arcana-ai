@@ -44,6 +44,7 @@ def build_admin_user_response(user: User, base_url: str = "") -> AdminUserRespon
         full_name=user.full_name,
         created_at=user.created_at,
         is_active=user.is_active,
+        is_deleted=user.is_deleted or False,
         is_admin=user.is_admin or False,
         is_specialized_premium=user.is_specialized_premium or False,
         receive_error_alerts=user.receive_error_alerts or False,
@@ -364,12 +365,13 @@ async def update_user(
 
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
-    """Delete a user"""
+    """Soft-delete a user by deactivating the account."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    db.delete(user)
+    user.is_deleted = True
+    user.is_active = False
     db.commit()
 
     return {"message": "User deleted successfully"}

@@ -24,6 +24,7 @@ class User(Base):
         full_name (str): Optional full name of the user.
         created_at (datetime): Timestamp of user creation.
         is_active (bool): Whether the user is active.
+        is_deleted (bool): Whether the user is soft-deleted.
         is_admin (bool): Whether the user has admin privileges.
         favorite_deck_id (int): Foreign key to the user's favorite deck.
         bio (str): Optional short biography shown on the user's profile.
@@ -50,6 +51,7 @@ class User(Base):
     full_name = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     is_active = Column(Boolean, default=True)
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)
     is_admin = Column(Boolean, default=False)
     favorite_deck_id = Column(Integer, ForeignKey("decks.id"), default=1, index=True)
 
