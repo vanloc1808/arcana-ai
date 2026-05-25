@@ -73,6 +73,11 @@ export interface UserProfile {
     reversed_cards?: boolean;
 }
 
+export interface TimezoneOption {
+    value: string;
+    label: string;
+}
+
 export interface ProfileUpdatePayload {
     favorite_deck_id?: number;
     full_name?: string | null;
