@@ -159,24 +159,24 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                         <FiZap className="w-4 h-4 text-purple-400" />
                         Quick Actions
                     </h3>
-                    <div className="space-y-2">
+                    <div className="grid gap-2">
                         <Link
                             href="/reading"
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-purple-900/40 transition-colors text-sm text-gray-300 hover:text-purple-300"
+                            className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-purple-900/40 transition-colors text-sm leading-5 text-gray-300 hover:text-purple-300"
                         >
                             <FiSun className="w-4 h-4" />
                             New Reading
                         </Link>
                         <Link
                             href="/journal"
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-purple-900/40 transition-colors text-sm text-gray-300 hover:text-purple-300"
+                            className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-purple-900/40 transition-colors text-sm leading-5 text-gray-300 hover:text-purple-300"
                         >
                             <FiBookOpen className="w-4 h-4" />
                             Journal
                         </Link>
                         <Link
                             href="/profile"
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-purple-900/40 transition-colors text-sm text-gray-300 hover:text-purple-300"
+                            className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-purple-900/40 transition-colors text-sm leading-5 text-gray-300 hover:text-purple-300"
                         >
                             <FiUser className="w-4 h-4" />
                             Profile
@@ -193,7 +193,7 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                             <FiHeart className="w-4 h-4 text-red-400" />
                             Your Journey
                         </h3>
-                        <div className="space-y-2">
+                        <div className="grid gap-2">
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-gray-400">Member since</span>
                                 <span className="text-xs text-purple-300">
