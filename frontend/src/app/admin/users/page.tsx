@@ -28,7 +28,7 @@ interface AdminUser {
 
 interface AdminDeck { id: number; name: string; }
 
-type Filter = "all" | "active" | "inactive" | "vip";
+type Filter = "all" | "active" | "inactive" | "vip" | "no_sessions";
 const PAGE_SIZE = 10;
 
 const COLUMNS: Column[] = [
@@ -76,14 +76,15 @@ function AdminUsersPageContent() {
         if (isAuthLoading) return;
         if (!isAuthenticated) { router.push("/login"); return; }
         if (!user?.is_admin) { router.push("/"); return; }
-        loadData();
-    }, [isAuthenticated, user, router, isAuthLoading]);
+        loadData(filter);
+    }, [isAuthenticated, user, router, isAuthLoading, filter]);
 
-    const loadData = async () => {
+    const loadData = async (activeFilter: Filter) => {
         try {
             setLoading(true);
+            const usersParams = activeFilter === "no_sessions" ? { limit: 100, no_sessions: true } : { limit: 100 };
             const [usersRes, decksRes] = await Promise.all([
-                api.get("/admin/users?limit=100"),
+                api.get("/admin/users", { params: usersParams }),
                 api.get("/admin/decks?limit=100"),
             ]);
             setUsers(usersRes.data);
@@ -149,9 +150,9 @@ function AdminUsersPageContent() {
                 <div className="toolbar">
                     <SearchInput value={q} onChange={setQ} placeholder="Search by name, username, email…" />
                     <div className="filter-group">
-                        {(["all", "active", "inactive", "vip"] as Filter[]).map((f) => (
+                        {(["all", "active", "inactive", "vip", "no_sessions"] as Filter[]).map((f) => (
                             <button key={f} className={`filter-chip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
-                                {f === "all" ? "All" : f === "vip" ? "VIP" : f[0].toUpperCase() + f.slice(1)}
+                                {f === "all" ? "All" : f === "vip" ? "VIP" : f === "no_sessions" ? "No sessions" : f[0].toUpperCase() + f.slice(1)}
                             </button>
                         ))}
                     </div>
@@ -180,7 +181,7 @@ function AdminUsersPageContent() {
                                         );
                                         setSelectedUserIds(new Set());
                                         setSelectionMode(false);
-                                        await loadData();
+                                        await loadData(filter);
                                     } catch {
                                         alert("Failed to delete one or more users.");
                                     } finally {
@@ -208,7 +209,7 @@ function AdminUsersPageContent() {
                             key={u.id}
                             u={u}
                             decks={decks}
-                            onSaved={loadData}
+                            onSaved={() => loadData(filter)}
                             selectionMode={selectionMode}
                             selected={selectedUserIds.has(u.id)}
                             onToggleSelected={() => {
