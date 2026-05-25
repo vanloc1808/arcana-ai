@@ -10,15 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Chat completions can now receive a `rename_chat` tool call for brand-new sessions, allowing the model to assign a short descriptive conversation title instead of leaving every chat as "New Chat".
 - Admin Users now supports bulk user deletion with a Select mode, row-level multi-select checkboxes, page-level select-all, and a single "Delete selected" action for removing multiple users in one flow.
-- Admin Users now includes a "No sessions" filter that is backed by the admin users API (`no_sessions=true`), so administrators can reliably fetch only accounts that have never started a chat session.
+- Admin Users now includes a "No sessions" filter chip so administrators can quickly find accounts that have never started a chat session.
 
 ### Changed
 - The backend now conditionally includes the `rename_chat` tool only when a session still has its default title; once a title is set by either the user or assistant, subsequent model calls omit the rename tool.
+- Enhance the homepage UI & chat session UI.
+- Removed the unused "Save" action from the chat session reading header, leaving only the "New spread" button in that action row.
 
 ### Fixed
 - Home page center "Card of the day" image now renders reliably for remote deck URLs by bypassing Next image optimization for that slot and falling back gracefully if the image fails to load.
 - Admin user deletion now performs a dedicated soft delete by marking `is_deleted=true` (and deactivating the account) instead of hard-deleting the database row, preventing foreign-key conflicts when related checkout sessions exist while keeping deleted state distinct from inactive users.
 - `/session` now shows recent readings in the left rail instead of visually collapsing the session list.
+- Chat session spread cards now load card artwork with direct image rendering (instead of Next.js optimization) so Card of the Day deck URLs render reliably in-session without blank card faces.
+- Homepage Quick Actions links now stack cleanly without visual overlap on narrow layouts, while still allowing each action label to stay on a single line.
 
 ## [0.0.17] - 2026-05-24
 

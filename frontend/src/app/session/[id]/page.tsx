@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
-import Image from 'next/image';
 import { useSessionCtx } from '../context';
 import type { Message, Card } from '../context';
 
@@ -11,11 +10,6 @@ import type { Message, Card } from '../context';
 const IconSparkle = ({ size = 12 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor">
     <path d="M8 1l1.4 5.6L15 8l-5.6 1.4L8 15l-1.4-5.6L1 8l5.6-1.4z" />
-  </svg>
-);
-const IconBookmark = () => (
-  <svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
-    <path d="M4 2.5h8v11l-4-2.5-4 2.5z" />
   </svg>
 );
 const IconShuffle = () => (
@@ -83,13 +77,13 @@ function SpreadCard({ card, position, index, revealed }: {
         {/* Front face — card image */}
         <div className="sess-card-face sess-card-front">
           {card.image_url ? (
-            <div style={{ position: 'relative', width: '100%', height: '100%', transform: isReversed ? 'rotate(180deg)' : 'none' }}>
-              <Image
+            <div style={{ width: '100%', height: '100%', transform: isReversed ? 'rotate(180deg)' : 'none' }}>
+              <img
                 src={card.image_url}
                 alt={card.name}
-                fill
-                style={{ objectFit: 'cover' }}
-                sizes="220px"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                loading="lazy"
+                decoding="async"
               />
             </div>
           ) : (
@@ -556,10 +550,6 @@ function SessionDetailInner() {
           )}
         </div>
         <div className="sess-top-right">
-          <button className="sess-ghost-btn">
-            <IconBookmark />
-            Save
-          </button>
           {hasReading && (
             <button className="sess-primary-btn sess-primary-btn-sm"
               onClick={() => sendMessage(sessionId, 'Draw a new spread for me.')}

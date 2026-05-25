@@ -102,6 +102,7 @@ function AdminUsersPageContent() {
             if (filter === "active" && !u.is_active) return false;
             if (filter === "inactive" && u.is_active) return false;
             if (filter === "vip" && !u.is_specialized_premium) return false;
+            if (filter === "no_sessions" && u.chat_sessions_count > 0) return false;
             if (!s) return true;
             return u.username.toLowerCase().includes(s)
                 || u.email.toLowerCase().includes(s)
