@@ -61,23 +61,19 @@ const MessageContent = ({ content }: { content: string }) => {
 function HomeContent() {
   const {
     sessions,
-    hasMoreSessions,
-    isLoadingMoreSessions,
     currentSession,
     messages,
     loading,
     error,
     streamingContent,
     isDrawingCards,
-    setCurrentSession,
     createSession,
-    fetchMessages,
     sendMessage,
-    loadMoreSessions,
   } = useChatSessions();
 
   const [input, setInput] = useState('');
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [isNavigatingToSession, setIsNavigatingToSession] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
@@ -120,34 +116,36 @@ function HomeContent() {
     }
   }, [searchParams]);
 
-  const handleSessionClick = useCallback(async (sessionId: number) => {
-    const session = sessions.find(s => s.id === sessionId);
-    if (session) {
-      setCurrentSession(session);
-      await fetchMessages(sessionId);
-    }
-  }, [sessions, setCurrentSession, fetchMessages]);
+  const handleSessionClick = useCallback((sessionId: number) => {
+    router.push(`/session/${sessionId}`);
+  }, [router]);
 
-  // Handle reading history URL parameter
+  const handleStartReading = useCallback(async () => {
+    setIsNavigatingToSession(true);
+    const session = await createSession();
+    if (session) {
+      router.push(`/session/${session.id}`);
+    } else {
+      setIsNavigatingToSession(false);
+    }
+  }, [createSession, router]);
+
+  // Handle URL parameters for session and history navigation
   useEffect(() => {
     const historyParam = searchParams.get('history');
     const sessionParam = searchParams.get('session');
 
     if (sessionParam) {
       const sessionId = parseInt(sessionParam);
-      const session = sessions.find(s => s.id === sessionId);
-      if (session) {
-        handleSessionClick(sessionId);
-      }
+      handleSessionClick(sessionId);
       return;
     }
 
     if (historyParam === 'true') {
-      setCurrentSession(null);
       router.replace('/', { scroll: false });
       scrollToTop();
     }
-  }, [searchParams, sessions, handleSessionClick, setCurrentSession, router, scrollToTop]);
+  }, [searchParams, handleSessionClick, router, scrollToTop]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,7 +184,7 @@ function HomeContent() {
               ref={contentScrollRef}
               className={`flex-1 ${currentSession ? 'p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto' : 'overflow-y-auto'}`}
             >
-              {currentSession ? (
+              {currentSession && !isNavigatingToSession ? (
                 <>
                   {messages.map(message => (
                     <div
@@ -249,12 +247,9 @@ function HomeContent() {
                 </>
               ) : (
                 <ArcanaHome
-                  onStartReading={createSession}
+                  onStartReading={handleStartReading}
                   sessions={sessions}
                   onOpenSession={handleSessionClick}
-                  hasMoreSessions={hasMoreSessions}
-                  isLoadingMoreSessions={isLoadingMoreSessions}
-                  onLoadMoreSessions={loadMoreSessions}
                 />
               )}
               <div ref={messagesEndRef} />

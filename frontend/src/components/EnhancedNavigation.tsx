@@ -172,7 +172,7 @@ export function EnhancedNavigation() {
 
                     {/* Logo */}
                     <Link
-                        href="/?history=true"
+                        href="/"
                         className="flex items-center gap-2.5 shrink-0 hover:opacity-85 transition-opacity"
                     >
                         <TarotAgentLogo size={32} className="text-violet-400 shrink-0" />

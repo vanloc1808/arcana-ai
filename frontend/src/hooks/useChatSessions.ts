@@ -37,12 +37,14 @@ export interface Card {
 }
 
 interface StreamResponse {
-    type: 'user_message' | 'assistant_message' | 'cards' | 'content_start' | 'content_chunk' | 'error' | 'drawing';
+    type: 'user_message' | 'assistant_message' | 'cards' | 'content_start' | 'content_chunk' | 'error' | 'drawing' | 'session_renamed';
     message?: Message;
     cards?: Card[];
     content?: string;
     error?: string;
     num_cards?: number;
+    /** Emitted when the LLM renames the session via the rename_chat tool */
+    title?: string;
 }
 
 // How long the card-drawing animation plays before cards/reading are revealed.
@@ -68,6 +70,7 @@ export const useChatSessions = () => {
     // arrive (the backend waits out the animation before sending them), with a
     // safety timeout in case those events never come.
     const [isDrawingCards, setIsDrawingCards] = useState(false);
+    const [isLoadingSessions, setIsLoadingSessions] = useState(true);
     const drawingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasAttemptedFetch = useRef(false);
 
@@ -94,6 +97,20 @@ export const useChatSessions = () => {
         setIsDrawingCards(false);
     }, [clearDrawingTimer]);
 
+    /**
+     * Apply a server-side rename to the session list and current session in one shot.
+     * Called whenever the SSE stream emits a `session_renamed` event.
+     */
+    const applySessionRename = useCallback((sessionId: number, newTitle: string) => {
+        setSessions(prev =>
+            prev.map(s => s.id === sessionId ? { ...s, title: newTitle } : s)
+        );
+        setCurrentSession(prev =>
+            prev?.id === sessionId ? { ...prev, title: newTitle } : prev
+        );
+        logDebug('Session renamed via SSE', { hook: 'useChatSessions', sessionId, newTitle });
+    }, []);
+
     const handleUnauthorized = useCallback(() => {
         logout();
     }, [logout]);
@@ -104,6 +121,7 @@ export const useChatSessions = () => {
             return;
         }
         hasAttemptedFetch.current = true;
+        setIsLoadingSessions(true);
         try {
             logDebug('Fetching sessions', { hook: 'useChatSessions', hasToken: !!token });
             const data: ChatSession[] = await chat.getSessions(0, SESSIONS_PAGE_SIZE);
@@ -118,6 +136,8 @@ export const useChatSessions = () => {
             }
             logHookError('useChatSessions', 'fetchSessions', error);
             setError(error instanceof Error ? error.message : 'Failed to load chat sessions');
+        } finally {
+            setIsLoadingSessions(false);
         }
     }, [handleUnauthorized, token]);
 
@@ -294,6 +314,9 @@ export const useChatSessions = () => {
                                             setMessages(prev => [...prev, data.message!]);
                                             setStreamingContent('');
                                         }
+                                        if (data.type === 'session_renamed' && data.title) {
+                                            applySessionRename(sessionId, data.title);
+                                        }
                                     } catch (e) {
                                         logError('Error parsing JSON from single data line in final buffer', e, { hook: 'useChatSessions', dataString: singleJsonDataString });
                                     }
@@ -366,6 +389,10 @@ export const useChatSessions = () => {
                                         // Add final assistant message and clear streaming
                                         setMessages(prev => [...prev, parsedData.message!]);
                                         setStreamingContent('');
+                                    }
+
+                                    if (parsedData.type === 'session_renamed' && parsedData.title) {
+                                        applySessionRename(sessionId, parsedData.title);
                                     }
                                 } catch (e) {
                                     logError('Error parsing JSON from single data line in event', e, { hook: 'useChatSessions', dataString: singleJsonDataString, originalLine: line });
@@ -465,6 +492,7 @@ export const useChatSessions = () => {
             fetchSessions();
         } else {
             logDebug('No token available, skipping session fetch', { hook: 'useChatSessions' });
+            setIsLoadingSessions(false);
         }
     }, [token, fetchSessions]);
 
@@ -472,6 +500,7 @@ export const useChatSessions = () => {
         sessions,
         hasMoreSessions,
         isLoadingMoreSessions,
+        isLoadingSessions,
         currentSession,
         messages,
         loading,

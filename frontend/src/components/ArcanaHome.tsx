@@ -13,9 +13,6 @@ interface ArcanaHomeProps {
   onStartReading: () => void;
   sessions: ChatSession[];
   onOpenSession: (sessionId: number) => void;
-  hasMoreSessions?: boolean;
-  isLoadingMoreSessions?: boolean;
-  onLoadMoreSessions?: () => void;
 }
 
 const WHISPERS = [
@@ -443,26 +440,16 @@ function ContinueReading({
   sessions,
   onOpenSession,
   onStartReading,
-  hasMoreSessions,
-  isLoadingMoreSessions,
-  onLoadMoreSessions,
 }: {
   sessions: ChatSession[];
   onOpenSession: (id: number) => void;
   onStartReading: () => void;
-  hasMoreSessions?: boolean;
-  isLoadingMoreSessions?: boolean;
-  onLoadMoreSessions?: () => void;
 }) {
-  const [showAllSessions, setShowAllSessions] = useState(false);
+  const router = useRouter();
   const hasHiddenLoadedSessions = sessions.length > 4;
-  const visibleSessions = showAllSessions ? sessions : sessions.slice(0, 4);
+  const visibleSessions = sessions.slice(0, 4);
   const sessionMetaLabel = sessions.length
-    ? showAllSessions
-      ? hasMoreSessions
-        ? `${visibleSessions.length}+ shown`
-        : `${visibleSessions.length} total`
-      : `${visibleSessions.length} recent`
+    ? `${Math.min(sessions.length, 4)} recent`
     : 'new here';
   return (
     <section className="ah-card">
@@ -487,7 +474,7 @@ function ContinueReading({
         </div>
       ) : (
         <div>
-          <div className={'ah-cont-list' + (showAllSessions ? ' ah-cont-list-all' : '')}>
+          <div className="ah-cont-list">
             {visibleSessions.map((s, i) => (
               <button type="button" className="ah-cont-item" key={s.id} onClick={() => onOpenSession(s.id)}>
                 <span className="ah-cont-mini-cards">
@@ -503,30 +490,16 @@ function ContinueReading({
               </button>
             ))}
           </div>
-          {(hasHiddenLoadedSessions || (showAllSessions && hasMoreSessions && onLoadMoreSessions)) && (
+          {hasHiddenLoadedSessions && (
             <div className="ah-cont-footer">
-              {hasHiddenLoadedSessions && (
-                <button
-                  type="button"
-                  className="ah-cont-footer-action"
-                  onClick={() => setShowAllSessions((value) => !value)}
-                  aria-expanded={showAllSessions}
-                >
-                  <List size={14} aria-hidden="true" />
-                  {showAllSessions ? 'Show recent' : 'All chats'}
-                </button>
-              )}
-              {showAllSessions && hasMoreSessions && onLoadMoreSessions && (
-                <button
-                  type="button"
-                  className="ah-cont-footer-action"
-                  onClick={onLoadMoreSessions}
-                  disabled={isLoadingMoreSessions}
-                >
-                  <List size={14} aria-hidden="true" />
-                  {isLoadingMoreSessions ? 'Loading...' : 'Load more chats'}
-                </button>
-              )}
+              <button
+                type="button"
+                className="ah-cont-footer-action"
+                onClick={() => router.push('/session')}
+              >
+                <List size={14} aria-hidden="true" />
+                All chats
+              </button>
             </div>
           )}
         </div>
@@ -573,9 +546,6 @@ export function ArcanaHome({
   onStartReading,
   sessions,
   onOpenSession,
-  hasMoreSessions = false,
-  isLoadingMoreSessions = false,
-  onLoadMoreSessions,
 }: ArcanaHomeProps) {
   const { user } = useAuth();
   const router = useRouter();
@@ -622,9 +592,6 @@ export function ArcanaHome({
               sessions={sessions}
               onOpenSession={onOpenSession}
               onStartReading={onStartReading}
-              hasMoreSessions={hasMoreSessions}
-              isLoadingMoreSessions={isLoadingMoreSessions}
-              onLoadMoreSessions={onLoadMoreSessions}
             />
           </div>
           <div><CardOfDay card={dailyCard} onRead={() => router.push('/library')} onJournal={() => router.push('/journal')} /></div>
