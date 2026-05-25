@@ -321,11 +321,19 @@ async def list_users(
     request: Request,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    no_sessions: bool = Query(False, description="Return only users with zero chat sessions"),
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user),
 ):
     """List all users with pagination"""
-    users = db.query(User).offset(skip).limit(limit).all()
+    users_query = db.query(User)
+    if no_sessions:
+        users_query = (
+            users_query.outerjoin(ChatSession, ChatSession.user_id == User.id)
+            .group_by(User.id)
+            .having(func.count(ChatSession.id) == 0)
+        )
+    users = users_query.offset(skip).limit(limit).all()
 
     return [build_admin_user_response(user, str(request.base_url).rstrip('/')) for user in users]
 

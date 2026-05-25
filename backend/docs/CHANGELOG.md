@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Chat completions can now receive a `rename_chat` tool call for brand-new sessions, allowing the model to assign a short descriptive conversation title instead of leaving every chat as "New Chat".
 - Admin Users now supports bulk user deletion with a Select mode, row-level multi-select checkboxes, page-level select-all, and a single "Delete selected" action for removing multiple users in one flow.
+- Admin Users now includes a "No sessions" filter that is backed by the admin users API (`no_sessions=true`), so administrators can reliably fetch only accounts that have never started a chat session.
 
 ### Changed
 - The backend now conditionally includes the `rename_chat` tool only when a session still has its default title; once a title is set by either the user or assistant, subsequent model calls omit the rename tool.
