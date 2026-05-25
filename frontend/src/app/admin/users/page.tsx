@@ -28,7 +28,7 @@ interface AdminUser {
 
 interface AdminDeck { id: number; name: string; }
 
-type Filter = "all" | "active" | "inactive" | "vip";
+type Filter = "all" | "active" | "inactive" | "vip" | "no_sessions";
 const PAGE_SIZE = 10;
 
 const COLUMNS: Column[] = [
@@ -101,6 +101,7 @@ function AdminUsersPageContent() {
             if (filter === "active" && !u.is_active) return false;
             if (filter === "inactive" && u.is_active) return false;
             if (filter === "vip" && !u.is_specialized_premium) return false;
+            if (filter === "no_sessions" && u.chat_sessions_count > 0) return false;
             if (!s) return true;
             return u.username.toLowerCase().includes(s)
                 || u.email.toLowerCase().includes(s)
@@ -149,9 +150,9 @@ function AdminUsersPageContent() {
                 <div className="toolbar">
                     <SearchInput value={q} onChange={setQ} placeholder="Search by name, username, email…" />
                     <div className="filter-group">
-                        {(["all", "active", "inactive", "vip"] as Filter[]).map((f) => (
+                        {(["all", "active", "inactive", "vip", "no_sessions"] as Filter[]).map((f) => (
                             <button key={f} className={`filter-chip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
-                                {f === "all" ? "All" : f === "vip" ? "VIP" : f[0].toUpperCase() + f.slice(1)}
+                                {f === "all" ? "All" : f === "vip" ? "VIP" : f === "no_sessions" ? "No sessions" : f[0].toUpperCase() + f.slice(1)}
                             </button>
                         ))}
                     </div>
