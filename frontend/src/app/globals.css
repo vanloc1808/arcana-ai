@@ -3061,8 +3061,8 @@ a:focus-visible {
 /* Reading list */
 .sess-reading-list {
   display: flex; flex-direction: column; gap: 2px;
-  overflow-y: auto; min-height: 0; flex: 1 1 0;
-  max-height: 220px;
+  overflow-y: auto; min-height: 32px; flex: 0 1 auto;
+  max-height: min(220px, 36vh);
 }
 .sess-reading-list::-webkit-scrollbar { width: 4px; }
 .sess-reading-list::-webkit-scrollbar-thumb { background: oklch(0.3 0.04 285 / 0.5); border-radius: 4px; }
@@ -3383,6 +3383,14 @@ a:focus-visible {
 .sess-cursor {
   display: inline-block; width: 2px; height: 1em;
   background: var(--sess-gold); margin-left: 2px; vertical-align: text-bottom;
+  animation: sess-blink 1s step-end infinite;
+}
+
+/* ── Streaming cursor on the last rendered element ───────────────────── */
+.sess-reading-streaming > *:last-child::after {
+  content: '';
+  display: inline-block; width: 2px; height: 0.9em;
+  background: var(--sess-gold); margin-left: 3px; vertical-align: text-bottom;
   animation: sess-blink 1s step-end infinite;
 }
 

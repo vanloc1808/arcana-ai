@@ -269,8 +269,10 @@ function ShufflingOverlay() {
 
 // ─── Streaming indicator ──────────────────────────────────────────────────────
 function StreamingReading({ content }: { content: string }) {
+  let firstParagraph = true;
+
   return (
-    <article className="sess-reading-body">
+    <article className="sess-reading-body sess-reading-streaming">
       <div className="sess-rb-marker">
         <span className="sess-rb-line" />
         <span className="sess-rb-label sess-rb-label-anim">
@@ -279,10 +281,45 @@ function StreamingReading({ content }: { content: string }) {
         </span>
         <span className="sess-rb-line" />
       </div>
-      <div style={{ fontFamily: 'var(--sess-serif)', fontSize: 18, lineHeight: 1.65, color: 'oklch(0.9 0.02 80)' }}>
+      <ReactMarkdown
+        components={{
+          p: ({ children }) => {
+            if (firstParagraph) {
+              firstParagraph = false;
+              const text = typeof children === 'string' ? children :
+                (Array.isArray(children) ? children.join('') : String(children));
+              const first = text.charAt(0);
+              const rest = text.slice(1);
+              return (
+                <p className="sess-rb-p sess-rb-p-first">
+                  <span className="sess-dropcap">{first}</span>
+                  {rest}
+                </p>
+              );
+            }
+            return <p className="sess-rb-p">{children}</p>;
+          },
+          h1: ({ children }) => <h3 className="sess-rb-h">{children}</h3>,
+          h2: ({ children }) => <h3 className="sess-rb-h">{children}</h3>,
+          h3: ({ children }) => <h3 className="sess-rb-h">{children}</h3>,
+          strong: ({ children }) => <strong style={{ color: 'var(--sess-text)', fontWeight: 600 }}>{children}</strong>,
+          em: ({ children }) => <em style={{ color: 'var(--sess-muted)' }}>{children}</em>,
+          ul: ({ children }) => <ul style={{ margin: '8px 0 16px', paddingLeft: 20, color: 'var(--sess-muted)' }}>{children}</ul>,
+          li: ({ children }) => <li style={{ marginBottom: 6, fontFamily: 'var(--sess-serif)', fontSize: 17, lineHeight: 1.6 }}>{children}</li>,
+          ol: ({ children }) => <ol className="sess-rb-ol">{children}</ol>,
+          blockquote: ({ children }) => (
+            <blockquote style={{
+              borderLeft: '2px solid var(--sess-gold-deep)',
+              paddingLeft: 16,
+              margin: '16px 0',
+              fontStyle: 'italic',
+              color: 'var(--sess-muted)',
+            }}>{children}</blockquote>
+          ),
+        }}
+      >
         {content}
-        <span className="sess-cursor" />
-      </div>
+      </ReactMarkdown>
     </article>
   );
 }
