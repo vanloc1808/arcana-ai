@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Home page center "Card of the day" image now renders reliably for remote deck URLs by bypassing Next image optimization for that slot and falling back gracefully if the image fails to load.
 - Admin user deletion now performs a dedicated soft delete by marking `is_deleted=true` (and deactivating the account) instead of hard-deleting the database row, preventing foreign-key conflicts when related checkout sessions exist while keeping deleted state distinct from inactive users.
 - `/session` now shows recent readings in the left rail instead of visually collapsing the session list.
+- Chat session spread cards now load card artwork with direct image rendering (instead of Next.js optimization) so Card of the Day deck URLs render reliably in-session without blank card faces.
 
 ## [0.0.17] - 2026-05-24
 
