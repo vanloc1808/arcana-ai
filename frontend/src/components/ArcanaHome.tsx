@@ -389,6 +389,7 @@ function Hero({ name, ready, lastReading, readingCount }: {
 function CardOfDay({ card, onRead, onJournal }: {
   card: DailyCard | null; onRead: () => void; onJournal: () => void;
 }) {
+  const [imageError, setImageError] = useState(false);
   const roman = card ? MAJOR_ROMAN[card.name] : undefined;
   return (
     <section className="ah-card ah-cod">
@@ -398,8 +399,18 @@ function CardOfDay({ card, onRead, onJournal }: {
       </div>
 
       <div className="ah-cod-frame" aria-label={card ? `${card.name} card` : 'Card of the day'}>
-        {card?.image_url
-          ? <Image src={card.image_url} alt={card.name} fill sizes="240px" style={{ objectFit: 'cover' }} />
+        {card?.image_url && !imageError
+          ? (
+            <Image
+              src={card.image_url}
+              alt={card.name}
+              fill
+              sizes="240px"
+              style={{ objectFit: 'cover' }}
+              unoptimized
+              onError={() => setImageError(true)}
+            />
+          )
           : <div className="ah-cod-art"><IconStar size={48} /></div>}
       </div>
 
