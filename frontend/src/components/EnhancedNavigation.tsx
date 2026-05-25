@@ -14,6 +14,7 @@ import {
     History,
     BookOpen,
     Library,
+    MessageCircle,
     LogOut,
     Crown,
     Star,
@@ -59,6 +60,12 @@ const NAV_ITEMS = [
         href: '/library',
         Icon: Library,
         match: (p: string) => p.startsWith('/library'),
+    },
+    {
+        label: 'Sessions',
+        href: '/session',
+        Icon: MessageCircle,
+        match: (p: string) => p.startsWith('/session'),
     },
 ];
 
