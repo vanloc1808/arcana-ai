@@ -11,6 +11,12 @@ const IconSparkle = () => (
   </svg>
 );
 
+const IconArrow = () => (
+  <svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 8h10M9 4l4 4-4 4" />
+  </svg>
+);
+
 
 const PROMPTS = [
   'What does this week ask of me?',
