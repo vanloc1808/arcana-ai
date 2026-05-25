@@ -118,7 +118,7 @@ function LeftRail() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
-  const { sessions, currentSession, createSession, setCurrentSession, hasMoreSessions, isLoadingMoreSessions, loadMoreSessions } = useSessionCtx();
+  const { sessions, currentSession, createSession, setCurrentSession, hasMoreSessions, isLoadingMoreSessions, isLoadingSessions, loadMoreSessions } = useSessionCtx();
 
   const moon = useMemo(() => getMoonPhase(new Date()), []);
 
@@ -154,23 +154,30 @@ function LeftRail() {
       <div className="sess-rail-section">
         <div className="sess-rail-section-h">Recent readings</div>
         <ul className="sess-reading-list">
-          {sessions.map((s, idx) => {
-            const active = s.id === activeId;
-            return (
-              <li key={s.id}>
-                <button
-                  className={'sess-reading-item' + (active ? ' active' : '')}
-                  onClick={() => handleSelectSession(s)}
-                >
-                  <span className="sess-ri-num">№{idx + 1}</span>
-                  <span className="sess-ri-q">{s.title || 'New reading'}</span>
-                  <span className="sess-ri-date">{relDay(s.created_at)}</span>
-                </button>
-              </li>
-            );
-          })}
-          {sessions.length === 0 && (
+          {isLoadingSessions ? (
+            <li className="sess-rail-loading">
+              <span className="sess-rail-dot" />
+              <span className="sess-rail-dot" />
+              <span className="sess-rail-dot" />
+            </li>
+          ) : sessions.length === 0 ? (
             <li className="sess-rail-empty">No readings yet</li>
+          ) : (
+            sessions.map((s, idx) => {
+              const active = s.id === activeId;
+              return (
+                <li key={s.id}>
+                  <button
+                    className={'sess-reading-item' + (active ? ' active' : '')}
+                    onClick={() => handleSelectSession(s)}
+                  >
+                    <span className="sess-ri-num">№{idx + 1}</span>
+                    <span className="sess-ri-q">{s.title || 'New reading'}</span>
+                    <span className="sess-ri-date">{relDay(s.created_at)}</span>
+                  </button>
+                </li>
+              );
+            })
           )}
         </ul>
         {hasMoreSessions && (

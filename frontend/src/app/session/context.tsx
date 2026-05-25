@@ -10,6 +10,7 @@ export interface SessionContextType {
   sessions: ChatSession[];
   hasMoreSessions: boolean;
   isLoadingMoreSessions: boolean;
+  isLoadingSessions: boolean;
   currentSession: ChatSession | null;
   messages: Message[];
   loading: boolean;

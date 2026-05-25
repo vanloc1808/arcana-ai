@@ -3093,6 +3093,22 @@ a:focus-visible {
   color: var(--sess-soft); letter-spacing: 0.06em;
 }
 
+.sess-rail-loading {
+  padding: 10px 12px;
+  display: flex; align-items: center; gap: 5px;
+}
+.sess-rail-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--sess-gold-deep); opacity: 0.5;
+  animation: sess-rail-pulse 1.2s ease-in-out infinite;
+}
+.sess-rail-dot:nth-child(2) { animation-delay: 0.2s; }
+.sess-rail-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes sess-rail-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+
 .sess-load-more {
   font-family: var(--sess-mono); font-size: 11px; color: var(--sess-gold-deep);
   letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 10px;
@@ -3493,7 +3509,7 @@ a:focus-visible {
 .sess-home {
   flex: 1;
   display: flex; flex-direction: column; align-items: center;
-  gap: 48px; padding: 60px 48px 80px;
+  gap: 28px; padding: 36px 48px 60px;
   overflow-y: auto; min-height: 0;
 }
 .sess-home::-webkit-scrollbar { width: 8px; }
@@ -3501,12 +3517,12 @@ a:focus-visible {
 
 .sess-home-hero {
   display: flex; flex-direction: column; align-items: center;
-  gap: 16px; text-align: center; max-width: 480px;
+  gap: 12px; text-align: center; max-width: 480px;
 }
 .sess-home-glyph { opacity: 0.8; }
 .sess-home-title {
   font-family: var(--sess-serif); font-weight: 500; font-style: italic;
-  font-size: clamp(28px, 4vw, 44px); line-height: 1.1;
+  font-size: clamp(24px, 3.5vw, 38px); line-height: 1.1;
   color: var(--sess-text); margin: 0;
 }
 .sess-home-sub {

@@ -61,8 +61,6 @@ const MessageContent = ({ content }: { content: string }) => {
 function HomeContent() {
   const {
     sessions,
-    hasMoreSessions,
-    isLoadingMoreSessions,
     currentSession,
     messages,
     loading,
@@ -71,7 +69,6 @@ function HomeContent() {
     isDrawingCards,
     createSession,
     sendMessage,
-    loadMoreSessions,
   } = useChatSessions();
 
   const [input, setInput] = useState('');
@@ -253,9 +250,6 @@ function HomeContent() {
                   onStartReading={handleStartReading}
                   sessions={sessions}
                   onOpenSession={handleSessionClick}
-                  hasMoreSessions={hasMoreSessions}
-                  isLoadingMoreSessions={isLoadingMoreSessions}
-                  onLoadMoreSessions={loadMoreSessions}
                 />
               )}
               <div ref={messagesEndRef} />

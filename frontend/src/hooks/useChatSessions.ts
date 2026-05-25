@@ -70,6 +70,7 @@ export const useChatSessions = () => {
     // arrive (the backend waits out the animation before sending them), with a
     // safety timeout in case those events never come.
     const [isDrawingCards, setIsDrawingCards] = useState(false);
+    const [isLoadingSessions, setIsLoadingSessions] = useState(true);
     const drawingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasAttemptedFetch = useRef(false);
 
@@ -120,6 +121,7 @@ export const useChatSessions = () => {
             return;
         }
         hasAttemptedFetch.current = true;
+        setIsLoadingSessions(true);
         try {
             logDebug('Fetching sessions', { hook: 'useChatSessions', hasToken: !!token });
             const data: ChatSession[] = await chat.getSessions(0, SESSIONS_PAGE_SIZE);
@@ -134,6 +136,8 @@ export const useChatSessions = () => {
             }
             logHookError('useChatSessions', 'fetchSessions', error);
             setError(error instanceof Error ? error.message : 'Failed to load chat sessions');
+        } finally {
+            setIsLoadingSessions(false);
         }
     }, [handleUnauthorized, token]);
 
@@ -488,6 +492,7 @@ export const useChatSessions = () => {
             fetchSessions();
         } else {
             logDebug('No token available, skipping session fetch', { hook: 'useChatSessions' });
+            setIsLoadingSessions(false);
         }
     }, [token, fetchSessions]);
 
@@ -495,6 +500,7 @@ export const useChatSessions = () => {
         sessions,
         hasMoreSessions,
         isLoadingMoreSessions,
+        isLoadingSessions,
         currentSession,
         messages,
         loading,
