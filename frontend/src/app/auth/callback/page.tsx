@@ -12,7 +12,7 @@ export default function AuthCallbackPage() {
         // Handle OAuth callback logic here
         // For now, just redirect to the appropriate page
         if (user) {
-            router.push("/session");
+            router.push("/");
         } else {
             router.push("/login");
         }

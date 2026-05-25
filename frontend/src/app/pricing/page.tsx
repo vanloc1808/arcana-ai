@@ -18,7 +18,7 @@ export default function PricingPage() {
                 router.push('/?openModal=subscription');
             } else {
                 // For free plan, just go to homepage
-                router.push('/session');
+                router.push('/');
             }
         } else {
             // Redirect unauthenticated users to register

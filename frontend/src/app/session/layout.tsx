@@ -145,10 +145,6 @@ function LeftRail() {
 
   return (
     <aside className="sess-rail">
-      <div className="sess-rail-top">
-        <Link href="/session"><Brand /></Link>
-      </div>
-
       <button className="sess-new-btn" onClick={handleNew}>
         <IconPlus />
         <span>New reading</span>

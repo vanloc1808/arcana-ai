@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useSessionCtx } from './context';
 
@@ -28,19 +28,13 @@ const PROMPTS = [
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function SessionHomePage() {
   const router = useRouter();
-  const { createSession, sessions } = useSessionCtx();
-
-  const recentSessions = useMemo(() => sessions.slice(0, 5), [sessions]);
+  const { createSession } = useSessionCtx();
 
   const handleNew = async () => {
     const session = await createSession();
     if (session) {
       router.push(`/session/${session.id}`);
     }
-  };
-
-  const handleOpenSession = (id: number) => {
-    router.push(`/session/${id}`);
   };
 
   return (
@@ -91,21 +85,13 @@ export default function SessionHomePage() {
         </ul>
       </div>
 
-      {/* ── Recent sessions shortcut ────────────────────────── */}
-      {recentSessions.length > 0 && (
+      {/* Recent sessions are already shown in the left rail — no duplicate here */}
+      {false && recentSessions.length > 0 && (
         <div className="sess-home-recent">
-          <div className="sess-home-prompts-label">
-            <span className="sess-divider-line" />
-            <span>Recent readings</span>
-            <span className="sess-divider-line" />
-          </div>
           <ul className="sess-recent-list">
             {recentSessions.map((s) => (
               <li key={s.id}>
-                <button
-                  className="sess-recent-item"
-                  onClick={() => handleOpenSession(s.id)}
-                >
+                <button className="sess-recent-item" onClick={() => handleOpenSession(s.id)}>
                   <span className="sess-recent-title">{s.title || 'New reading'}</span>
                   <span className="sess-recent-date">
                     {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}

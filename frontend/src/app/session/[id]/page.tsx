@@ -442,8 +442,13 @@ function SessionDetailInner() {
       setCurrentSession(session);
       fetchMessages(sessionId);
     }
-    // If sessions are loaded but this ID isn't found, redirect
-    if (sessions.length > 0 && !session) {
+    // Only redirect when we're confident the session doesn't exist:
+    // - the list has been populated (length > 0)
+    // - the session isn't in it
+    // - AND currentSession isn't already pointing at this id
+    //   (handles the race where createSession sets currentSession
+    //    before the new session appears in the sessions[] array)
+    if (sessions.length > 0 && !session && currentSession?.id !== sessionId) {
       router.replace('/session');
     }
   }, [sessionId, sessions, currentSession, setCurrentSession, fetchMessages, router]);
