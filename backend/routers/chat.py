@@ -136,8 +136,6 @@ DRAW_CARDS_TOOL = {
 }
 
 
-
-
 RENAME_CHAT_TOOL = {
     "type": "function",
     "function": {
@@ -158,6 +156,8 @@ RENAME_CHAT_TOOL = {
         },
     },
 }
+
+
 def validate_chat_session_exists(db: Session, session_id: int, user_id: int) -> bool:
     """
     Validate that a chat session exists and belongs to the specified user.
@@ -776,6 +776,39 @@ def update_chat_session(
         raise ChatSessionError(message="Error updating chat session", details={"error": str(e)})
 
 
+def handle_llm_tool_calls(
+    tool_calls: list[dict],
+    *,
+    session: ChatSession,
+    db: Session,
+) -> tuple[dict | None, str | None]:
+    """
+    Handle tool calls returned by the LLM.
+
+    The model can return multiple tool calls in a single response, so this
+    helper processes them in order, applies any chat rename, and returns the
+    first draw_cards call for the streaming flow to execute.
+    """
+    draw_tool_call = None
+    renamed_title = None
+
+    for tool_call in tool_calls:
+        tool_name = tool_call.get("name")
+
+        if tool_name == "rename_chat":
+            new_title = (tool_call.get("args", {}).get("title") or "").strip()
+            if new_title:
+                session.title = new_title
+                db.commit()
+                db.refresh(session)
+                renamed_title = session.title
+
+        elif tool_name == "draw_cards" and draw_tool_call is None:
+            draw_tool_call = tool_call
+
+    return draw_tool_call, renamed_title
+
+
 @router.post("/sessions/{session_id}/messages/")
 @limiter.limit(RATE_LIMITS["chat"])
 async def create_message(
@@ -946,25 +979,40 @@ async def create_message(
                 if session.title == "New Chat":
                     available_tools.append(RENAME_CHAT_TOOL)
 
+                logger.logger.info(
+                    f"Invoking LLM with {len(messages_for_llm)} messages and {len(available_tools)} tools available"
+                )
+
                 llm_response = llm.bind_tools(available_tools).invoke(messages_for_llm)
+
+                if llm_response.tool_calls:
+                    logger.logger.info(
+                        f"LLM made a tool call: {llm_response.tool_calls}",
+                        extra={"tool_calls": llm_response.tool_calls},
+                    )
 
                 # Check if the model wants to use tools
                 if llm_response.tool_calls:
-                    tool_call = llm_response.tool_calls[0]
+                    tool_call, renamed_title = handle_llm_tool_calls(
+                        llm_response.tool_calls,
+                        session=session,
+                        db=db,
+                    )
 
-                    if tool_call["name"] == "rename_chat":
-                        new_title = (tool_call.get("args", {}).get("title") or "").strip()
-                        if new_title:
-                            session.title = new_title
-                            db.commit()
-                            db.refresh(session)
-                            yield f"data: {json.dumps({'type': 'session_renamed', 'title': session.title})}\n\n"
+                    if renamed_title:
+                        yield f"data: {json.dumps({'type': 'session_renamed', 'title': renamed_title})}\n\n"
 
+                    if not tool_call:
                         llm_response = llm.bind_tools([DRAW_CARDS_TOOL]).invoke(messages_for_llm)
                         if llm_response.tool_calls:
-                            tool_call = llm_response.tool_calls[0]
-                        else:
-                            tool_call = None
+                            tool_call, renamed_title = handle_llm_tool_calls(
+                                llm_response.tool_calls,
+                                session=session,
+                                db=db,
+                            )
+
+                            if renamed_title:
+                                yield f"data: {json.dumps({'type': 'session_renamed', 'title': renamed_title})}\n\n"
 
                     if tool_call and tool_call["name"] == "draw_cards":
                         # Execute the tool
