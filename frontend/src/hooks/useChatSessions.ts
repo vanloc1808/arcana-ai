@@ -37,12 +37,14 @@ export interface Card {
 }
 
 interface StreamResponse {
-    type: 'user_message' | 'assistant_message' | 'cards' | 'content_start' | 'content_chunk' | 'error' | 'drawing';
+    type: 'user_message' | 'assistant_message' | 'cards' | 'content_start' | 'content_chunk' | 'error' | 'drawing' | 'session_renamed';
     message?: Message;
     cards?: Card[];
     content?: string;
     error?: string;
     num_cards?: number;
+    /** Emitted when the LLM renames the session via the rename_chat tool */
+    title?: string;
 }
 
 // How long the card-drawing animation plays before cards/reading are revealed.
@@ -93,6 +95,20 @@ export const useChatSessions = () => {
         clearDrawingTimer();
         setIsDrawingCards(false);
     }, [clearDrawingTimer]);
+
+    /**
+     * Apply a server-side rename to the session list and current session in one shot.
+     * Called whenever the SSE stream emits a `session_renamed` event.
+     */
+    const applySessionRename = useCallback((sessionId: number, newTitle: string) => {
+        setSessions(prev =>
+            prev.map(s => s.id === sessionId ? { ...s, title: newTitle } : s)
+        );
+        setCurrentSession(prev =>
+            prev?.id === sessionId ? { ...prev, title: newTitle } : prev
+        );
+        logDebug('Session renamed via SSE', { hook: 'useChatSessions', sessionId, newTitle });
+    }, []);
 
     const handleUnauthorized = useCallback(() => {
         logout();
@@ -294,6 +310,9 @@ export const useChatSessions = () => {
                                             setMessages(prev => [...prev, data.message!]);
                                             setStreamingContent('');
                                         }
+                                        if (data.type === 'session_renamed' && data.title) {
+                                            applySessionRename(sessionId, data.title);
+                                        }
                                     } catch (e) {
                                         logError('Error parsing JSON from single data line in final buffer', e, { hook: 'useChatSessions', dataString: singleJsonDataString });
                                     }
@@ -366,6 +385,10 @@ export const useChatSessions = () => {
                                         // Add final assistant message and clear streaming
                                         setMessages(prev => [...prev, parsedData.message!]);
                                         setStreamingContent('');
+                                    }
+
+                                    if (parsedData.type === 'session_renamed' && parsedData.title) {
+                                        applySessionRename(sessionId, parsedData.title);
                                     }
                                 } catch (e) {
                                     logError('Error parsing JSON from single data line in event', e, { hook: 'useChatSessions', dataString: singleJsonDataString, originalLine: line });
