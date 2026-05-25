@@ -32,6 +32,7 @@ type Filter = "all" | "active" | "inactive" | "vip";
 const PAGE_SIZE = 10;
 
 const COLUMNS: Column[] = [
+    { label: "", width: "4%" },
     { label: "User", width: "34%" },
     { label: "Status", width: "12%" },
     { label: "Plan", width: "10%" },
@@ -67,6 +68,9 @@ function AdminUsersPageContent() {
     const [q, setQ] = useState("");
     const [filter, setFilter] = useState<Filter>("all");
     const [page, setPage] = useState(1);
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
     useEffect(() => {
         if (isAuthLoading) return;
@@ -107,8 +111,17 @@ function AdminUsersPageContent() {
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const currentPage = Math.min(page, totalPages);
     const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const selectedCount = selectedUserIds.size;
+    const pageUserIds = pageRows.map((u) => u.id);
+    const allCurrentPageSelected = pageUserIds.length > 0 && pageUserIds.every((id) => selectedUserIds.has(id));
 
     useEffect(() => { setPage(1); }, [q, filter]);
+    useEffect(() => {
+        setSelectedUserIds((prev) => {
+            const next = new Set(Array.from(prev).filter((id) => users.some((u) => u.id === id)));
+            return next.size === prev.size ? prev : next;
+        });
+    }, [users]);
 
     if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading users…" />;
     if (!user.is_admin) return null;
@@ -142,16 +155,95 @@ function AdminUsersPageContent() {
                             </button>
                         ))}
                     </div>
+                    <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+                        <Button
+                            variant={selectionMode ? "secondary" : "ghost"}
+                            onClick={() => {
+                                setSelectionMode((prev) => !prev);
+                                setSelectedUserIds(new Set());
+                            }}
+                        >
+                            {selectionMode ? "Cancel selection" : "Select"}
+                        </Button>
+                        {selectionMode && (
+                            <Button
+                                variant="danger"
+                                disabled={selectedCount === 0 || isBulkDeleting}
+                                onClick={async () => {
+                                    if (selectedCount === 0 || isBulkDeleting) return;
+                                    const shouldDelete = window.confirm(`Delete ${selectedCount} selected user${selectedCount > 1 ? "s" : ""}? This cannot be undone.`);
+                                    if (!shouldDelete) return;
+                                    setIsBulkDeleting(true);
+                                    try {
+                                        await Promise.all(
+                                            Array.from(selectedUserIds).map((id) => api.delete(`/admin/users/${id}`)),
+                                        );
+                                        setSelectedUserIds(new Set());
+                                        setSelectionMode(false);
+                                        await loadData();
+                                    } catch {
+                                        alert("Failed to delete one or more users.");
+                                    } finally {
+                                        setIsBulkDeleting(false);
+                                    }
+                                }}
+                            >
+                                {isBulkDeleting ? "Deleting…" : `Delete selected (${selectedCount})`}
+                            </Button>
+                        )}
+                    </div>
                 </div>
+                {selectionMode && (
+                    <div className="muted" style={{ marginTop: 8, marginBottom: 12 }}>
+                        Select users from the table, then choose “Delete selected”.
+                    </div>
+                )}
 
                 <Table
                     columns={COLUMNS}
                     rows={pageRows}
                     empty="No users match your filters."
                     renderRow={(u: AdminUser) => (
-                        <UserRow key={u.id} u={u} decks={decks} onSaved={loadData} />
+                        <UserRow
+                            key={u.id}
+                            u={u}
+                            decks={decks}
+                            onSaved={loadData}
+                            selectionMode={selectionMode}
+                            selected={selectedUserIds.has(u.id)}
+                            onToggleSelected={() => {
+                                setSelectedUserIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(u.id)) next.delete(u.id);
+                                    else next.add(u.id);
+                                    return next;
+                                });
+                            }}
+                        />
                     )}
                 />
+                {selectionMode && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
+                        <label className="admin-check-label">
+                            <input
+                                type="checkbox"
+                                className="admin-check"
+                                checked={allCurrentPageSelected}
+                                onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setSelectedUserIds((prev) => {
+                                        const next = new Set(prev);
+                                        if (checked) pageUserIds.forEach((id) => next.add(id));
+                                        else pageUserIds.forEach((id) => next.delete(id));
+                                        return next;
+                                    });
+                                }}
+                            />
+                            <span>Select all on this page</span>
+                        </label>
+                        <span className="muted">{selectedCount} selected</span>
+                    </div>
+                )}
 
                 <div className="pagination">
                     <span className="pagination-info">
@@ -175,13 +267,38 @@ function AdminUsersPageContent() {
     );
 }
 
-function UserRow({ u, decks, onSaved }: { u: AdminUser; decks: AdminDeck[]; onSaved: () => void }) {
+function UserRow({
+    u,
+    decks,
+    onSaved,
+    selectionMode,
+    selected,
+    onToggleSelected,
+}: {
+    u: AdminUser;
+    decks: AdminDeck[];
+    onSaved: () => void;
+    selectionMode: boolean;
+    selected: boolean;
+    onToggleSelected: () => void;
+}) {
     const [open, setOpen] = useState(false);
     const [validationError, setValidationError] = useState("");
 
     return (
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setValidationError(""); }}>
-            <tr className="is-clickable" onClick={() => setOpen(true)}>
+            <tr className={selectionMode ? "" : "is-clickable"} onClick={() => { if (!selectionMode) setOpen(true); }}>
+                <td onClick={(e) => e.stopPropagation()}>
+                    {selectionMode && (
+                        <input
+                            type="checkbox"
+                            className="admin-check"
+                            checked={selected}
+                            onChange={onToggleSelected}
+                            aria-label={`Select ${u.username}`}
+                        />
+                    )}
+                </td>
                 <td>
                     <div className="cell-user">
                         <Avatar src={u.avatar_url} username={u.username} size="sm" />
