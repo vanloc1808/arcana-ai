@@ -39,7 +39,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from config import settings
 from database import Base, engine
-from routers import admin, auth, changelog, chat, health, journal, sharing, stats, streaks, subscription, support, tarot, tasks, web_push
+from routers import admin, auth, changelog, chat, health, journal, sharing, stats, streaks, subscription, support, tarot, tasks, utilities, web_push
 from utils.error_handlers import (
     TarotAPIException,
     general_exception_handler,
@@ -155,6 +155,7 @@ app.include_router(changelog.router)  # Changelog and version information
 app.include_router(streaks.router)  # Daily streaks and achievements
 app.include_router(stats.router)    # Aggregated dashboard statistics
 app.include_router(web_push.router)  # Web Push (VAPID) subscriptions and delivery
+app.include_router(utilities.router)  # Shared utility endpoints
 
 
 @app.get("/")

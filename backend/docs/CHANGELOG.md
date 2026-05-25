@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Chat completions can now receive a `rename_chat` tool call for brand-new sessions, allowing the model to assign a short descriptive conversation title instead of leaving every chat as "New Chat".
+- Added a standardized timezone catalog endpoint (`GET /utilities/timezones`) so frontend timezone dropdowns can use one backend-defined IANA list across profile and notification settings; it now returns the full runtime `zoneinfo.available_timezones()` set.
 - Admin Users now supports bulk user deletion with a Select mode, row-level multi-select checkboxes, page-level select-all, and a single "Delete selected" action for removing multiple users in one flow.
 - Admin Users now includes a "No sessions" filter chip so administrators can quickly find accounts that have never started a chat session.
 - Header navigation now includes a dedicated Sessions tab that links directly to `/session` for faster access to chat history.

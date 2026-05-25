@@ -504,6 +504,13 @@ class UserResponse(BaseModel):
         json_encoders = {datetime: lambda v: v.isoformat()}
 
 
+class TimezoneOption(BaseModel):
+    """Timezone item returned by the timezone options endpoint."""
+
+    value: str
+    label: str
+
+
 # Password Reset Models
 class ForgotPasswordRequest(BaseModel):
     """Schema for requesting a password reset email.

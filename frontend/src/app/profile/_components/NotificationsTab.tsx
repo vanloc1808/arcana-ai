@@ -1,10 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MysticCard, SectionHeader, FieldLabel, FieldInput, FieldSelect } from './MysticCard';
 import { ProfileIcon } from './ProfileIcon';
 import { GhostButton } from './ProfileInfoTab';
 import { PushNotificationToggle } from '@/components/PushNotificationToggle';
+import { auth } from '@/lib/api';
+import { TimezoneOption } from '@/types/tarot';
+
+const TIMEZONE_FALLBACK_OPTIONS: TimezoneOption[] = [
+    { value: 'UTC', label: 'UTC' },
+    { value: 'Asia/Ho_Chi_Minh', label: 'Asia/Ho_Chi_Minh' },
+    { value: 'Asia/Singapore', label: 'Asia/Singapore' },
+    { value: 'Europe/London', label: 'Europe/London' },
+    { value: 'America/New_York', label: 'America/New_York' },
+];
 
 export function NotificationsTab() {
     const [prefs, setPrefs] = useState({
@@ -12,6 +22,21 @@ export function NotificationsTab() {
         marketing: false, security: true,
     });
     const toggle = (k: keyof typeof prefs) => setPrefs(p => ({ ...p, [k]: !p[k] }));
+    const [timezoneOptions, setTimezoneOptions] = useState<TimezoneOption[]>(TIMEZONE_FALLBACK_OPTIONS);
+
+    useEffect(() => {
+        const loadTimezones = async () => {
+            try {
+                const options = await auth.getTimezones();
+                if (Array.isArray(options) && options.length > 0) {
+                    setTimezoneOptions(options);
+                }
+            } catch {
+                setTimezoneOptions(TIMEZONE_FALLBACK_OPTIONS);
+            }
+        };
+        loadTimezones();
+    }, []);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -129,10 +154,9 @@ export function NotificationsTab() {
                     <div>
                         <FieldLabel>Timezone</FieldLabel>
                         <FieldSelect defaultValue="Asia/Ho_Chi_Minh">
-                            <option>Asia/Ho_Chi_Minh</option>
-                            <option>Asia/Singapore</option>
-                            <option>Europe/London</option>
-                            <option>America/New_York</option>
+                            {timezoneOptions.map((tz) => (
+                                <option key={tz.value} value={tz.value}>{tz.label}</option>
+                            ))}
                         </FieldSelect>
                     </div>
                 </div>

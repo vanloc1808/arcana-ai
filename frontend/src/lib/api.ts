@@ -249,6 +249,11 @@ export const auth = {
         return response.data;
     },
 
+    getTimezones: async () => {
+        const response = await api.get("/utilities/timezones");
+        return response.data;
+    },
+
     me: async () => {
         const response = await api.get("/auth/me");
         return response.data;

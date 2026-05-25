@@ -4,8 +4,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { MysticCard, SectionHeader, FieldLabel, FieldInput, FieldSelect, FieldTextarea } from './MysticCard';
 import { ProfileIcon } from './ProfileIcon';
-import { Deck, ProfileUpdatePayload, UserProfile } from '@/types/tarot';
+import { Deck, ProfileUpdatePayload, TimezoneOption, UserProfile } from '@/types/tarot';
 import { AvatarUpload } from '@/components/AvatarUpload';
+import { auth } from '@/lib/api';
 
 interface ProfileInfoTabProps {
     profile: UserProfile | null;
@@ -27,20 +28,20 @@ interface FormState {
     reversed_cards: boolean;
 }
 
-const TIMEZONE_OPTIONS: { value: string; label: string }[] = [
+const TIMEZONE_FALLBACK_OPTIONS: TimezoneOption[] = [
     { value: 'UTC', label: 'UTC' },
-    { value: 'Asia/Ho_Chi_Minh', label: 'Vietnam (UTC+7)' },
-    { value: 'Asia/Singapore', label: 'Singapore (UTC+8)' },
-    { value: 'Asia/Tokyo', label: 'Japan (UTC+9)' },
-    { value: 'Asia/Kolkata', label: 'India (UTC+5:30)' },
-    { value: 'Europe/London', label: 'London (UTC+0)' },
-    { value: 'Europe/Paris', label: 'Central Europe (UTC+1)' },
-    { value: 'America/New_York', label: 'New York (UTC−5)' },
-    { value: 'America/Chicago', label: 'Chicago (UTC−6)' },
-    { value: 'America/Denver', label: 'Denver (UTC−7)' },
-    { value: 'America/Los_Angeles', label: 'Los Angeles (UTC−8)' },
-    { value: 'Australia/Sydney', label: 'Sydney (UTC+11)' },
-    { value: 'Pacific/Auckland', label: 'Auckland (UTC+13)' },
+    { value: 'Asia/Ho_Chi_Minh', label: 'Asia/Ho_Chi_Minh' },
+    { value: 'Asia/Singapore', label: 'Asia/Singapore' },
+    { value: 'Asia/Tokyo', label: 'Asia/Tokyo' },
+    { value: 'Asia/Kolkata', label: 'Asia/Kolkata' },
+    { value: 'Europe/London', label: 'Europe/London' },
+    { value: 'Europe/Paris', label: 'Europe/Paris' },
+    { value: 'America/New_York', label: 'America/New_York' },
+    { value: 'America/Chicago', label: 'America/Chicago' },
+    { value: 'America/Denver', label: 'America/Denver' },
+    { value: 'America/Los_Angeles', label: 'America/Los_Angeles' },
+    { value: 'Australia/Sydney', label: 'Australia/Sydney' },
+    { value: 'Pacific/Auckland', label: 'Pacific/Auckland' },
 ];
 
 const CARD_ANIMATION_OPTIONS: { value: string; label: string; desc: string }[] = [
@@ -68,6 +69,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
     const baseline = useMemo(() => (profile ? toForm(profile) : null), [profile]);
     const [form, setForm] = useState<FormState | null>(baseline);
     const [isSaving, setIsSaving] = useState(false);
+    const [timezoneOptions, setTimezoneOptions] = useState<TimezoneOption[]>(TIMEZONE_FALLBACK_OPTIONS);
     const [isEditing, setIsEditing] = useState(false);
 
     // Re-sync the editable form whenever the underlying profile changes
@@ -75,6 +77,20 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
     useEffect(() => {
         setForm(baseline);
     }, [baseline]);
+
+    useEffect(() => {
+        const loadTimezones = async () => {
+            try {
+                const options = await auth.getTimezones();
+                if (Array.isArray(options) && options.length > 0) {
+                    setTimezoneOptions(options);
+                }
+            } catch {
+                setTimezoneOptions(TIMEZONE_FALLBACK_OPTIONS);
+            }
+        };
+        loadTimezones();
+    }, []);
 
     const memberSince = profile?.created_at
         ? new Date(profile.created_at).getFullYear()
@@ -277,7 +293,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                             style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
                         >
                             <option value="">Not set</option>
-                            {TIMEZONE_OPTIONS.map((tz) => (
+                            {timezoneOptions.map((tz) => (
                                 <option key={tz.value} value={tz.value}>{tz.label}</option>
                             ))}
                         </FieldSelect>
