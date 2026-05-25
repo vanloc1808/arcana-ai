@@ -69,9 +69,7 @@ function HomeContent() {
     error,
     streamingContent,
     isDrawingCards,
-    setCurrentSession,
     createSession,
-    fetchMessages,
     sendMessage,
     loadMoreSessions,
   } = useChatSessions();
@@ -120,34 +118,33 @@ function HomeContent() {
     }
   }, [searchParams]);
 
-  const handleSessionClick = useCallback(async (sessionId: number) => {
-    const session = sessions.find(s => s.id === sessionId);
-    if (session) {
-      setCurrentSession(session);
-      await fetchMessages(sessionId);
-    }
-  }, [sessions, setCurrentSession, fetchMessages]);
+  const handleSessionClick = useCallback((sessionId: number) => {
+    router.push(`/session/${sessionId}`);
+  }, [router]);
 
-  // Handle reading history URL parameter
+  const handleStartReading = useCallback(async () => {
+    const session = await createSession();
+    if (session) {
+      router.push(`/session/${session.id}`);
+    }
+  }, [createSession, router]);
+
+  // Handle URL parameters for session and history navigation
   useEffect(() => {
     const historyParam = searchParams.get('history');
     const sessionParam = searchParams.get('session');
 
     if (sessionParam) {
       const sessionId = parseInt(sessionParam);
-      const session = sessions.find(s => s.id === sessionId);
-      if (session) {
-        handleSessionClick(sessionId);
-      }
+      handleSessionClick(sessionId);
       return;
     }
 
     if (historyParam === 'true') {
-      setCurrentSession(null);
       router.replace('/', { scroll: false });
       scrollToTop();
     }
-  }, [searchParams, sessions, handleSessionClick, setCurrentSession, router, scrollToTop]);
+  }, [searchParams, handleSessionClick, router, scrollToTop]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,7 +246,7 @@ function HomeContent() {
                 </>
               ) : (
                 <ArcanaHome
-                  onStartReading={createSession}
+                  onStartReading={handleStartReading}
                   sessions={sessions}
                   onOpenSession={handleSessionClick}
                   hasMoreSessions={hasMoreSessions}
