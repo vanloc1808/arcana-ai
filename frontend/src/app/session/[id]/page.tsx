@@ -467,6 +467,9 @@ function SessionDetailInner() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const prevStreamingRef = useRef<string | null>(null);
+  const prevMsgCountRef = useRef<number>(0);
+  const prevDrawingRef = useRef<boolean>(false);
 
   // Find and activate this session
   useEffect(() => {
@@ -501,9 +504,19 @@ function SessionDetailInner() {
     }
   }, [searchParams, messages.length, loading, currentSession, sessionId, sendMessage]);
 
-  // Scroll to bottom on new content
+  // Scroll to bottom only on meaningful transitions, not every streamed token
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const streamingStarted = !!streamingContent && !prevStreamingRef.current;
+    const newMessageArrived = messages.length > prevMsgCountRef.current;
+    const drawingStarted = isDrawingCards && !prevDrawingRef.current;
+
+    if (streamingStarted || newMessageArrived || drawingStarted) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    prevStreamingRef.current = streamingContent;
+    prevMsgCountRef.current = messages.length;
+    prevDrawingRef.current = isDrawingCards;
   }, [messages, streamingContent, isDrawingCards]);
 
   // ── Parse messages ──────────────────────────────────────────────────────────
