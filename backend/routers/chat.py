@@ -955,7 +955,7 @@ async def create_message(
                     if tool_call["name"] == "rename_chat":
                         new_title = (tool_call.get("args", {}).get("title") or "").strip()
                         if new_title:
-                            session.title = new_title[:100]
+                            session.title = new_title
                             db.commit()
                             db.refresh(session)
                             yield f"data: {json.dumps({'type': 'session_renamed', 'title': session.title})}\n\n"
