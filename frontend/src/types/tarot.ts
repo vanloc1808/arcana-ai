@@ -252,6 +252,33 @@ export interface SubscriptionHistory {
     };
 }
 
+// Dashboard Stats Types
+
+export interface UsageBreakdown {
+    context: string;
+    count: number;
+}
+
+export interface RecentReadingEntry {
+    id: number;
+    turn_type: string;
+    usage_context: string;
+    feature_used?: string | null;
+    consumed_at: string; // ISO datetime
+}
+
+export interface UserDashboardStats {
+    total_readings: number;
+    current_streak: number;
+    longest_streak: number;
+    total_active_days: number;
+    last_activity_date: string | null; // YYYY-MM-DD
+    is_active_today: boolean;
+    period_days: number;
+    usage_by_context: UsageBreakdown[];
+    recent_readings: RecentReadingEntry[];
+}
+
 // Journal Types
 export interface JournalEntry {
     id: number;

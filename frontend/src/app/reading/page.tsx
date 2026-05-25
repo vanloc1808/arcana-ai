@@ -8,10 +8,8 @@ import { SpreadLayout } from '@/components/SpreadLayout';
 import { useTarotReading } from '@/hooks/useTarotReading';
 import { Spread } from '@/types/tarot';
 import { tarot } from '@/lib/api';
-import Link from 'next/link';
-import { FiShare2, FiArrowLeft } from 'react-icons/fi';
+import { FiShare2 } from 'react-icons/fi';
 import { ShareReadingModal } from '@/components/ShareReadingModal';
-import { TurnCounter } from '@/components/TurnCounter';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from 'react-hot-toast';
@@ -121,45 +119,6 @@ export default function ReadingPage() {
         <div className="min-h-screen pt-20 bg-gradient-to-br from-gray-900 via-gray-800 to-purple-900">
             <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
                 <div className="max-w-6xl mx-auto">
-                    {/* Header */}
-                    <div className="card-mystical shadow-lg p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                                <h1 className="text-xl sm:text-2xl lg:text-display-2 text-gradient-cosmic leading-tight">
-                                    Mystical Tarot Reading
-                                </h1>
-                                <p className="text-sm sm:text-base lg:text-body-lg text-elegant mt-1 sm:mt-2">
-                                    Discover your path with ancient wisdom and divine guidance
-                                </p>
-                            </div>
-                            <div className="flex items-center space-x-2 sm:space-x-4">
-                                <Link
-                                    href="/reading/compatibility"
-                                    className="btn-mystical flex items-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
-                                >
-                                    <span className="hidden xs:inline">Compatibility Reading</span>
-                                    <span className="xs:hidden">Compat.</span>
-                                </Link>
-                                <Link
-                                    href="/"
-                                    className="btn-mystical flex items-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
-                                >
-                                    <FiArrowLeft className="w-4 h-4" />
-                                    <span className="hidden xs:inline">Back to Chat</span>
-                                    <span className="xs:hidden">Back</span>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Turn Counter */}
-                    <div className="mb-4 sm:mb-6">
-                        <TurnCounter
-                            onPurchaseClick={() => setIsSubscriptionModalOpen(true)}
-                            showDetails={true}
-                        />
-                    </div>
-
                     {/* Reading Form */}
                     <div className="card-mystical shadow-lg p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8">
                         <h2 className="text-lg sm:text-xl lg:text-mystical-title text-gradient mb-4 sm:mb-6 lg:mb-8 text-center">

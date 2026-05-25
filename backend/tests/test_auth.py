@@ -1014,6 +1014,13 @@ def test_update_user_profile_reading_language_invalid(client, auth_headers):
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+def test_update_user_profile_reading_language_chinese_simplified(client, auth_headers):
+    """Chinese (Simplified) is an accepted reading language."""
+    response = client.put("/auth/me", headers=auth_headers, json={"reading_language": "Chinese (Simplified)"})
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["reading_language"] == "Chinese (Simplified)"
+
+
 def test_update_user_profile_partial_preference_leaves_others(client, auth_headers, test_user, db_session):
     """Updating one preference does not reset the others."""
     client.put("/auth/me", headers=auth_headers, json={"card_animations": "off"})

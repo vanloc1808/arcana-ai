@@ -27,6 +27,7 @@ import {
     JournalFilters,
     TagUsage,
     ProfileUpdatePayload,
+    UserDashboardStats,
 } from "@/types/tarot";
 
 // Callback function to be set by AuthProvider
@@ -751,6 +752,17 @@ export interface StreakProgress {
     streak: StreakSummary;
     achievements: AchievementSummary[];
 }
+
+export const dashboardStats = {
+    /**
+     * Fetch aggregated dashboard stats for the History tab.
+     * @param periodDays Rolling window for usage breakdown & recent readings (default 30, max 3650).
+     */
+    getMyStats: async (periodDays: number = 30): Promise<UserDashboardStats> => {
+        const response = await api.get("/api/stats/me", { params: { period_days: periodDays } });
+        return response.data;
+    },
+};
 
 export const streaks = {
     getMyProgress: async (): Promise<StreakProgress> => {

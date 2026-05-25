@@ -172,7 +172,7 @@ export function EnhancedNavigation() {
 
                     {/* Logo */}
                     <Link
-                        href="/"
+                        href="/?history=true"
                         className="flex items-center gap-2.5 shrink-0 hover:opacity-85 transition-opacity"
                     >
                         <TarotAgentLogo size={32} className="text-violet-400 shrink-0" />
@@ -365,7 +365,7 @@ export function EnhancedNavigation() {
                                     </DropdownMenuItem>
 
                                     <DropdownMenuItem asChild className="px-4 py-3">
-                                        <Link href="/" className="flex items-center gap-3">
+                                        <Link href="/?history=true" className="flex items-center gap-3">
                                             <History className="w-4 h-4" />
                                             Reading History
                                         </Link>

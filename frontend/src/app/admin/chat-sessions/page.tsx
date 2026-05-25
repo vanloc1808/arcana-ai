@@ -33,6 +33,16 @@ const COLUMNS: Column[] = [
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Syncs the ?q= URL param to local state. Must live inside a Suspense boundary. */
+function SearchParamSync({ setQ }: { setQ: (q: string) => void }) {
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        const query = searchParams.get("q");
+        if (query) setQ(query);
+    }, [searchParams, setQ]);
+    return null;
+}
+
 export default function AdminChatSessionsPage() {
     return (
         <Suspense fallback={<AdminLoadingScreen label="Loading sessions…" />}>
@@ -44,7 +54,6 @@ export default function AdminChatSessionsPage() {
 function AdminChatSessionsPageContent() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [sessions, setSessions] = useState<AdminChatSession[]>([]);
     const [stats, setStats] = useState<DashboardStats>({});
     const [sortField, setSortField] = useState<SortField>("created_at");
@@ -108,11 +117,6 @@ function AdminChatSessionsPageContent() {
         };
     }, [sessions, stats]);
 
-    useEffect(() => {
-        const query = searchParams.get("q");
-        if (query) setQ(query);
-    }, [searchParams]);
-
     const filteredSessions = useMemo(() => {
         const search = q.trim().toLowerCase();
         if (!search) return sessions;
@@ -130,6 +134,9 @@ function AdminChatSessionsPageContent() {
 
     return (
         <AdminLayout activePath="/admin/chat-sessions" breadcrumb="Chat Sessions" username={user.username ?? "Admin"}>
+            <Suspense fallback={null}>
+                <SearchParamSync setQ={setQ} />
+            </Suspense>
             <div className="view">
                 <PageHeader
                     kicker="Conversations"

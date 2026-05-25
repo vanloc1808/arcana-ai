@@ -363,7 +363,7 @@ class UserCreate(UserBase):
 
 
 CARD_ANIMATION_CHOICES = {"cinematic", "minimal", "off"}
-READING_LANGUAGE_CHOICES = {"English", "Vietnamese", "Spanish", "French", "German"}
+READING_LANGUAGE_CHOICES = {"English", "Vietnamese", "Chinese (Simplified)", "Spanish", "French", "German"}
 
 
 class UserUpdate(BaseModel):
@@ -1926,6 +1926,58 @@ class StreakProgressResponse(BaseModel):
     achievements: list[AchievementResponse]
 
 
+# --- Dashboard Stats ---
+
+
+class UsageBreakdown(BaseModel):
+    """Turn usage count for a single context bucket."""
+
+    context: str
+    count: int
+
+
+class RecentReadingEntry(BaseModel):
+    """One row in the recent-readings log."""
+
+    id: int
+    turn_type: str
+    usage_context: str
+    feature_used: Optional[str] = None
+    consumed_at: datetime
+
+    class Config:
+        from_attributes = True
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+
+class UserDashboardStats(BaseModel):
+    """Aggregated dashboard statistics for the History tab.
+
+    Attributes:
+        total_readings: Lifetime count of all turns consumed.
+        current_streak: Active consecutive-day streak (0 if broken).
+        longest_streak: All-time best streak in days.
+        total_active_days: Total distinct calendar days with any activity.
+        last_activity_date: Most recent activity date (UTC), or None.
+        is_active_today: True if the user already has activity for today.
+        period_days: The window used for ``usage_by_context`` and
+            ``recent_readings`` (default 30).
+        usage_by_context: Per-context turn counts within ``period_days``.
+        recent_readings: The most recent reading entries within
+            ``period_days``, newest first.
+    """
+
+    total_readings: int
+    current_streak: int
+    longest_streak: int
+    total_active_days: int
+    last_activity_date: Optional[date] = None
+    is_active_today: bool
+    period_days: int
+    usage_by_context: list[UsageBreakdown]
+    recent_readings: list[RecentReadingEntry]
+
+
 # --- Web Push ---
 
 
@@ -1958,4 +2010,3 @@ class WebPushTestResponse(BaseModel):
     sent: int
     failed: int
     pruned: int
-

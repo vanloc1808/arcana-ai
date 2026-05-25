@@ -6,6 +6,7 @@ import { ProfileIcon } from './ProfileIcon';
 import { MysticButton, GhostButton } from './ProfileInfoTab';
 import { TurnCounter } from '@/components/TurnCounter';
 import { UserProfile } from '@/types/tarot';
+import { getProfilePlanName, hasProfileUnlimitedAccess } from './subscriptionStatus';
 
 interface SubscriptionTabProps {
     profile: UserProfile | null;
@@ -13,8 +14,8 @@ interface SubscriptionTabProps {
 }
 
 export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionTabProps) {
-    const isPremium = profile && (profile.number_of_paid_turns > 0 || profile.subscription_status === 'premium');
-    const planName = isPremium ? 'Unlimited Seer' : 'Novice';
+    const isPremium = hasProfileUnlimitedAccess(profile);
+    const planName = getProfilePlanName(profile);
     const planPrice = isPremium ? '$19/mo' : 'Free';
 
     return (
