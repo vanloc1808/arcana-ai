@@ -136,6 +136,28 @@ DRAW_CARDS_TOOL = {
 }
 
 
+
+
+RENAME_CHAT_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "rename_chat",
+        "description": (
+            "Assign a short, descriptive title to a newly created chat that still uses the default title. "
+            "Use this only once when the chat has never been named by the user or assistant."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "A concise chat title (max 100 characters)",
+                },
+            },
+            "required": ["title"],
+        },
+    },
+}
 def validate_chat_session_exists(db: Session, session_id: int, user_id: int) -> bool:
     """
     Validate that a chat session exists and belongs to the specified user.
@@ -920,13 +942,31 @@ async def create_message(
                 # generator.
 
                 # Get model response with tool calling
-                llm_response = llm.bind_tools([DRAW_CARDS_TOOL]).invoke(messages_for_llm)
+                available_tools = [DRAW_CARDS_TOOL]
+                if session.title == "New Chat":
+                    available_tools.append(RENAME_CHAT_TOOL)
+
+                llm_response = llm.bind_tools(available_tools).invoke(messages_for_llm)
 
                 # Check if the model wants to use tools
                 if llm_response.tool_calls:
                     tool_call = llm_response.tool_calls[0]
 
-                    if tool_call["name"] == "draw_cards":
+                    if tool_call["name"] == "rename_chat":
+                        new_title = (tool_call.get("args", {}).get("title") or "").strip()
+                        if new_title:
+                            session.title = new_title[:100]
+                            db.commit()
+                            db.refresh(session)
+                            yield f"data: {json.dumps({'type': 'session_renamed', 'title': session.title})}\n\n"
+
+                        llm_response = llm.bind_tools([DRAW_CARDS_TOOL]).invoke(messages_for_llm)
+                        if llm_response.tool_calls:
+                            tool_call = llm_response.tool_calls[0]
+                        else:
+                            tool_call = None
+
+                    if tool_call and tool_call["name"] == "draw_cards":
                         # Execute the tool
                         args = tool_call["args"]
                         user_question = args.get("user_question", message_request.content)
