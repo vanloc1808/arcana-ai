@@ -11,11 +11,6 @@ const IconSparkle = () => (
   </svg>
 );
 
-const IconArrow = () => (
-  <svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 8h10M9 4l4 4-4 4" />
-  </svg>
-);
 
 const PROMPTS = [
   'What does this week ask of me?',
@@ -85,24 +80,7 @@ export default function SessionHomePage() {
         </ul>
       </div>
 
-      {/* Recent sessions are already shown in the left rail — no duplicate here */}
-      {false && recentSessions.length > 0 && (
-        <div className="sess-home-recent">
-          <ul className="sess-recent-list">
-            {recentSessions.map((s) => (
-              <li key={s.id}>
-                <button className="sess-recent-item" onClick={() => handleOpenSession(s.id)}>
-                  <span className="sess-recent-title">{s.title || 'New reading'}</span>
-                  <span className="sess-recent-date">
-                    {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </span>
-                  <span className="sess-recent-arrow"><IconArrow /></span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Recent sessions are shown in the left rail — no duplicate needed here */}
     </div>
   );
 }
