@@ -12,11 +12,6 @@ const IconSparkle = ({ size = 12 }: { size?: number }) => (
     <path d="M8 1l1.4 5.6L15 8l-5.6 1.4L8 15l-1.4-5.6L1 8l5.6-1.4z" />
   </svg>
 );
-const IconBookmark = () => (
-  <svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
-    <path d="M4 2.5h8v11l-4-2.5-4 2.5z" />
-  </svg>
-);
 const IconShuffle = () => (
   <svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M2 4h2.5l7 8H14M2 12h2.5l2.2-2.5M9.4 6.5L11.5 4H14" />
@@ -555,10 +550,6 @@ function SessionDetailInner() {
           )}
         </div>
         <div className="sess-top-right">
-          <button className="sess-ghost-btn">
-            <IconBookmark />
-            Save
-          </button>
           {hasReading && (
             <button className="sess-primary-btn sess-primary-btn-sm"
               onClick={() => sendMessage(sessionId, 'Draw a new spread for me.')}
