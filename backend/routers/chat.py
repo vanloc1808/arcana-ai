@@ -143,7 +143,7 @@ RENAME_CHAT_TOOL = {
     "function": {
         "name": "rename_chat",
         "description": (
-            "Assign a short, descriptive title to a newly created chat that still uses the default title. "
+            "Assign a short, descriptive title to a newly created chat that still uses the default title. The description should not exceed 100 characters."
             "Use this only once when the chat has never been named by the user or assistant."
         ),
         "parameters": {
