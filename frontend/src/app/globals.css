@@ -2925,11 +2925,48 @@ a:focus-visible {
   .arcana-home .ah-grid { grid-template-columns: 1fr; }
   .arcana-home .ah-ritual-cta { grid-template-columns: 1fr; }
 }
+@media (max-width: 900px) {
+  .arcana-home .ah-main { padding-inline: 22px; }
+  .arcana-home .ah-strip {
+    gap: 12px;
+    border-radius: 16px;
+    padding: 10px 12px;
+    letter-spacing: 0.04em;
+    font-size: 10px;
+  }
+  .arcana-home .ah-strip .ah-grow { display: none; }
+  .arcana-home .ah-hero-meta { gap: 12px; }
+  .arcana-home .ah-card,
+  .arcana-home .ah-cod { padding: 16px; }
+  .arcana-home .ah-cod-frame { max-width: 190px; }
+  .arcana-home .ah-card-title { gap: 10px; align-items: flex-start; }
+  .arcana-home .ah-card-title h3,
+  .arcana-home .ah-cod-title { font-size: 20px; }
+  .arcana-home .ah-cont-item,
+  .arcana-home .ah-spread {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+  .arcana-home .ah-cont-mini-cards,
+  .arcana-home .ah-spread-glyph {
+    display: none;
+  }
+  .arcana-home .ah-spread-count {
+    text-align: left;
+  }
+  .arcana-home .ah-ritual-cta { padding: 16px; gap: 14px; }
+}
 @media (max-width: 640px) {
   .arcana-home .ah-main { padding: var(--ah-gutter) 18px 48px; }
   .arcana-home .ah-card-title-actions { flex-direction: column; }
   .arcana-home .ah-card-actions { width: 100%; justify-content: stretch; }
   .arcana-home .ah-card-action { flex: 1; }
+  .arcana-home .ah-card-title .ah-meta { font-size: 9px; }
+  .arcana-home .ah-cod-actions { flex-direction: column; }
+  .arcana-home .ah-cod-actions .ah-btn-ghost-gold { width: 100%; }
+  .arcana-home .ah-ritual-cta .ah-row { width: 100%; }
+  .arcana-home .ah-btn-primary,
+  .arcana-home .ah-btn-secondary { width: 100%; justify-content: center; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -3595,22 +3632,111 @@ a:focus-visible {
   .sess-rail {
     display: none;
   }
+  .sess-main,
+  .sess-detail {
+    min-width: 0;
+  }
   .sess-reading-stage {
     padding: 24px 20px 60px;
+    gap: 24px;
   }
   .sess-topbar {
     padding: 12px 16px 10px;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .sess-top-right {
+    margin-left: auto;
+  }
+  .sess-crumb {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .sess-crumb-s {
+    max-width: min(50vw, 28ch);
   }
   .sess-composer {
     padding: 12px 16px 18px;
   }
+  .sess-composer-inner {
+    gap: 8px;
+    padding: 8px 8px 8px 10px;
+  }
   .sess-spread {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 18px;
+  }
+  .sess-card3d {
+    max-width: 190px;
+  }
+  .sess-chat-user,
+  .sess-chat-assistant {
+    max-width: min(92%, 680px);
+  }
+}
+@media (max-width: 640px) {
+  .sess-topbar {
+    flex-wrap: wrap;
+  }
+  .sess-top-right {
+    width: 100%;
+    margin-left: 0;
+  }
+  .sess-top-right .sess-primary-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .sess-reading-body {
+    padding: 24px 16px 20px;
+  }
+  .sess-rb-marker {
+    margin-bottom: 18px;
+    gap: 10px;
+  }
+  .sess-rb-h {
+    font-size: 20px;
+  }
+  .sess-rb-p,
+  .sess-chat-p,
+  .sess-chat-user-text {
+    font-size: 16px;
+  }
+  .sess-dropcap {
+    font-size: 42px;
+    padding-right: 8px;
+  }
+  .sess-composer-foot {
+    flex-wrap: wrap;
+    text-align: center;
   }
 }
 @media (max-width: 500px) {
+  .sess-reading-stage {
+    padding: 18px 12px 44px;
+    gap: 18px;
+  }
   .sess-spread {
     grid-template-columns: 1fr !important;
   }
+  .sess-card3d {
+    max-width: 220px;
+  }
   .sess-rh-question { font-size: 22px; }
+  .sess-composer {
+    padding: 10px 10px 12px;
+  }
+  .sess-composer-inner {
+    border-radius: 12px;
+  }
+  .sess-kbd,
+  .sess-composer-foot .sess-dot,
+  .sess-composer-foot span:last-child,
+  .sess-primary-btn-sm span {
+    display: none;
+  }
+  .sess-primary-btn-sm {
+    padding: 9px;
+    min-width: 38px;
+    justify-content: center;
+  }
 }
