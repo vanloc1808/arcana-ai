@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - The backend now conditionally includes the `rename_chat` tool only when a session still has its default title; once a title is set by either the user or assistant, subsequent model calls omit the rename tool.
 
+### Fixed
+- Home page center "Card of the day" image now renders reliably for remote deck URLs by bypassing Next image optimization for that slot and falling back gracefully if the image fails to load.
+
 ## [0.0.17] - 2026-05-24
 
 ### Added
@@ -37,7 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Profile reading-preference toggles now render as compact switches instead of oversized circular controls.
 - Profile notification toggles now render as compact switches instead of oversized circular controls.
 - Profile history now shows infinity for free and paid turn counts when the user has unlimited access.
-- Home page center "Card of the day" image now renders reliably for remote deck URLs by bypassing Next image optimization for that slot and falling back gracefully if the image fails to load.
 
 ## [0.0.16] - 2026-05-24
 
