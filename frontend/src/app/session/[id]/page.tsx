@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
-import Image from 'next/image';
 import { useSessionCtx } from '../context';
 import type { Message, Card } from '../context';
 
@@ -83,13 +82,13 @@ function SpreadCard({ card, position, index, revealed }: {
         {/* Front face — card image */}
         <div className="sess-card-face sess-card-front">
           {card.image_url ? (
-            <div style={{ position: 'relative', width: '100%', height: '100%', transform: isReversed ? 'rotate(180deg)' : 'none' }}>
-              <Image
+            <div style={{ width: '100%', height: '100%', transform: isReversed ? 'rotate(180deg)' : 'none' }}>
+              <img
                 src={card.image_url}
                 alt={card.name}
-                fill
-                style={{ objectFit: 'cover' }}
-                sizes="220px"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                loading="lazy"
+                decoding="async"
               />
             </div>
           ) : (
