@@ -2931,3 +2931,662 @@ a:focus-visible {
   .arcana-home .ah-card-actions { width: 100%; justify-content: stretch; }
   .arcana-home .ah-card-action { flex: 1; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SESSION LAYOUT — Midnight & Brass Palette
+   Reading-session redesign: parchment cards, brass type, starlit ground.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Custom properties ──────────────────────────────────────────────── */
+:root {
+  --sess-bg:        oklch(0.135 0.028 280);
+  --sess-bg2:       oklch(0.18 0.035 282);
+  --sess-surface:   oklch(0.22 0.04 285);
+  --sess-line:      oklch(0.32 0.04 285 / 0.6);
+  --sess-gold:      oklch(0.78 0.12 78);
+  --sess-gold-deep: oklch(0.55 0.11 65);
+  --sess-plum:      oklch(0.55 0.16 320);
+  --sess-paper:     oklch(0.93 0.035 78);
+  --sess-ink:       oklch(0.22 0.04 285);
+  --sess-text:      oklch(0.95 0.015 80);
+  --sess-muted:     oklch(0.68 0.025 285);
+  --sess-soft:      oklch(0.52 0.03 285);
+
+  --sess-serif: 'Cormorant Garamond', 'EB Garamond', Georgia, serif;
+  --sess-mono:  'JetBrains Mono', ui-monospace, monospace;
+  --sess-rail:  268px;
+  --sess-gap:   28px;
+  --sess-radius: 14px;
+  --sess-radius-card: 10px;
+}
+
+@keyframes sess-twinkle {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 0.85; }
+}
+@keyframes sess-shuf-fan {
+  0%   { transform: translate(0, 0) rotate(0); }
+  40%  { transform: translate(calc((var(--shuf-i) - 2) * 28px), -20px) rotate(calc((var(--shuf-i) - 2) * 6deg)); }
+  100% { transform: translate(0, 0) rotate(0); }
+}
+@keyframes sess-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sess-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ── App shell ──────────────────────────────────────────────────────── */
+.sess-app {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--sess-rail) 1fr;
+  height: 100vh;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 0%, oklch(0.25 0.07 305 / 0.4), transparent 70%),
+    radial-gradient(ellipse 50% 50% at 100% 100%, oklch(0.25 0.05 50 / 0.18), transparent 70%),
+    var(--sess-bg);
+  color: var(--sess-text);
+  font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+  overflow: hidden;
+}
+
+.sess-starfield {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none; opacity: 0.55;
+}
+
+/* ── Left rail ──────────────────────────────────────────────────────── */
+.sess-rail {
+  position: relative; z-index: 2;
+  grid-column: 1;
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--sess-line);
+  background: linear-gradient(180deg, oklch(0.18 0.04 285 / 0.9), oklch(0.14 0.03 282 / 0.9));
+  backdrop-filter: blur(8px);
+  padding: 20px 14px 16px;
+  gap: 18px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sess-rail-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 2px 6px;
+}
+
+/* Brand */
+.sess-brand { display: flex; align-items: center; gap: 10px; }
+.sess-brand-name { display: flex; align-items: baseline; gap: 2px; }
+.sess-brand-mark {
+  font-family: var(--sess-serif); font-size: 20px; font-weight: 500;
+  letter-spacing: 0.02em; color: var(--sess-text);
+}
+.sess-brand-ai {
+  font-family: var(--sess-mono); font-size: 10px; letter-spacing: 0.18em;
+  color: var(--sess-gold); padding: 2px 5px;
+  border: 1px solid var(--sess-gold-deep); border-radius: 3px;
+  text-transform: uppercase; line-height: 1; align-self: center;
+}
+
+/* New reading button */
+.sess-new-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px; border-radius: 10px;
+  background: linear-gradient(180deg, oklch(0.82 0.13 78), oklch(0.62 0.13 70));
+  color: oklch(0.18 0.04 60);
+  font-weight: 600; font-size: 13px;
+  border: none; cursor: pointer;
+  box-shadow: inset 0 1px 0 oklch(0.98 0.04 80 / 0.6), 0 1px 0 oklch(0.1 0.02 280);
+  transition: transform 0.1s ease;
+}
+.sess-new-btn:hover { transform: translateY(-1px); }
+.sess-new-btn .sess-kbd { margin-left: auto; }
+
+.sess-kbd {
+  display: inline-flex; align-items: center;
+  padding: 2px 6px; border-radius: 4px;
+  background: oklch(0.16 0.03 280 / 0.6); color: var(--sess-muted);
+  border: 1px solid var(--sess-line);
+  font-family: var(--sess-mono); font-size: 10px; letter-spacing: 0.04em;
+}
+
+/* Rail sections */
+.sess-rail-section {
+  display: flex; flex-direction: column; gap: 6px; min-height: 0;
+}
+.sess-rail-section-h {
+  font-family: var(--sess-mono); font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--sess-soft);
+  padding: 4px 8px;
+}
+
+/* Reading list */
+.sess-reading-list {
+  display: flex; flex-direction: column; gap: 2px;
+  overflow-y: auto; min-height: 0; flex: 1 1 0;
+  max-height: 220px;
+}
+.sess-reading-list::-webkit-scrollbar { width: 4px; }
+.sess-reading-list::-webkit-scrollbar-thumb { background: oklch(0.3 0.04 285 / 0.5); border-radius: 4px; }
+.sess-reading-list::-webkit-scrollbar-track { background: transparent; }
+
+.sess-reading-item {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: baseline;
+  gap: 8px; padding: 9px 10px; border-radius: 8px;
+  text-align: left; color: var(--sess-muted); width: 100%;
+  background: none; border: none; cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sess-reading-item:hover { background: oklch(0.24 0.04 285 / 0.6); color: var(--sess-text); }
+.sess-reading-item.active {
+  background: oklch(0.26 0.06 285 / 0.85);
+  color: var(--sess-text);
+  box-shadow: inset 2px 0 0 var(--sess-gold);
+}
+.sess-ri-num { font-family: var(--sess-mono); font-size: 10px; color: var(--sess-gold-deep); }
+.sess-ri-q {
+  font-family: var(--sess-serif); font-size: 14px; font-style: italic;
+  line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sess-ri-date { font-family: var(--sess-mono); font-size: 9px; color: var(--sess-soft); letter-spacing: 0.05em; }
+
+.sess-rail-empty {
+  padding: 8px 12px; font-family: var(--sess-mono); font-size: 11px;
+  color: var(--sess-soft); letter-spacing: 0.06em;
+}
+
+.sess-load-more {
+  font-family: var(--sess-mono); font-size: 11px; color: var(--sess-gold-deep);
+  letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 10px;
+  background: none; border: none; cursor: pointer;
+  transition: color 0.15s;
+}
+.sess-load-more:hover { color: var(--sess-gold); }
+.sess-load-more:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Nav list */
+.sess-nav-list a {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 10px; border-radius: 7px;
+  font-size: 13px; color: var(--sess-muted);
+  text-decoration: none;
+}
+.sess-nav-list a:hover { background: oklch(0.24 0.04 285 / 0.5); color: var(--sess-text); }
+
+/* Rail footer */
+.sess-rail-foot {
+  margin-top: auto; display: flex; flex-direction: column;
+  gap: 12px; padding-top: 12px; border-top: 1px solid var(--sess-line);
+}
+.sess-moon {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px;
+  background: oklch(0.2 0.04 285 / 0.5);
+  font-size: 11px; color: var(--sess-muted);
+  font-family: var(--sess-mono); letter-spacing: 0.04em;
+}
+.sess-moon svg { color: var(--sess-gold); }
+.sess-user { display: flex; align-items: center; gap: 10px; padding: 4px 8px; }
+.sess-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--sess-gold), var(--sess-gold-deep));
+  color: var(--sess-bg); font-family: var(--sess-serif); font-weight: 600; font-size: 14px;
+  display: grid; place-items: center;
+}
+.sess-user-name { font-size: 13px; font-weight: 500; }
+.sess-user-plan {
+  font-size: 10px; color: var(--sess-soft); font-family: var(--sess-mono);
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* ── Main area ──────────────────────────────────────────────────────── */
+.sess-main {
+  position: relative; z-index: 1;
+  grid-column: 2;
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+
+.sess-detail {
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* TopBar */
+.sess-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px 14px;
+  border-bottom: 1px solid var(--sess-line);
+  background: linear-gradient(180deg, oklch(0.16 0.035 282 / 0.7), transparent);
+  flex-shrink: 0;
+}
+.sess-top-left { display: flex; flex-direction: column; gap: 4px; }
+.sess-crumb { display: flex; align-items: baseline; gap: 8px; }
+.sess-crumb-l {
+  font-family: var(--sess-mono); font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--sess-soft);
+}
+.sess-crumb-n { font-family: var(--sess-mono); font-size: 13px; color: var(--sess-gold); }
+.sess-crumb-dot { color: var(--sess-soft); }
+.sess-crumb-s {
+  font-family: var(--sess-serif); font-style: italic; font-size: 15px;
+  color: var(--sess-text); max-width: 36ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sess-top-meta {
+  font-family: var(--sess-mono); font-size: 10px;
+  color: var(--sess-soft); letter-spacing: 0.08em;
+}
+.sess-top-right { display: flex; gap: 10px; }
+
+/* Shared button styles */
+.sess-ghost-btn, .sess-primary-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 13px; border-radius: 8px;
+  font-size: 12px; font-weight: 500; letter-spacing: 0.02em;
+  border: none; cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.sess-ghost-btn {
+  color: var(--sess-muted); background: none;
+  border: 1px solid var(--sess-line);
+}
+.sess-ghost-btn:hover { color: var(--sess-text); background: oklch(0.24 0.04 285 / 0.5); }
+.sess-primary-btn {
+  color: oklch(0.18 0.04 60);
+  background: linear-gradient(180deg, oklch(0.85 0.13 78), oklch(0.65 0.13 70));
+  box-shadow: inset 0 1px 0 oklch(0.98 0.04 80 / 0.6);
+}
+.sess-primary-btn:hover { transform: translateY(-1px); }
+.sess-primary-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+.sess-primary-btn-sm { padding: 7px 11px; font-size: 12px; }
+
+/* ── Reading scroll ─────────────────────────────────────────────────── */
+.sess-reading-scroll {
+  overflow-y: auto; min-height: 0; flex: 1;
+  position: relative;
+}
+.sess-reading-scroll::-webkit-scrollbar { width: 8px; }
+.sess-reading-scroll::-webkit-scrollbar-thumb {
+  background: oklch(0.3 0.04 285 / 0.5); border-radius: 4px;
+}
+.sess-reading-scroll::-webkit-scrollbar-track { background: transparent; }
+
+.sess-reading-stage {
+  max-width: 1080px; margin: 0 auto;
+  padding: 36px 48px 80px;
+  display: flex; flex-direction: column; gap: 36px;
+}
+
+/* ── Error banner ───────────────────────────────────────────────────── */
+.sess-error-banner {
+  padding: 12px 16px; border-radius: 8px;
+  background: oklch(0.25 0.08 25 / 0.4);
+  border: 1px solid oklch(0.5 0.12 25 / 0.5);
+  color: oklch(0.85 0.08 30); font-size: 14px;
+}
+
+/* ── Reading header ─────────────────────────────────────────────────── */
+.sess-reading-head {
+  text-align: center; display: flex; flex-direction: column;
+  gap: 16px; align-items: center;
+}
+.sess-rh-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--sess-gold); font-family: var(--sess-mono); font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  padding: 4px 10px; border: 1px solid var(--sess-gold-deep); border-radius: 999px;
+}
+.sess-rh-question {
+  margin: 0; max-width: 28ch; text-wrap: pretty;
+  font-family: var(--sess-serif); font-weight: 500; font-style: italic;
+  font-size: clamp(24px, 3.2vw, 42px); line-height: 1.15;
+  color: var(--sess-text);
+}
+
+/* ── Card spread ────────────────────────────────────────────────────── */
+.sess-spread {
+  display: grid;
+  gap: clamp(20px, 3vw, 44px);
+  padding: 14px 0;
+}
+
+.sess-card-slot {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.sess-pos-label {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 10px; width: 100%;
+  font-family: var(--sess-mono); font-size: 10px; letter-spacing: 0.24em;
+  text-transform: uppercase; color: var(--sess-gold-deep);
+}
+.sess-pos-line { height: 1px; background: linear-gradient(90deg, transparent, var(--sess-gold-deep), transparent); }
+.sess-pos-name { white-space: nowrap; }
+
+/* 3-D card flip */
+.sess-card3d {
+  width: 100%; max-width: 220px; aspect-ratio: 100 / 140;
+  position: relative; transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--card-delay, 0s);
+}
+.sess-card3d.flipped { transform: rotateY(180deg); }
+
+.sess-card-face {
+  position: absolute; inset: 0;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: var(--sess-radius-card);
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 oklch(0.98 0.04 80 / 0.15),
+    0 16px 40px oklch(0.05 0.02 280 / 0.55),
+    0 2px 6px oklch(0.05 0.02 280 / 0.5);
+}
+.sess-card-back { background: var(--sess-bg2); }
+.sess-card-front { transform: rotateY(180deg); background: var(--sess-paper); }
+
+.sess-reversed-tag {
+  position: absolute; top: 8px; right: 8px;
+  padding: 3px 7px; border-radius: 3px;
+  background: var(--sess-plum); color: var(--sess-text);
+  font-family: var(--sess-mono); font-size: 9px; letter-spacing: 0.12em;
+  text-transform: uppercase; pointer-events: none;
+}
+
+.sess-card-meta { text-align: center; display: flex; flex-direction: column; gap: 4px; }
+.sess-card-name {
+  font-family: var(--sess-serif); font-size: 17px; font-weight: 500;
+  color: var(--sess-text); letter-spacing: 0.02em;
+}
+.sess-card-keywords {
+  font-family: var(--sess-mono); font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--sess-soft);
+}
+
+/* ── Reading article ────────────────────────────────────────────────── */
+.sess-reading-body {
+  background:
+    linear-gradient(180deg, oklch(0.2 0.04 285 / 0.6), oklch(0.18 0.035 282 / 0.4));
+  border: 1px solid var(--sess-line);
+  border-radius: var(--sess-radius);
+  padding: 38px clamp(28px, 4vw, 56px) 32px;
+  max-width: 760px; margin: 0 auto; width: 100%;
+  position: relative;
+}
+.sess-reading-body::before,
+.sess-reading-body::after {
+  content: ""; position: absolute; left: 16px; right: 16px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sess-gold-deep), transparent);
+  opacity: 0.5;
+}
+.sess-reading-body::before { top: 6px; }
+.sess-reading-body::after  { bottom: 6px; }
+
+.sess-rb-marker {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 14px; margin-bottom: 26px;
+}
+.sess-rb-line { height: 1px; background: linear-gradient(90deg, transparent, var(--sess-gold-deep), transparent); }
+.sess-rb-label {
+  font-family: var(--sess-mono); font-size: 10px; letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--sess-gold);
+}
+.sess-rb-label-anim {
+  display: flex; align-items: center; gap: 6px;
+  animation: sess-fade-in 0.25s ease;
+}
+
+.sess-rb-h {
+  font-family: var(--sess-serif); font-style: italic; font-weight: 500;
+  font-size: 22px; color: var(--sess-text);
+  margin: 24px 0 8px; letter-spacing: 0.01em;
+}
+.sess-rb-p {
+  font-family: var(--sess-serif); font-size: 18px; line-height: 1.65;
+  color: oklch(0.9 0.02 80); margin: 0 0 14px; text-wrap: pretty;
+}
+.sess-rb-p-first { display: block; }
+.sess-dropcap {
+  float: left; font-family: var(--sess-serif); font-weight: 500; font-style: normal;
+  font-size: 56px; line-height: 0.86; color: var(--sess-gold);
+  padding: 6px 10px 0 0; margin-top: 2px;
+}
+.sess-rb-ol {
+  counter-reset: ol; display: flex; flex-direction: column; gap: 14px;
+  margin: 8px 0 18px; padding: 0; list-style: none;
+}
+.sess-rb-ol li {
+  display: grid; grid-template-columns: auto 1fr; gap: 14px;
+  padding: 12px 14px;
+  background: oklch(0.16 0.03 285 / 0.5);
+  border-left: 2px solid var(--sess-gold-deep);
+  border-radius: 6px;
+  font-family: var(--sess-serif); font-size: 16px; color: var(--sess-muted);
+  line-height: 1.55;
+}
+.sess-cursor {
+  display: inline-block; width: 2px; height: 1em;
+  background: var(--sess-gold); margin-left: 2px; vertical-align: text-bottom;
+  animation: sess-blink 1s step-end infinite;
+}
+
+/* ── Follow-up chat ──────────────────────────────────────────────────── */
+.sess-chat-msg { display: flex; flex-direction: column; gap: 4px; }
+.sess-chat-msg.user { align-items: flex-end; }
+.sess-chat-msg.assistant { align-items: flex-start; }
+
+.sess-chat-user {
+  max-width: 70%;
+  padding: 14px 18px; border-radius: 16px;
+  background: linear-gradient(135deg, oklch(0.42 0.18 300), oklch(0.35 0.18 290));
+  color: var(--sess-text);
+}
+.sess-chat-user-text {
+  font-family: var(--sess-serif); font-size: 16px; font-style: italic;
+  line-height: 1.55; margin: 0;
+}
+
+.sess-chat-assistant {
+  max-width: 80%;
+  background: oklch(0.2 0.04 285 / 0.5);
+  border: 1px solid var(--sess-line);
+  border-radius: 12px; padding: 16px 20px;
+}
+.sess-chat-assistant-tag {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--sess-mono); font-size: 9px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--sess-gold);
+  margin-bottom: 10px;
+}
+.sess-chat-p {
+  font-family: var(--sess-serif); font-size: 17px; line-height: 1.6;
+  color: oklch(0.88 0.02 80); margin: 0 0 10px;
+}
+.sess-chat-p:last-child { margin-bottom: 0; }
+
+.sess-chat-cards {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;
+}
+.sess-chat-card-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 8px;
+  background: oklch(0.16 0.03 285 / 0.5);
+  border: 1px solid var(--sess-line);
+}
+
+/* ── Shuffling overlay ──────────────────────────────────────────────── */
+.sess-shuf-overlay {
+  position: absolute; inset: 0;
+  background: oklch(0.14 0.03 282 / 0.75);
+  backdrop-filter: blur(6px);
+  display: grid; place-items: center;
+  z-index: 10;
+  animation: sess-fade-in 0.25s ease;
+}
+.sess-shuf-stack {
+  position: relative; width: 160px; height: 224px;
+}
+.sess-shuf-card {
+  position: absolute; inset: 0; border-radius: var(--sess-radius-card);
+  overflow: hidden;
+  box-shadow: 0 14px 30px oklch(0.05 0.02 280 / 0.5);
+  animation: sess-shuf-fan 1.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation-delay: calc(var(--shuf-i) * 0.08s);
+}
+.sess-shuf-label {
+  position: absolute; bottom: 28%; transform: translateY(calc(100% + 24px));
+  display: flex; align-items: center; gap: 8px;
+  color: var(--sess-gold); font-family: var(--sess-serif); font-style: italic;
+  font-size: 16px; white-space: nowrap;
+}
+
+/* ── Composer ───────────────────────────────────────────────────────── */
+.sess-composer {
+  padding: 14px 32px 22px;
+  border-top: 1px solid var(--sess-line);
+  background: linear-gradient(0deg, oklch(0.14 0.03 282 / 0.95), oklch(0.14 0.03 282 / 0.6));
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
+}
+.sess-composer-inner {
+  display: flex; align-items: center; gap: 10px;
+  max-width: 880px; margin: 0 auto;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--sess-line); border-radius: 999px;
+  background: oklch(0.18 0.035 285 / 0.6);
+  transition: border-color 0.15s ease;
+}
+.sess-composer-inner:focus-within {
+  border-color: var(--sess-gold-deep);
+  box-shadow: 0 0 0 4px oklch(0.55 0.11 65 / 0.12);
+}
+.sess-composer-inner > svg { color: var(--sess-gold); flex-shrink: 0; }
+.sess-composer-input {
+  flex: 1; min-width: 0;
+  border: 0; outline: 0; background: transparent;
+  color: var(--sess-text);
+  font: italic 16px var(--sess-serif);
+  padding: 6px 4px;
+}
+.sess-composer-input::placeholder { color: var(--sess-soft); }
+.sess-composer-input:disabled { opacity: 0.6; }
+.sess-composer-foot {
+  display: flex; gap: 8px; justify-content: center; align-items: center;
+  margin-top: 10px; font-size: 11px; color: var(--sess-soft);
+  font-family: var(--sess-mono); letter-spacing: 0.04em;
+}
+.sess-dot { color: var(--sess-gold-deep); }
+
+/* ── Empty state ────────────────────────────────────────────────────── */
+.sess-empty-stage {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 24px; padding: 60px 0 40px; text-align: center;
+}
+.sess-empty-glyph { opacity: 0.7; }
+.sess-empty-hint {
+  font-family: var(--sess-serif); font-style: italic; font-size: 22px;
+  color: var(--sess-muted); max-width: 36ch; line-height: 1.4; margin: 0;
+}
+.sess-empty-composer { width: 100%; max-width: 640px; }
+
+/* ── Session home ───────────────────────────────────────────────────── */
+.sess-home {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 48px; padding: 60px 48px 80px;
+  overflow-y: auto; min-height: 0;
+}
+.sess-home::-webkit-scrollbar { width: 8px; }
+.sess-home::-webkit-scrollbar-thumb { background: oklch(0.3 0.04 285 / 0.5); border-radius: 4px; }
+
+.sess-home-hero {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 16px; text-align: center; max-width: 480px;
+}
+.sess-home-glyph { opacity: 0.8; }
+.sess-home-title {
+  font-family: var(--sess-serif); font-weight: 500; font-style: italic;
+  font-size: clamp(28px, 4vw, 44px); line-height: 1.1;
+  color: var(--sess-text); margin: 0;
+}
+.sess-home-sub {
+  font-family: var(--sess-serif); font-size: 16px; font-style: italic;
+  line-height: 1.55; color: var(--sess-muted); margin: 0;
+}
+
+.sess-home-prompts, .sess-home-recent {
+  width: 100%; max-width: 600px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.sess-home-prompts-label {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 12px;
+  font-family: var(--sess-mono); font-size: 10px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--sess-soft);
+}
+.sess-divider-line { height: 1px; background: linear-gradient(90deg, transparent, var(--sess-line)); }
+.sess-home-prompts-label span:last-child .sess-divider-line { background: linear-gradient(270deg, transparent, var(--sess-line)); }
+
+.sess-prompt-list { display: flex; flex-direction: column; gap: 4px; }
+.sess-prompt-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 8px; width: 100%;
+  text-align: left; background: none; border: none; cursor: pointer;
+  color: var(--sess-muted);
+  font-family: var(--sess-serif); font-style: italic; font-size: 15px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sess-prompt-item:hover {
+  background: oklch(0.22 0.04 285 / 0.6); color: var(--sess-text);
+}
+.sess-prompt-item svg { flex-shrink: 0; }
+.sess-prompt-arrow { margin-left: auto; color: var(--sess-soft); }
+.sess-prompt-item:hover .sess-prompt-arrow { color: var(--sess-gold); }
+
+.sess-recent-list { display: flex; flex-direction: column; gap: 4px; }
+.sess-recent-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 8px; width: 100%;
+  text-align: left; background: none; border: none; cursor: pointer;
+  transition: background 0.15s ease;
+}
+.sess-recent-item:hover { background: oklch(0.22 0.04 285 / 0.6); }
+.sess-recent-title {
+  flex: 1; font-family: var(--sess-serif); font-size: 15px; font-style: italic;
+  color: var(--sess-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sess-recent-date {
+  font-family: var(--sess-mono); font-size: 10px; color: var(--sess-soft);
+  letter-spacing: 0.08em; flex-shrink: 0;
+}
+.sess-recent-arrow { color: var(--sess-soft); flex-shrink: 0; }
+.sess-recent-item:hover .sess-recent-title { color: var(--sess-text); }
+.sess-recent-item:hover .sess-recent-arrow { color: var(--sess-gold); }
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .sess-app {
+    grid-template-columns: 1fr;
+  }
+  .sess-rail {
+    display: none;
+  }
+  .sess-reading-stage {
+    padding: 24px 20px 60px;
+  }
+  .sess-topbar {
+    padding: 12px 16px 10px;
+  }
+  .sess-composer {
+    padding: 12px 16px 18px;
+  }
+  .sess-spread {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+@media (max-width: 500px) {
+  .sess-spread {
+    grid-template-columns: 1fr !important;
+  }
+  .sess-rh-question { font-size: 22px; }
+}

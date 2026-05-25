@@ -182,14 +182,14 @@ export default function OnboardingPage() {
 
     const handleGetStarted = () => {
         if (isAuthenticated) {
-            router.push('/');
+            router.push('/session');
         } else {
             router.push('/register');
         }
     };
 
     const handleSkip = () => {
-        router.push('/');
+        router.push('/session');
     };
 
     const step = onboardingSteps[currentStep];

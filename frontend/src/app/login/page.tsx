@@ -33,7 +33,7 @@ export default function Login() {
 
             // Redirect to home page after a short delay to ensure tokens are set
             setTimeout(() => {
-                router.push('/');
+                router.push('/session');
             }, 100);
         } catch (err: unknown) {
             let errorMessage = 'An error occurred';
