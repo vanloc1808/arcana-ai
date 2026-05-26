@@ -349,6 +349,10 @@ function UserRow({
                                 receive_error_alerts: fd.get("receive_error_alerts") === "on",
                                 favorite_deck_id: parseInt(fd.get("favorite_deck_id") as string),
                             });
+                            const newPassword = (fd.get("new_password") as string | null)?.trim() ?? "";
+                            if (newPassword) {
+                                await api.post(`/admin/users/${u.id}/reset-password`, { new_password: newPassword });
+                            }
                             setOpen(false);
                             onSaved();
                         } catch { alert("Failed to update user."); }
@@ -366,6 +370,17 @@ function UserRow({
                             <input name={f.name} type={f.type} defaultValue={f.val} required={f.required} className="admin-input" />
                         </div>
                     ))}
+                    <div>
+                        <label className="admin-field-label">Reset password</label>
+                        <input
+                            name="new_password"
+                            type="password"
+                            minLength={8}
+                            autoComplete="new-password"
+                            placeholder="Leave blank to keep current password"
+                            className="admin-input"
+                        />
+                    </div>
                     <div className="flex flex-col gap-3">
                         {[
                             { name: "is_active", label: "Active user", checked: u.is_active },

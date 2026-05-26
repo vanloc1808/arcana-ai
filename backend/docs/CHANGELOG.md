@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Admin Users now supports bulk user deletion with a Select mode, row-level multi-select checkboxes, page-level select-all, and a single "Delete selected" action for removing multiple users in one flow.
 - Admin Users now includes a "No sessions" filter chip so administrators can quickly find accounts that have never started a chat session.
 - Header navigation now includes a dedicated Sessions tab that links directly to `/session` for faster access to chat history.
+- Admin Users now supports direct password resets from the user edit dialog, allowing administrators to set a new password for any account without email token flow.
 
 ### Changed
 - The backend now conditionally includes the `rename_chat` tool only when a session still has its default title; once a title is set by either the user or assistant, subsequent model calls omit the rename tool.
