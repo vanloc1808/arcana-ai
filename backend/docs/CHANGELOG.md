@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.19] - 2026-05-25
+
+### Added
+- Added a dedicated staging deployment workflow triggered by successful CI runs on the `staging` branch, including automated image rollout, database migration, and health checks for the staging stack.
+- Added `docker-compose.staging.yaml` to run an isolated staging stack (frontend, backend, Redis, Celery worker, and Celery beat) with staging-specific container names, env files, and Traefik host rules.
+- Added `docs/STAGING_SETUP_TODO.md` with manual follow-ups that still require external access (GitHub secrets, VPS preparation, DNS/TLS, and optional hardening).
+
 ## [0.0.18] - 2026-05-25
 
 ### Added

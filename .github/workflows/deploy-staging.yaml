@@ -1,0 +1,57 @@
+name: Deploy to VPS (Staging)
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [staging]
+    types:
+      - completed
+
+env:
+  PROJECT_DIR: ${{ secrets.VPS_STAGING_PROJECT_DIR }}
+  COMPOSE_FILE: docker-compose.staging.yaml
+  IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Deploy staging application
+        run: |
+          set -e
+          cd "${{ env.PROJECT_DIR }}"
+
+          git fetch origin
+          git checkout staging
+          git pull origin staging
+
+          export IMAGE_TAG="${IMAGE_TAG}"
+          echo "Deploying staging image tag: ${IMAGE_TAG}"
+
+          docker compose -f "${COMPOSE_FILE}" pull
+          docker compose -f "${COMPOSE_FILE}" up -d
+
+      - name: Run database migrations
+        run: |
+          set -e
+          cd "${{ env.PROJECT_DIR }}"
+          echo "Waiting for staging backend to be ready..."
+          sleep 30
+          docker compose -f "${COMPOSE_FILE}" exec -T backend \
+            uv run python migrate.py
+          echo "Staging database migrations completed successfully"
+
+      - name: Health check
+        run: |
+          cd "${{ env.PROJECT_DIR }}"
+          echo "Service status:"
+          docker compose -f "${COMPOSE_FILE}" ps
+          echo "Checking staging backend health endpoint..."
+          sleep 10
+          if curl -f http://localhost:8010/health; then
+            echo "Staging backend health check passed"
+          else
+            echo "Warning: Staging backend health check failed"
+          fi
