@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { MysticCard } from './MysticCard';
 import { ProfileIcon } from './ProfileIcon';
 import { DeckSelector } from '@/components/DeckSelector';
@@ -11,7 +12,14 @@ interface TarotDecksTabProps {
 }
 
 export function TarotDecksTab({ profile }: TarotDecksTabProps) {
+    const { t } = useTranslation('profile');
     const currentDeck = profile?.favorite_deck;
+
+    const deckLore = [
+        { era: '1700s', label: t('decks.traditional1700s'), desc: t('decks.traditionalDesc'), tone: '#38bdf8' as const },
+        { era: '1909', label: t('decks.modern1909'), desc: t('decks.modernDesc'), tone: '#a855f7' as const },
+        { era: t('decks.today', { defaultValue: 'Today' }), label: t('decks.contemporary'), desc: t('decks.contemporaryDesc'), tone: '#f5b942' as const },
+    ];
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -25,16 +33,16 @@ export function TarotDecksTab({ profile }: TarotDecksTabProps) {
                             fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
                             color: '#f5b942', fontWeight: 600, marginBottom: 6,
                         }}>
-                            ✦ Currently channeling
+                            ✦ {t('decksTab.currentlyChanneling')}
                         </div>
                         <h2 style={{
                             margin: 0, fontSize: 36, fontWeight: 500, lineHeight: 1.1,
                             fontFamily: "'Cormorant Garamond', serif", color: '#f4f1ff',
                         }}>
-                            {currentDeck?.name || 'No deck selected'}
+                            {currentDeck?.name || t('decksTab.noDeckSelected')}
                         </h2>
                         <p style={{ margin: '6px 0 0', color: '#b3b0d4', fontSize: 14 }}>
-                            {currentDeck ? 'Your active oracle for readings & chat' : 'Choose a deck from the list below'}
+                            {currentDeck ? t('decksTab.activeOracle') : t('decksTab.chooseDeckBelow')}
                         </p>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -42,7 +50,7 @@ export function TarotDecksTab({ profile }: TarotDecksTabProps) {
                             fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
                             color: '#7c799f', letterSpacing: '0.1em', marginBottom: 4,
                         }}>
-                            DECK STATUS
+                            {t('decksTab.deckStatus')}
                         </div>
                         <div style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -52,9 +60,9 @@ export function TarotDecksTab({ profile }: TarotDecksTabProps) {
                             color: currentDeck ? '#a855f7' : '#7c799f',
                         }}>
                             {currentDeck ? (
-                                <><ProfileIcon name="check" size={13} /> Active</>
+                                <><ProfileIcon name="check" size={13} /> {t('decksTab.active')}</>
                             ) : (
-                                'Not set'
+                                t('decksTab.notSet')
                             )}
                         </div>
                     </div>
@@ -73,17 +81,17 @@ export function TarotDecksTab({ profile }: TarotDecksTabProps) {
                                 fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
                                 color: '#f5b942', fontWeight: 600, marginBottom: 4,
                             }}>
-                                ✦ Your Collection
+                                ✦ {t('decksTab.yourCollection')}
                             </div>
                             <h3 style={{
                                 margin: 0, fontSize: 28, fontWeight: 500,
                                 fontFamily: "'Cormorant Garamond', serif", color: '#f4f1ff',
                             }}>
-                                Choose your deck
+                                {t('decksTab.chooseDeck')}
                             </h3>
                         </div>
                         <span style={{ fontSize: 13, color: '#7c799f' }}>
-                            Applied to every reading and chat
+                            {t('decksTab.appliedToAll')}
                         </span>
                     </div>
                 </div>
@@ -97,19 +105,13 @@ export function TarotDecksTab({ profile }: TarotDecksTabProps) {
 
             {/* Deck mythology strip */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-                {DECK_LORE.map(lore => (
+                {deckLore.map(lore => (
                     <LoreCard key={lore.era} {...lore} />
                 ))}
             </div>
         </div>
     );
 }
-
-const DECK_LORE = [
-    { era: '1700s', label: 'Traditional pattern', desc: 'The Marseille — earliest standardised deck. Pip-style minors, austere line-art majors.', tone: '#38bdf8' as const },
-    { era: '1909', label: 'Modern foundation', desc: "Rider–Waite — the lingua franca. Fully illustrated minors; Pamela Colman Smith's visionary art.", tone: '#a855f7' as const },
-    { era: 'Today', label: 'Contemporary voice', desc: 'New decks balance inclusivity, personal mythology, and evolving spiritual vocabularies.', tone: '#f5b942' as const },
-];
 
 function LoreCard({ era, label, desc, tone }: { era: string; label: string; desc: string; tone: string }) {
     return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, JournalEntryCreate } from "@/types/tarot";
 import { XMarkIcon, TagIcon, HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
@@ -38,6 +39,7 @@ export default function CreateJournalEntry({
         is_favorite: false
     });
 
+    const { t } = useTranslation('journal');
     const [tagInput, setTagInput] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -97,7 +99,7 @@ export default function CreateJournalEntry({
                 {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b border-gray-700">
                     <h2 className="text-xl font-bold text-white">
-                        Create Journal Entry
+                        {t('create.title')}
                     </h2>
                     <button
                         onClick={onClose}
@@ -111,18 +113,18 @@ export default function CreateJournalEntry({
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                     {/* Reading Information */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium text-white">Reading Information</h3>
+                        <h3 className="text-lg font-medium text-white">{t('create.readingInfo')}</h3>
 
                         {/* Concern */}
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Question/Concern
+                                {t('create.question')}
                             </label>
                             <input
                                 type="text"
                                 value={formData.reading_snapshot.concern || ""}
                                 onChange={(e) => handleReadingSnapshotChange("concern", e.target.value)}
-                                placeholder="What question did you ask the cards?"
+                                placeholder={t('create.questionPlaceholder')}
                                 className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-gray-700 text-white placeholder-gray-400"
                             />
                         </div>
@@ -130,13 +132,13 @@ export default function CreateJournalEntry({
                         {/* Spread */}
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Spread Used
+                                {t('create.spreadUsed')}
                             </label>
                             <input
                                 type="text"
                                 value={formData.reading_snapshot.spread || ""}
                                 onChange={(e) => handleReadingSnapshotChange("spread", e.target.value)}
-                                placeholder="e.g., Three Card Spread, Celtic Cross"
+                                placeholder={t('create.spreadPlaceholder')}
                                 className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-gray-700 text-white placeholder-gray-400"
                             />
                         </div>
@@ -144,12 +146,12 @@ export default function CreateJournalEntry({
                         {/* Interpretation */}
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Initial Interpretation
+                                {t('create.initialInterpretation')}
                             </label>
                             <textarea
                                 value={formData.reading_snapshot.interpretation || ""}
                                 onChange={(e) => handleReadingSnapshotChange("interpretation", e.target.value)}
-                                placeholder="What was the initial interpretation of the cards?"
+                                placeholder={t('create.interpretationPlaceholder')}
                                 rows={3}
                                 className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-gray-700 text-white placeholder-gray-400"
                             />
@@ -158,17 +160,17 @@ export default function CreateJournalEntry({
 
                     {/* Personal Reflection */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium text-white">Personal Reflection</h3>
+                        <h3 className="text-lg font-medium text-white">{t('create.personalReflection')}</h3>
 
                         {/* Personal Notes */}
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Personal Notes & Insights
+                                {t('create.personalNotes')}
                             </label>
                             <textarea
                                 value={formData.personal_notes || ""}
                                 onChange={(e) => handleInputChange("personal_notes", e.target.value)}
-                                placeholder="What insights, feelings, or thoughts did this reading bring up for you?"
+                                placeholder={t('create.notesPlaceholder')}
                                 rows={4}
                                 className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-gray-700 text-white placeholder-gray-400"
                             />
@@ -178,7 +180,7 @@ export default function CreateJournalEntry({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Mood Before Reading
+                                    {t('create.moodBefore')}
                                 </label>
                                 <div className="flex items-center space-x-3">
                                     <input
@@ -200,7 +202,7 @@ export default function CreateJournalEntry({
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Mood After Reading
+                                    {t('create.moodAfter')}
                                 </label>
                                 <div className="flex items-center space-x-3">
                                     <input
@@ -224,7 +226,7 @@ export default function CreateJournalEntry({
                         {/* Outcome Rating */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                How helpful was this reading? (1-10)
+                                {t('create.helpfulness')}
                             </label>
                             <div className="flex items-center space-x-3">
                                 <input
@@ -244,12 +246,12 @@ export default function CreateJournalEntry({
 
                     {/* Tags and Organization */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Organization</h3>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('create.organization')}</h3>
 
                         {/* Tags */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Tags
+                                {t('create.tags')}
                             </label>
                             <div className="flex space-x-2 mb-2">
                                 <div className="flex-1 relative">
@@ -259,7 +261,7 @@ export default function CreateJournalEntry({
                                         value={tagInput}
                                         onChange={(e) => setTagInput(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                                        placeholder="Add a tag..."
+                                        placeholder={t('create.tagPlaceholder')}
                                         className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                                     />
                                 </div>
@@ -268,7 +270,7 @@ export default function CreateJournalEntry({
                                     onClick={handleAddTag}
                                     className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors duration-200"
                                 >
-                                    Add
+                                    {t('add', { ns: 'common' })}
                                 </button>
                             </div>
 
@@ -297,7 +299,7 @@ export default function CreateJournalEntry({
                         {/* Follow-up Date */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Follow-up Date (Optional)
+                                {t('create.followUpDate')}
                             </label>
                             <input
                                 type="date"
@@ -320,7 +322,7 @@ export default function CreateJournalEntry({
                                     <HeartIcon className="w-5 h-5 text-gray-400" />
                                 )}
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Mark as Favorite
+                                    {t('create.markAsFavorite')}
                                 </span>
                             </button>
                         </div>
@@ -333,14 +335,14 @@ export default function CreateJournalEntry({
                             onClick={onClose}
                             className="px-6 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
                         >
-                            Cancel
+                            {t('cancel', { ns: 'common' })}
                         </button>
                         <button
                             type="submit"
                             disabled={isSubmitting}
                             className="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                         >
-                            {isSubmitting ? "Creating..." : "Create Entry"}
+                            {isSubmitting ? t('create.creating') : t('create.createEntry')}
                         </button>
                     </div>
                 </form>

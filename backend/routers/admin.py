@@ -24,6 +24,7 @@ from schemas import (
     AdminSpreadResponse,
     AdminSpreadUpdate,
     AdminUserResponse,
+    AdminUserPasswordResetRequest,
     AdminUserUpdate,
 )
 from utils.avatar_utils import avatar_manager
@@ -383,6 +384,23 @@ async def delete_user(user_id: int, db: Session = Depends(get_db), admin_user: U
     db.commit()
 
     return {"message": "User deleted successfully"}
+
+
+@router.post("/users/{user_id}/reset-password")
+async def reset_user_password(
+    user_id: int,
+    payload: AdminUserPasswordResetRequest,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),
+):
+    """Reset a user's password from the admin portal."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password = payload.new_password
+    db.commit()
+    return {"message": "Password reset successfully"}
 
 
 # Chat Session Management

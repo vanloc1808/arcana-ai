@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { MysticCard, SectionHeader } from './MysticCard';
 import { ProfileIcon } from './ProfileIcon';
 import { SubscriptionHistory } from '@/components/SubscriptionHistory';
@@ -13,6 +15,7 @@ interface HistoryTabProps {
 }
 
 export function HistoryTab({ profile }: HistoryTabProps) {
+    const { t } = useTranslation('profile');
     const [filter, setFilter] = useState<'overview' | 'transactions' | 'usage'>('overview');
     const [stats, setStats] = useState<UserDashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -42,20 +45,20 @@ export function HistoryTab({ profile }: HistoryTabProps) {
     const longestStreakLabel = loading
         ? '…'
         : longestStreak !== null
-            ? `${longestStreak} day${longestStreak !== 1 ? 's' : ''}`
+            ? `${longestStreak} ${longestStreak !== 1 ? t('common:dayPlural') : t('common:daySingular')}`
             : '—';
     const longestStreakSub = stats?.last_activity_date
-        ? `last active ${new Date(stats.last_activity_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-        : 'personal best';
+        ? t('historyTab.lastActive', { date: new Date(stats.last_activity_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })
+        : t('historyTab.personalBest');
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {/* Stat strip */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-                <StatCard icon="card" label="Total readings" value={totalReadingsLabel} sub="lifetime" tone="violet" />
-                <StatCard icon="bolt" label="Turns remaining" value={totalTurns} sub="current balance" tone="gold" />
-                <StatCard icon="chart" label="Paid turns" value={paidTurns} sub="purchased" tone="emerald" />
-                <StatCard icon="moon" label="Longest streak" value={longestStreakLabel} sub={loading ? '' : longestStreakSub} tone="sky" />
+                <StatCard icon="card" label={t('historyTab.totalReadings')} value={totalReadingsLabel} sub={t('historyTab.lifetime')} tone="violet" />
+                <StatCard icon="bolt" label={t('historyTab.turnsRemaining')} value={totalTurns} sub={t('historyTab.currentBalance')} tone="gold" />
+                <StatCard icon="chart" label={t('historyTab.paidTurns')} value={paidTurns} sub={t('historyTab.purchased')} tone="emerald" />
+                <StatCard icon="moon" label={t('historyTab.longestStreak')} value={longestStreakLabel} sub={loading ? '' : longestStreakSub} tone="sky" />
             </div>
 
             {/* Filter tabs */}
@@ -70,12 +73,12 @@ export function HistoryTab({ profile }: HistoryTabProps) {
                                 color: filter === f ? '#f4f1ff' : '#7c799f',
                                 padding: '18px 0', marginRight: 28, fontSize: 14,
                                 fontWeight: filter === f ? 600 : 500,
-                                position: 'relative', textTransform: 'capitalize',
+                                position: 'relative',
                                 fontFamily: "'Plus Jakarta Sans', sans-serif",
                                 transition: 'color 150ms ease',
                             }}
                         >
-                            {f}
+                            {f === 'overview' ? t('historyTab.tabOverview') : f === 'transactions' ? t('historyTab.tabTransactions') : t('historyTab.tabUsage')}
                             {filter === f && (
                                 <div style={{
                                     position: 'absolute', left: 0, right: 0, bottom: -1,
@@ -96,9 +99,9 @@ export function HistoryTab({ profile }: HistoryTabProps) {
                 </div>
 
                 <div style={{ padding: 24 }}>
-                    {filter === 'overview' && <OverviewView profile={profile} stats={stats} loading={loading} />}
+                    {filter === 'overview' && <OverviewView profile={profile} stats={stats} loading={loading} t={t} />}
                     {filter === 'transactions' && <SubscriptionHistory />}
-                    {filter === 'usage' && <UsageView stats={stats} loading={loading} />}
+                    {filter === 'usage' && <UsageView stats={stats} loading={loading} t={t} />}
                 </div>
             </MysticCard>
         </div>
@@ -107,32 +110,36 @@ export function HistoryTab({ profile }: HistoryTabProps) {
 
 // ── Context label map ─────────────────────────────────────────────────────────
 
-const CONTEXT_LABELS: Record<string, string> = {
-    reading: 'Readings',
-    chat: 'Chat sessions',
-    subscription: 'Subscription actions',
-    other: 'Other',
-};
+function contextLabel(t: TFunction, context: string): string {
+    const map: Record<string, string> = {
+        reading: t('historyTab.contextReadings'),
+        chat: t('historyTab.contextChat'),
+        subscription: t('historyTab.contextSubscription'),
+        other: t('historyTab.contextOther'),
+    };
+    return map[context] ?? context;
+}
 
 const USAGE_TONES: ('violet' | 'gold' | 'emerald' | 'sky')[] = ['violet', 'gold', 'emerald', 'sky'];
 
 // ── Date formatter ────────────────────────────────────────────────────────────
 
-function formatReadingDate(isoString: string): string {
+function formatReadingDate(isoString: string, t: TFunction): string {
     const d = new Date(isoString);
     const now = new Date();
-    const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    if (d.toDateString() === now.toDateString()) return `Today · ${time}`;
-    if (d.toDateString() === new Date(now.getTime() - 86_400_000).toDateString()) return `Yesterday · ${time}`;
-    return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${time}`;
+    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+    if (d.toDateString() === now.toDateString()) return `${t('historyTab.today')}${time}`;
+    if (d.toDateString() === new Date(now.getTime() - 86_400_000).toDateString()) return `${t('historyTab.yesterday')}${time}`;
+    return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${time}`;
 }
 
 // ── Sub-views ─────────────────────────────────────────────────────────────────
 
-function OverviewView({ profile, stats, loading }: {
+function OverviewView({ profile, stats, loading, t }: {
     profile: UserProfile | null;
     stats: UserDashboardStats | null;
     loading: boolean;
+    t: TFunction;
 }) {
     const hasUnlimitedAccess = hasProfileUnlimitedAccess(profile);
     const freeTurns = profile ? (hasUnlimitedAccess ? '∞' : String(profile.number_of_free_turns)) : '—';
@@ -143,28 +150,29 @@ function OverviewView({ profile, stats, loading }: {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             {/* Left: current state */}
             <div>
-                <SectionHeader eyebrow="At a glance" title="Current state" />
+                <SectionHeader eyebrow={t('historyTab.atAGlance')} title={t('historyTab.currentState')} />
                 <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <KV k="Subscription" v={<span style={{ color: '#f5b942' }}>{getProfilePlanLabel(profile)}</span>} />
-                    <KV k="Free turns" v={freeTurns} />
-                    <KV k="Paid turns" v={paidTurns} />
-                    <KV k="Favorite deck" v={profile?.favorite_deck?.name ?? 'None selected'} />
-                    <KV k="Member since" v={profile ? new Date(profile.created_at).toLocaleDateString() : '—'} />
+                    <KV k={t('historyTab.subscription')} v={<span style={{ color: '#f5b942' }}>{getProfilePlanLabel(profile)}</span>} />
+                    <KV k={t('historyTab.freeTurns')} v={freeTurns} />
+                    <KV k={t('historyTab.paidTurns')} v={paidTurns} />
+                    <KV k={t('historyTab.favoriteDeck')} v={profile?.favorite_deck?.name ?? t('historyTab.noneSelected')} />
+                    <KV k={t('historyTab.memberSince')} v={profile ? new Date(profile.created_at).toLocaleDateString() : '—'} />
                 </div>
             </div>
 
             {/* Right: what you read */}
             <div>
-                <SectionHeader eyebrow={`Last ${stats?.period_days ?? 30} days`} title="What you read" />
+                <SectionHeader eyebrow={t('historyTab.lastDays', { count: stats?.period_days ?? 30 })} title={t('historyTab.whatYouRead')} />
                 <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {loading ? (
-                        <Placeholder />
+                        <Placeholder t={t} />
                     ) : !stats || stats.usage_by_context.length === 0 ? (
-                        <Empty text="No usage in this period." />
+                        <Empty text={t('historyTab.noUsage')} />
                     ) : stats.usage_by_context.map((u, i) => (
                         <UsageBar
                             key={u.context}
-                            label={CONTEXT_LABELS[u.context] ?? u.context}
+                            label={contextLabel(t, u.context)}
+                            t={t}
                             value={u.count}
                             max={maxUsage}
                             tone={USAGE_TONES[i % USAGE_TONES.length]}
@@ -175,12 +183,12 @@ function OverviewView({ profile, stats, loading }: {
 
             {/* Bottom: reading log */}
             <div style={{ gridColumn: '1 / -1' }}>
-                <SectionHeader eyebrow="Recent" title="Reading log" />
+                <SectionHeader eyebrow={t('historyTab.recent')} title={t('historyTab.readingLog')} />
                 <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {loading ? (
-                        <Placeholder />
+                        <Placeholder t={t} />
                     ) : !stats || stats.recent_readings.length === 0 ? (
-                        <Empty text="No readings found." />
+                        <Empty text={t('historyTab.noReadings')} />
                     ) : stats.recent_readings.map((item) => (
                         <div key={item.id} style={{
                             display: 'grid',
@@ -191,10 +199,10 @@ function OverviewView({ profile, stats, loading }: {
                             borderRadius: 10, border: '1px solid #1f2148',
                         }}>
                             <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: '#7c799f' }}>
-                                {formatReadingDate(item.consumed_at)}
+                                {formatReadingDate(item.consumed_at, t)}
                             </span>
                             <span style={{ fontSize: 13, color: '#f4f1ff', textTransform: 'capitalize' }}>
-                                {CONTEXT_LABELS[item.usage_context] ?? item.usage_context}
+                                {contextLabel(t, item.usage_context)}
                             </span>
                             <span style={{ fontSize: 12, color: '#a855f7', fontWeight: 600, textAlign: 'right', textTransform: 'capitalize' }}>
                                 {item.turn_type}
@@ -207,20 +215,21 @@ function OverviewView({ profile, stats, loading }: {
     );
 }
 
-function UsageView({ stats, loading }: { stats: UserDashboardStats | null; loading: boolean }) {
+function UsageView({ stats, loading, t }: { stats: UserDashboardStats | null; loading: boolean; t: TFunction }) {
     const maxUsage = Math.max(1, ...(stats?.usage_by_context.map(u => u.count) ?? [1]));
     return (
         <div>
-            <SectionHeader eyebrow="Usage" title="Turn consumption" />
+            <SectionHeader eyebrow={t('historyTab.usage')} title={t('historyTab.turnConsumption')} />
             <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {loading ? (
-                    <Placeholder />
+                    <Placeholder t={t} />
                 ) : !stats || stats.usage_by_context.length === 0 ? (
-                    <Empty text="No usage data available." />
+                    <Empty text={t('historyTab.noUsageData')} />
                 ) : stats.usage_by_context.map((u, i) => (
                     <UsageBar
                         key={u.context}
-                        label={CONTEXT_LABELS[u.context] ?? u.context}
+                        label={contextLabel(t, u.context)}
+                        t={t}
                         value={u.count}
                         max={maxUsage}
                         tone={USAGE_TONES[i % USAGE_TONES.length]}
@@ -280,9 +289,10 @@ function KV({ k, v }: { k: string; v: React.ReactNode }) {
     );
 }
 
-function UsageBar({ label, value, max, tone }: {
+function UsageBar({ label, value, max, tone, t }: {
     label: string; value: number; max: number;
     tone: 'violet' | 'gold' | 'emerald' | 'sky';
+    t: TFunction;
 }) {
     const colors = { violet: '#a855f7', gold: '#f5b942', emerald: '#4ade80', sky: '#38bdf8' };
     return (
@@ -290,7 +300,7 @@ function UsageBar({ label, value, max, tone }: {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: 13, color: '#b3b0d4' }}>{label}</span>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: '#7c799f' }}>
-                    {value} turn{value !== 1 ? 's' : ''}
+                    {value} {value !== 1 ? t('common:turnPlural') : t('common:turnSingular')}
                 </span>
             </div>
             <div style={{ height: 4, background: '#07071a', borderRadius: 2, overflow: 'hidden' }}>
@@ -300,8 +310,8 @@ function UsageBar({ label, value, max, tone }: {
     );
 }
 
-function Placeholder() {
-    return <span style={{ fontSize: 13, color: '#7c799f' }}>Loading…</span>;
+function Placeholder({ t }: { t: TFunction }) {
+    return <span style={{ fontSize: 13, color: '#7c799f' }}>{t('history.loading')}</span>;
 }
 
 function Empty({ text }: { text: string }) {

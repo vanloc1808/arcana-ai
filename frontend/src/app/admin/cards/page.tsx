@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslation } from 'react-i18next';
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, StatCard, SearchInput, Icon, Table, type Column } from "@/components/admin/AdminUI";
@@ -56,8 +57,9 @@ function SearchParamSync({ setQ }: { setQ: (q: string) => void }) {
 }
 
 export default function AdminCardsPage() {
+    const { t } = useTranslation('admin');
     return (
-        <Suspense fallback={<AdminLoadingScreen label="Loading cards…" />}>
+        <Suspense fallback={<AdminLoadingScreen label={t('cards.loadingCards')} />}>
             <AdminCardsPageContent />
         </Suspense>
     );
@@ -66,6 +68,7 @@ export default function AdminCardsPage() {
 function AdminCardsPageContent() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
+    const { t } = useTranslation('admin');
     const [cards, setCards] = useState<AdminCard[]>([]);
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
@@ -116,20 +119,20 @@ function AdminCardsPageContent() {
         });
     }, [cards, q, deckFilter, decks]);
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading cards…" />;
+    if (isAuthLoading || !user) return <AdminLoadingScreen label={t('cards.loadingCards')} />;
     if (!user.is_admin) return null;
-    if (loading) return <AdminLoadingScreen label="Shuffling the arcana…" />;
+    if (loading) return <AdminLoadingScreen label={t('cards.shufflingArcana')} />;
 
     const distinctDecks = [...new Set(cards.map((c) => c.deck_id))].length;
     const distinctSuits = [...new Set(cards.map((c) => c.suit).filter(Boolean))].length;
 
     return (
-        <AdminLayout activePath="/admin/cards" breadcrumb="Cards" username={user.username ?? "Admin"}>
+        <AdminLayout activePath="/admin/cards" breadcrumb={t('cards.title')} username={user.username ?? "Admin"}>
             <Suspense fallback={null}>
                 <SearchParamSync setQ={setQ} />
             </Suspense>
             <div className="view">
-                <PageHeader kicker="Content" title="Cards" subtitle="The full catalog across every deck." />
+                <PageHeader kicker={t('cards.kicker')} title={t('cards.title')} subtitle={t('cards.subtitle')} />
 
                 <div className="stats-grid stats-grid-3">
                     <StatCard label="Total cards" value={cards.length.toLocaleString()} caption="across all decks" accent="violet" />
@@ -138,9 +141,9 @@ function AdminCardsPageContent() {
                 </div>
 
                 <div className="toolbar">
-                    <SearchInput value={q} onChange={setQ} placeholder="Search cards by name or suit…" />
+                    <SearchInput value={q} onChange={setQ} placeholder={t('cards.searchPlaceholder')} />
                     <div className="filter-group">
-                        <button className={`filter-chip ${deckFilter === "all" ? "is-active" : ""}`} onClick={() => setDeckFilter("all")}>All decks</button>
+                        <button className={`filter-chip ${deckFilter === "all" ? "is-active" : ""}`} onClick={() => setDeckFilter("all")}>{t('cards.allDecks')}</button>
                         {decks.map((d) => (
                             <button key={d.id} className={`filter-chip ${deckFilter === String(d.id) ? "is-active" : ""}`} onClick={() => setDeckFilter(String(d.id))}>
                                 {d.name}
@@ -166,6 +169,7 @@ function CardRow({ c, decks, deckName, onSaved, onDelete }: {
     c: AdminCard; decks: AdminDeck[]; deckName: string; onSaved: () => void; onDelete: () => void;
 }) {
     const [open, setOpen] = useState(false);
+    const { t } = useTranslation('admin');
     const color = SUIT_COLORS[c.suit] ?? DEFAULT_SUIT_COLOR;
 
     return (
@@ -195,10 +199,10 @@ function CardRow({ c, decks, deckName, onSaved, onDelete }: {
                 <td className="muted">{c.element || "—"}</td>
                 <td style={{ textAlign: "right" }}>
                     <div className="row-actions">
-                        <button className="row-action" title="Edit" onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+                        <button className="row-action" title={t('cards.edit')} onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
                             <Icon name="edit" size={14} />
                         </button>
-                        <button className="row-action danger" title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+                        <button className="row-action danger" title={t('cards.delete')} onClick={(e) => { e.stopPropagation(); onDelete(); }}>
                             <Icon name="trash" size={14} />
                         </button>
                     </div>
@@ -206,7 +210,7 @@ function CardRow({ c, decks, deckName, onSaved, onDelete }: {
             </tr>
             <DialogContent className="admin-dialog">
                 <DialogHeader>
-                    <DialogTitle className="admin-dialog-title">Edit card</DialogTitle>
+                    <DialogTitle className="admin-dialog-title">{t('cards.editCard')}</DialogTitle>
                 </DialogHeader>
                 <form
                     onSubmit={async (e) => {
@@ -247,15 +251,15 @@ function CardRow({ c, decks, deckName, onSaved, onDelete }: {
                         </div>
                     ))}
                     <div>
-                        <label className="admin-field-label">Numerology</label>
+                        <label className="admin-field-label">{t('cards.numerology')}</label>
                         <input name="numerology" type="number" defaultValue={c.numerology} className="admin-input" />
                     </div>
                     <div>
-                        <label className="admin-field-label">Deck</label>
+                        <label className="admin-field-label">{t('cards.deck')}</label>
                         <div className="mt-1.5">
                             <Select name="deck_id" defaultValue={String(c.deck_id)}>
                                 <SelectTrigger className="admin-input">
-                                    <SelectValue placeholder="Select a deck" />
+                                    <SelectValue placeholder={t('cards.selectDeck')} />
                                 </SelectTrigger>
                                 <SelectContent style={{ background: "#181b27", border: "1px solid rgba(167,160,200,0.18)", color: "#eceaf4" }}>
                                     {decks.map((d) => (
@@ -265,7 +269,7 @@ function CardRow({ c, decks, deckName, onSaved, onDelete }: {
                             </Select>
                         </div>
                     </div>
-                    <button type="submit" className="admin-dialog-submit">Save changes</button>
+                    <button type="submit" className="admin-dialog-submit">{t('cards.saveChanges')}</button>
                 </form>
             </DialogContent>
         </Dialog>

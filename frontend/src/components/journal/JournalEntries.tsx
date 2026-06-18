@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { JournalEntry, JournalFilters, JournalEntryUpdate } from "@/types/tarot";
 import { format } from "date-fns";
 import { HeartIcon, TrashIcon, PencilIcon, CalendarIcon, TagIcon } from "@heroicons/react/24/outline";
@@ -16,6 +17,7 @@ interface JournalEntriesProps {
 }
 
 export default function JournalEntries({ entries, onUpdate, onDelete, onFilter }: JournalEntriesProps) {
+    const { t } = useTranslation('journal');
     const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
     const [filters, setFilters] = useState<JournalFilters>({});
     const [showFilters, setShowFilters] = useState(false);
@@ -56,7 +58,7 @@ export default function JournalEntries({ entries, onUpdate, onDelete, onFilter }
             {/* Filters Toggle */}
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-white">
-                    Journal Entries ({entries.length})
+                    {t('list.title', { count: entries.length })}
                 </h2>
                 <button
                     onClick={() => setShowFilters(!showFilters)}
@@ -65,7 +67,7 @@ export default function JournalEntries({ entries, onUpdate, onDelete, onFilter }
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
                     </svg>
-                    <span>{showFilters ? "Hide Filters" : "Show Filters"}</span>
+                    <span>{showFilters ? t('list.hideFilters') : t('list.showFilters')}</span>
                 </button>
             </div>
 
@@ -85,8 +87,8 @@ export default function JournalEntries({ entries, onUpdate, onDelete, onFilter }
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
                     </div>
-                    <h3 className="text-lg font-medium text-white mb-2">No journal entries yet</h3>
-                    <p className="text-gray-400">Start your tarot journey by creating your first journal entry.</p>
+                    <h3 className="text-lg font-medium text-white mb-2">{t('list.noEntries')}</h3>
+                    <p className="text-gray-400">{t('list.noEntriesDesc')}</p>
                 </div>
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -170,7 +172,7 @@ export default function JournalEntries({ entries, onUpdate, onDelete, onFilter }
                                 <div className="flex items-center justify-between mb-3">
                                     {entry.mood_before && (
                                         <div className="flex items-center space-x-2">
-                                            <span className="text-xs text-gray-400">Before:</span>
+                                            <span className="text-xs text-gray-400">{t('list.moodBefore')}</span>
                                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getMoodColor(entry.mood_before)}`}>
                                                 {getMoodEmoji(entry.mood_before)} {entry.mood_before}/10
                                             </span>
@@ -178,7 +180,7 @@ export default function JournalEntries({ entries, onUpdate, onDelete, onFilter }
                                     )}
                                     {entry.mood_after && (
                                         <div className="flex items-center space-x-2">
-                                            <span className="text-xs text-gray-400">After:</span>
+                                            <span className="text-xs text-gray-400">{t('list.moodAfter')}</span>
                                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getMoodColor(entry.mood_after)}`}>
                                                 {getMoodEmoji(entry.mood_after)} {entry.mood_after}/10
                                             </span>
@@ -213,7 +215,7 @@ export default function JournalEntries({ entries, onUpdate, onDelete, onFilter }
                                     <div className="flex items-center space-x-2">
                                         <CalendarIcon className="w-4 h-4 text-yellow-400" />
                                         <span className="text-xs text-yellow-300">
-                                            Follow-up: {format(new Date(entry.follow_up_date), "MMM d, yyyy")}
+                                            {t('list.followUp')} {format(new Date(entry.follow_up_date), "MMM d, yyyy")}
                                         </span>
                                     </div>
                                 </div>

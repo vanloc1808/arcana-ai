@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslation } from 'react-i18next';
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, StatCard, Pill, Button, SearchInput, Icon, Table, type Column } from "@/components/admin/AdminUI";
@@ -52,8 +53,9 @@ function SearchParamSync({ setQ }: { setQ: (q: string) => void }) {
 }
 
 export default function AdminUsersPage() {
+    const { t } = useTranslation('admin');
     return (
-        <Suspense fallback={<AdminLoadingScreen label="Loading users…" />}>
+        <Suspense fallback={<AdminLoadingScreen label={t('users.loadingUsers')} />}>
             <AdminUsersPageContent />
         </Suspense>
     );
@@ -62,6 +64,7 @@ export default function AdminUsersPage() {
 function AdminUsersPageContent() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
+    const { t } = useTranslation('admin');
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
@@ -125,21 +128,21 @@ function AdminUsersPageContent() {
         });
     }, [users]);
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading users…" />;
+    if (isAuthLoading || !user) return <AdminLoadingScreen label={t('users.loadingUsers')} />;
     if (!user.is_admin) return null;
-    if (loading) return <AdminLoadingScreen label="Summoning user records…" />;
+    if (loading) return <AdminLoadingScreen label={t('users.summoningRecords')} />;
 
     const activeCount = users.filter((u) => u.is_active).length;
     const vipCount = users.filter((u) => u.is_specialized_premium).length;
     const inactiveCount = users.length - activeCount;
 
     return (
-        <AdminLayout activePath="/admin/users" breadcrumb="Users" username={user.username ?? "Admin"}>
+        <AdminLayout activePath="/admin/users" breadcrumb={t('users.title')} username={user.username ?? "Admin"}>
             <Suspense fallback={null}>
                 <SearchParamSync setQ={setQ} />
             </Suspense>
             <div className="view">
-                <PageHeader kicker="People" title="Users" subtitle="Manage accounts, subscriptions, and access." />
+                <PageHeader kicker={t('users.kicker')} title={t('users.title')} subtitle={t('users.subtitle')} />
 
                 <div className="stats-grid stats-grid-4">
                     <StatCard label="Total users" value={users.length.toLocaleString()} caption="all registered accounts" accent="violet" />
@@ -149,7 +152,7 @@ function AdminUsersPageContent() {
                 </div>
 
                 <div className="toolbar">
-                    <SearchInput value={q} onChange={setQ} placeholder="Search by name, username, email…" />
+                    <SearchInput value={q} onChange={setQ} placeholder={t('users.searchPlaceholder')} />
                     <div className="filter-group">
                         {(["all", "active", "inactive", "vip", "no_sessions"] as Filter[]).map((f) => (
                             <button key={f} className={`filter-chip ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
@@ -173,7 +176,8 @@ function AdminUsersPageContent() {
                                 disabled={selectedCount === 0 || isBulkDeleting}
                                 onClick={async () => {
                                     if (selectedCount === 0 || isBulkDeleting) return;
-                                    const shouldDelete = window.confirm(`Delete ${selectedCount} selected user${selectedCount > 1 ? "s" : ""}? This cannot be undone.`);
+                                    const plural = selectedCount > 1 ? "s" : "";
+                                    const shouldDelete = window.confirm(t('users.deleteConfirm', { count: selectedCount, plural }));
                                     if (!shouldDelete) return;
                                     setIsBulkDeleting(true);
                                     try {
@@ -197,7 +201,7 @@ function AdminUsersPageContent() {
                 </div>
                 {selectionMode && (
                     <div className="muted" style={{ marginTop: 8, marginBottom: 12 }}>
-                        Select users from the table, then choose “Delete selected”.
+                        Select users from the table, then choose "Delete selected".
                     </div>
                 )}
 
@@ -243,7 +247,7 @@ function AdminUsersPageContent() {
                             />
                             <span>Select all on this page</span>
                         </label>
-                        <span className="muted">{selectedCount} selected</span>
+                        <span className="muted">{t('users.selected', { count: selectedCount })}</span>
                     </div>
                 )}
 
@@ -252,7 +256,7 @@ function AdminUsersPageContent() {
                         Showing {pageRows.length} of {filtered.length}{filtered.length !== users.length ? ` (filtered from ${users.length})` : ""}
                     </span>
                     <div className="pagination-controls">
-                        <button className="page-btn" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>Previous</button>
+                        <button className="page-btn" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>{t('users.previous')}</button>
                         {Array.from({ length: totalPages }, (_, i) => i + 1)
                             .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
                             .map((p, idx, arr) => (
@@ -261,7 +265,7 @@ function AdminUsersPageContent() {
                                     <button className={`page-btn ${p === currentPage ? "is-active" : ""}`} onClick={() => setPage(p)}>{p}</button>
                                 </span>
                             ))}
-                        <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>Next</button>
+                        <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>{t('users.next')}</button>
                     </div>
                 </div>
             </div>
@@ -286,6 +290,7 @@ function UserRow({
 }) {
     const [open, setOpen] = useState(false);
     const [validationError, setValidationError] = useState("");
+    const { t } = useTranslation('admin');
 
     return (
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setValidationError(""); }}>
@@ -314,22 +319,22 @@ function UserRow({
                     </div>
                 </td>
                 <td>
-                    {u.is_active ? <Pill tone="success" dot>Active</Pill> : <Pill tone="neutral" dot>Inactive</Pill>}
+                    {u.is_active ? <Pill tone="success" dot>{t('users.active')}</Pill> : <Pill tone="neutral" dot>{t('users.inactive')}</Pill>}
                 </td>
                 <td>
-                    {u.is_specialized_premium ? <Pill tone="accent">VIP</Pill> : <Pill tone="neutral">Free</Pill>}
+                    {u.is_specialized_premium ? <Pill tone="accent">{t('users.vip')}</Pill> : <Pill tone="neutral">Free</Pill>}
                 </td>
                 <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{u.shared_readings_count}</td>
                 <td className="muted">{new Date(u.created_at).toLocaleDateString()}</td>
                 <td style={{ textAlign: "right" }}>
-                    <button className="btn btn-secondary btn-sm" title="Edit user" onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
-                        <Icon name="edit" size={13} /> Edit
+                    <button className="btn btn-secondary btn-sm" title={t('users.editUser')} onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+                        <Icon name="edit" size={13} /> {t('users.editBtn')}
                     </button>
                 </td>
             </tr>
             <DialogContent className="admin-dialog">
                 <DialogHeader>
-                    <DialogTitle className="admin-dialog-title">Edit user</DialogTitle>
+                    <DialogTitle className="admin-dialog-title">{t('users.editUser')}</DialogTitle>
                 </DialogHeader>
                 <form
                     onSubmit={async (e) => {
@@ -349,6 +354,10 @@ function UserRow({
                                 receive_error_alerts: fd.get("receive_error_alerts") === "on",
                                 favorite_deck_id: parseInt(fd.get("favorite_deck_id") as string),
                             });
+                            const newPassword = (fd.get("new_password") as string | null)?.trim() ?? "";
+                            if (newPassword) {
+                                await api.post(`/admin/users/${u.id}/reset-password`, { new_password: newPassword });
+                            }
                             setOpen(false);
                             onSaved();
                         } catch { alert("Failed to update user."); }
@@ -366,6 +375,17 @@ function UserRow({
                             <input name={f.name} type={f.type} defaultValue={f.val} required={f.required} className="admin-input" />
                         </div>
                     ))}
+                    <div>
+                        <label className="admin-field-label">{t('users.resetPassword')}</label>
+                        <input
+                            name="new_password"
+                            type="password"
+                            minLength={8}
+                            autoComplete="new-password"
+                            placeholder={t('users.resetPasswordPlaceholder')}
+                            className="admin-input"
+                        />
+                    </div>
                     <div className="flex flex-col gap-3">
                         {[
                             { name: "is_active", label: "Active user", checked: u.is_active },
@@ -379,11 +399,11 @@ function UserRow({
                         ))}
                     </div>
                     <div>
-                        <label className="admin-field-label">Favorite deck</label>
+                        <label className="admin-field-label">{t('users.favoriteDeck')}</label>
                         <div className="mt-1.5">
                             <Select name="favorite_deck_id" defaultValue={String(u.favorite_deck_id)}>
                                 <SelectTrigger className="admin-input">
-                                    <SelectValue placeholder="Select a deck" />
+                                    <SelectValue placeholder={t('users.selectDeck')} />
                                 </SelectTrigger>
                                 <SelectContent style={{ background: "#181b27", border: "1px solid rgba(167,160,200,0.18)", color: "#eceaf4" }}>
                                     {decks.map((d) => (
@@ -393,7 +413,7 @@ function UserRow({
                             </Select>
                         </div>
                     </div>
-                    <button type="submit" className="admin-dialog-submit">Save changes</button>
+                    <button type="submit" className="admin-dialog-submit">{t('users.saveChanges')}</button>
                 </form>
             </DialogContent>
         </Dialog>

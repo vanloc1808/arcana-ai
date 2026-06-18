@@ -1,41 +1,44 @@
 'use client';
 
 import React from 'react';
-
-const TAB_META: Record<string, { eyebrow: string; label: string; title: string; sub: string }> = {
-    profile: {
-        eyebrow: 'I.',
-        label: 'Profile Info',
-        title: 'Your private grove',
-        sub: 'The vessel that holds your readings — appearance, voice, presence.',
-    },
-    decks: {
-        eyebrow: 'II.',
-        label: 'Tarot Decks',
-        title: 'Choose your oracle',
-        sub: 'Every reading is filtered through the deck you carry. Pick wisely.',
-    },
-    subscription: {
-        eyebrow: 'III.',
-        label: 'Subscription',
-        title: 'The keeper’s ledger',
-        sub: 'Your tier, your turns, your invoices — kept transparent.',
-    },
-    history: {
-        eyebrow: 'IV.',
-        label: 'History',
-        title: 'What you have read',
-        sub: 'Every spread, every chat, every card that arrived. Preserved.',
-    },
-    notifications: {
-        eyebrow: 'V.',
-        label: 'Notifications',
-        title: 'Whispered messages',
-        sub: 'Decide which signals reach you, and when.',
-    },
-};
+import { useTranslation } from 'react-i18next';
 
 export function ProfilePageHeader({ active }: { active: string }) {
+    const { t } = useTranslation('profile');
+
+    const TAB_META: Record<string, { eyebrow: string; label: string; title: string; sub: string }> = {
+        profile: {
+            eyebrow: t('header.profileInfo.eyebrow'),
+            label: t('header.profileInfo.label'),
+            title: t('header.profileInfo.title'),
+            sub: t('header.profileInfo.sub'),
+        },
+        decks: {
+            eyebrow: t('header.decks.eyebrow'),
+            label: t('header.decks.label'),
+            title: t('header.decks.title'),
+            sub: t('header.decks.sub'),
+        },
+        subscription: {
+            eyebrow: t('header.subscription.eyebrow'),
+            label: t('header.subscription.label'),
+            title: t('header.subscription.title'),
+            sub: t('header.subscription.sub'),
+        },
+        history: {
+            eyebrow: t('header.history.eyebrow'),
+            label: t('header.history.label'),
+            title: t('header.history.title'),
+            sub: t('header.history.sub'),
+        },
+        notifications: {
+            eyebrow: t('header.notifications.eyebrow'),
+            label: t('header.notifications.label'),
+            title: t('header.notifications.title'),
+            sub: t('header.notifications.sub'),
+        },
+    };
+
     const meta = TAB_META[active] || TAB_META['profile'];
 
     return (

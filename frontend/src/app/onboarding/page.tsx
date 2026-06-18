@@ -26,74 +26,9 @@ import {
     StarIcon,
     EyeIcon
 } from '@/components/icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-
-const onboardingSteps = [
-    {
-        id: 'welcome',
-        title: 'Welcome to ArcanaAI',
-        subtitle: 'Your AI-Powered Mystical Guide',
-        description: 'Discover the ancient wisdom of Tarot through modern AI technology. Get personalized readings, track your spiritual journey, and unlock deep insights.',
-        icon: TarotAgentLogo,
-        gradient: 'from-purple-600 via-purple-500 to-indigo-600',
-        animation: 'floating'
-    },
-    {
-        id: 'how-it-works',
-        title: 'How It Works',
-        subtitle: 'Simple, Intuitive, Magical',
-        description: 'Chat with our ArcanaAI, ask questions about love, career, or life path. Our AI interprets traditional Tarot wisdom for modern guidance.',
-        icon: MessageCircle,
-        gradient: 'from-indigo-600 via-blue-500 to-cyan-600',
-        animation: 'pulse-glow'
-    },
-    {
-        id: 'features',
-        title: 'Discover Your Features',
-        subtitle: 'Everything You Need for Your Journey',
-        description: 'From personalized readings to spiritual journaling, we\'ve created the complete Tarot experience.',
-        icon: StarIcon,
-        gradient: 'from-cyan-600 via-teal-500 to-emerald-600',
-        animation: 'sparkle'
-    },
-    {
-        id: 'readings',
-        title: 'Interactive Tarot Readings',
-        subtitle: 'Choose Your Path',
-        description: 'Select from multiple deck styles and reading spreads. Each card drawn is personalized for your unique energy and question.',
-        icon: TarotCardIcon,
-        gradient: 'from-emerald-600 via-green-500 to-lime-600',
-        animation: 'card-flip'
-    },
-    {
-        id: 'journal',
-        title: 'Your Spiritual Journal',
-        subtitle: 'Track Your Growth',
-        description: 'Keep a record of your readings, insights, and spiritual journey. Watch patterns emerge and your intuition strengthen over time.',
-        icon: BookOpen,
-        gradient: 'from-lime-600 via-yellow-500 to-orange-600',
-        animation: 'writing'
-    },
-    {
-        id: 'community',
-        title: 'Share & Connect',
-        subtitle: 'Build Your Mystical Community',
-        description: 'Share meaningful readings with friends and discover how others interpret the cards. Create your own tarot community.',
-        icon: Share2,
-        gradient: 'from-orange-600 via-red-500 to-pink-600',
-        animation: 'connection'
-    },
-    {
-        id: 'get-started',
-        title: 'Ready to Begin?',
-        subtitle: 'Your Mystical Journey Awaits',
-        description: 'Join thousands who have discovered clarity, guidance, and wisdom through our AI Tarot readings.',
-        icon: Crown,
-        gradient: 'from-pink-600 via-purple-500 to-purple-600',
-        animation: 'celebration'
-    }
-];
 
 const FeatureCard = ({ icon: Icon, title, description, delay = 0 }: {
     icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -118,7 +53,17 @@ const FeatureCard = ({ icon: Icon, title, description, delay = 0 }: {
     </div>
 );
 
-const AnimatedIcon = ({ step, size = 80 }: { step: typeof onboardingSteps[0]; size?: number }) => {
+type OnboardingStep = {
+    id: string;
+    title: string;
+    subtitle: string;
+    description: string;
+    icon: React.ComponentType<{ size?: number; className?: string }>;
+    gradient: string;
+    animation: string;
+};
+
+const AnimatedIcon = ({ step, size = 80 }: { step: OnboardingStep; size?: number }) => {
     const Icon = step.icon;
 
     return (
@@ -148,11 +93,78 @@ const AnimatedIcon = ({ step, size = 80 }: { step: typeof onboardingSteps[0]; si
 };
 
 export default function OnboardingPage() {
+    const { t } = useTranslation('home');
     const [currentStep, setCurrentStep] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
     const [isNewUser, setIsNewUser] = useState(false);
     const { isAuthenticated } = useAuth();
     const router = useRouter();
+
+    const onboardingSteps = [
+        {
+            id: 'welcome',
+            title: t('onboarding.title'),
+            subtitle: t('onboarding.subtitle'),
+            description: t('onboarding.intro'),
+            icon: TarotAgentLogo,
+            gradient: 'from-purple-600 via-purple-500 to-indigo-600',
+            animation: 'floating'
+        },
+        {
+            id: 'how-it-works',
+            title: t('onboarding.howItWorks'),
+            subtitle: t('onboarding.simpleIntuitive'),
+            description: t('onboarding.howItWorksDesc'),
+            icon: MessageCircle,
+            gradient: 'from-indigo-600 via-blue-500 to-cyan-600',
+            animation: 'pulse-glow'
+        },
+        {
+            id: 'features',
+            title: t('onboarding.discoverFeatures'),
+            subtitle: t('onboarding.everythingYouNeed'),
+            description: t('onboarding.discoverFeatures'),
+            icon: StarIcon,
+            gradient: 'from-cyan-600 via-teal-500 to-emerald-600',
+            animation: 'sparkle'
+        },
+        {
+            id: 'readings',
+            title: t('onboarding.featureReadings'),
+            subtitle: t('onboarding.chooseYourPath'),
+            description: t('onboarding.chooseYourPathDesc'),
+            icon: TarotCardIcon,
+            gradient: 'from-emerald-600 via-green-500 to-lime-600',
+            animation: 'card-flip'
+        },
+        {
+            id: 'journal',
+            title: t('onboarding.journalTitle'),
+            subtitle: t('onboarding.trackGrowth'),
+            description: t('onboarding.trackGrowthDesc'),
+            icon: BookOpen,
+            gradient: 'from-lime-600 via-yellow-500 to-orange-600',
+            animation: 'writing'
+        },
+        {
+            id: 'community',
+            title: t('onboarding.shareTitle'),
+            subtitle: t('onboarding.buildCommunity'),
+            description: t('onboarding.buildCommunityDesc'),
+            icon: Share2,
+            gradient: 'from-orange-600 via-red-500 to-pink-600',
+            animation: 'connection'
+        },
+        {
+            id: 'get-started',
+            title: t('onboarding.readyTitle'),
+            subtitle: t('onboarding.journeyAwaits'),
+            description: t('onboarding.joinThousands'),
+            icon: Crown,
+            gradient: 'from-pink-600 via-purple-500 to-purple-600',
+            animation: 'celebration'
+        }
+    ];
 
     // Check if this is a new user (coming from registration)
     useEffect(() => {
@@ -304,7 +316,7 @@ export default function OnboardingPage() {
                         onClick={handleSkip}
                         className="text-gray-400 hover:text-white transition-colors font-medium"
                     >
-                        {isNewUser ? 'Skip & Start Using App' : 'Skip Tour'}
+                        {isNewUser ? t('onboarding.skipAndStart', { defaultValue: 'Skip & Start Using App' }) : t('onboarding.skipAndStart', { defaultValue: 'Skip Tour' })}
                     </button>
                 </div>
             </header>
@@ -315,7 +327,7 @@ export default function OnboardingPage() {
                     <div className="container mx-auto px-4">
                         <div className="py-3 text-center">
                             <p className="text-white font-medium">
-                                🎉 <span className="text-purple-300">Welcome to ArcanaAI!</span> Let&apos;s take a quick tour to get you started.
+                                {t('onboarding.tourWelcome')}
                             </p>
                         </div>
                     </div>
@@ -328,10 +340,10 @@ export default function OnboardingPage() {
                     <div className="py-4">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm text-gray-400">
-                                {isNewUser ? 'Getting Started' : 'Tour Progress'} - Step {currentStep + 1} of {onboardingSteps.length}
+                                {isNewUser ? t('onboarding.gettingStarted') : t('onboarding.tourProgress')} - Step {currentStep + 1} of {onboardingSteps.length}
                             </span>
                             <span className="text-sm text-gray-400">
-                                {Math.round(((currentStep + 1) / onboardingSteps.length) * 100)}% Complete
+                                {Math.round(((currentStep + 1) / onboardingSteps.length) * 100)}% {t('onboarding.complete')}
                             </span>
                         </div>
                         <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
@@ -353,11 +365,11 @@ export default function OnboardingPage() {
                             <AnimatedIcon step={step} size={120} />
                             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
                                 <span className={`bg-gradient-to-r ${step.gradient} bg-clip-text text-transparent block animate-slideInUp`}>
-                                    {isNewUser ? 'Welcome!' : step.title}
+                                    {isNewUser ? t('onboarding.title') : step.title}
                                 </span>
                             </h1>
                             <p className="text-xl md:text-2xl text-purple-300 mb-4 font-medium animate-slideInUp" style={{ animationDelay: '200ms' }}>
-                                {isNewUser ? 'Your Journey into AI Tarot Begins Now' : step.subtitle}
+                                {isNewUser ? t('onboarding.subtitle', { defaultValue: 'Your Journey into AI Tarot Begins Now' }) : step.subtitle}
                             </p>
                             <p className="text-lg text-gray-300 mb-12 leading-relaxed animate-slideInUp" style={{ animationDelay: '400ms' }}>
                                 {isNewUser
@@ -370,20 +382,20 @@ export default function OnboardingPage() {
                             <div className="grid md:grid-cols-3 gap-6 mb-12">
                                 <FeatureCard
                                     icon={Zap}
-                                    title="Instant Insights"
-                                    description="Get immediate AI-powered tarot readings 24/7"
+                                    title={t('onboarding.instantInsights')}
+                                    description={t('onboarding.instantInsightsDesc')}
                                     delay={600}
                                 />
                                 <FeatureCard
                                     icon={Heart}
-                                    title="Personal Growth"
-                                    description="Track your spiritual journey with detailed analytics"
+                                    title={t('onboarding.personalGrowth')}
+                                    description={t('onboarding.personalGrowthDesc')}
                                     delay={800}
                                 />
                                 <FeatureCard
                                     icon={EyeIcon}
-                                    title="Deep Wisdom"
-                                    description="Access centuries of tarot knowledge through modern AI"
+                                    title={t('onboarding.deepWisdom')}
+                                    description={t('onboarding.deepWisdomDesc')}
                                     delay={1000}
                                 />
                             </div>
@@ -407,7 +419,7 @@ export default function OnboardingPage() {
 
                             {/* Interactive demo */}
                             <div className="bg-gray-800/50 backdrop-blur-sm border border-purple-700/30 rounded-2xl p-8 mb-8">
-                                <h3 className="text-xl font-semibold text-white mb-6">Try It Now!</h3>
+                                <h3 className="text-xl font-semibold text-white mb-6">{t('onboarding.tryItNow')}</h3>
                                 <div className="space-y-4">
                                     <div className="flex items-start space-x-4">
                                         <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
@@ -449,38 +461,38 @@ export default function OnboardingPage() {
                             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <FeatureCard
                                     icon={MessageCircle}
-                                    title="AI Chat Readings"
-                                    description="Natural conversations with our ArcanaAI for personalized guidance"
+                                    title={t('onboarding.aiChatReadings')}
+                                    description={t('onboarding.aiChatReadingsDesc')}
                                     delay={0}
                                 />
                                 <FeatureCard
                                     icon={TarotCardIcon}
-                                    title="Multiple Decks"
-                                    description="Choose from various tarot decks including Rider-Waite, Marseille, and more"
+                                    title={t('onboarding.multipleDecks')}
+                                    description={t('onboarding.multipleDecksDesc')}
                                     delay={200}
                                 />
                                 <FeatureCard
                                     icon={BookOpen}
-                                    title="Reading Journal"
-                                    description="Keep track of your readings and watch patterns emerge over time"
+                                    title={t('onboarding.readingJournal')}
+                                    description={t('onboarding.readingJournalDesc')}
                                     delay={400}
                                 />
                                 <FeatureCard
                                     icon={Share2}
-                                    title="Share Insights"
-                                    description="Share meaningful readings with friends and build your community"
+                                    title={t('onboarding.shareInsights')}
+                                    description={t('onboarding.shareInsightsDesc')}
                                     delay={600}
                                 />
                                 <FeatureCard
                                     icon={Crown}
-                                    title="Premium Features"
-                                    description="Unlock unlimited readings, advanced spreads, and detailed analytics"
+                                    title={t('onboarding.premiumFeatures')}
+                                    description={t('onboarding.premiumFeaturesDesc')}
                                     delay={800}
                                 />
                                 <FeatureCard
                                     icon={UserPlus}
-                                    title="Personal Growth"
-                                    description="Track your spiritual development with insights and analytics"
+                                    title={t('onboarding.personalGrowth')}
+                                    description={t('onboarding.personalAnalyticsDesc')}
                                     delay={1000}
                                 />
                             </div>
@@ -536,22 +548,22 @@ export default function OnboardingPage() {
                                             <div className="flex items-center space-x-4 p-4 bg-gray-700/50 rounded-xl">
                                                 <BookOpen size={24} className="text-purple-400" />
                                                 <div>
-                                                    <h3 className="text-white font-semibold">Reading History</h3>
-                                                    <p className="text-gray-300 text-sm">Keep track of all your readings</p>
+                                                    <h3 className="text-white font-semibold">{t('onboarding.readingHistory')}</h3>
+                                                    <p className="text-gray-300 text-sm">{t('onboarding.readingHistoryDesc')}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-4 p-4 bg-gray-700/50 rounded-xl">
                                                 <Eye size={24} className="text-purple-400" />
                                                 <div>
-                                                    <h3 className="text-white font-semibold">Pattern Recognition</h3>
-                                                    <p className="text-gray-300 text-sm">Discover recurring themes in your life</p>
+                                                    <h3 className="text-white font-semibold">{t('onboarding.patternRecognition')}</h3>
+                                                    <p className="text-gray-300 text-sm">{t('onboarding.patternRecognitionDesc')}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-4 p-4 bg-gray-700/50 rounded-xl">
                                                 <Zap size={24} className="text-purple-400" />
                                                 <div>
-                                                    <h3 className="text-white font-semibold">Personal Analytics</h3>
-                                                    <p className="text-gray-300 text-sm">Track your spiritual growth over time</p>
+                                                    <h3 className="text-white font-semibold">{t('onboarding.personalAnalytics')}</h3>
+                                                    <p className="text-gray-300 text-sm">{t('onboarding.personalAnalyticsDesc')}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -564,15 +576,15 @@ export default function OnboardingPage() {
                                             <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center">
                                                 <Share2 size={40} className="text-white" />
                                             </div>
-                                            <h3 className="text-xl font-semibold text-white mb-2">Share Readings</h3>
-                                            <p className="text-gray-300">Create shareable links for meaningful readings you want to discuss with friends</p>
+                                            <h3 className="text-xl font-semibold text-white mb-2">{t('onboarding.shareReadings')}</h3>
+                                            <p className="text-gray-300">{t('onboarding.shareReadingsDesc')}</p>
                                         </div>
                                         <div className="text-center">
                                             <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center">
                                                 <Heart size={40} className="text-white" />
                                             </div>
-                                            <h3 className="text-xl font-semibold text-white mb-2">Build Community</h3>
-                                            <p className="text-gray-300">Connect with others on similar spiritual journeys and share insights</p>
+                                            <h3 className="text-xl font-semibold text-white mb-2">{t('onboarding.buildCommunityShort')}</h3>
+                                            <p className="text-gray-300">{t('onboarding.buildCommunityShortDesc')}</p>
                                         </div>
                                     </div>
                                 )}
@@ -585,15 +597,15 @@ export default function OnboardingPage() {
                             <AnimatedIcon step={step} size={140} />
                             <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
                                 <span className={`bg-gradient-to-r ${step.gradient} bg-clip-text text-transparent`}>
-                                    {isNewUser ? 'You&apos;re All Set!' : step.title}
+                                    {isNewUser ? t('onboarding.allSet') : step.title}
                                 </span>
                             </h2>
                             <p className="text-2xl text-purple-300 mb-4 font-medium">
-                                {isNewUser ? 'Time to Begin Your First Reading' : step.subtitle}
+                                {isNewUser ? t('onboarding.timeToBegin') : step.subtitle}
                             </p>
                             <p className="text-lg text-gray-300 mb-12 leading-relaxed">
                                 {isNewUser
-                                    ? 'You now know everything you need to start your mystical journey. Ready to get your first AI-powered tarot reading?'
+                                    ? t('onboarding.youNowKnow')
                                     : step.description
                                 }
                             </p>
@@ -603,7 +615,7 @@ export default function OnboardingPage() {
                                 <div className="flex items-center justify-center space-x-4 mb-6">
                                     <CheckCircle size={32} className="text-green-400" />
                                     <span className="text-xl text-white font-semibold">
-                                        {isNewUser ? 'Welcome aboard! You&apos;re ready to start!' : 'You&apos;re all set to begin!'}
+                                        {isNewUser ? t('onboarding.welcomeAboard') : t('onboarding.allSetToBegin')}
                                     </span>
                                 </div>
 
@@ -615,12 +627,12 @@ export default function OnboardingPage() {
                                         {isAuthenticated ? (
                                             <>
                                                 <PlayCircle size={24} className="mr-2" />
-                                                {isNewUser ? 'Start My First Reading!' : 'Start Your First Reading'}
+                                                {isNewUser ? t('onboarding.startFirstReading') : t('onboarding.startYourReading')}
                                             </>
                                         ) : (
                                             <>
                                                 <UserPlus size={24} className="mr-2" />
-                                                Create Your Account
+                                                {t('onboarding.createAccount')}
                                             </>
                                         )}
                                     </Button>
@@ -631,7 +643,7 @@ export default function OnboardingPage() {
                                         className="px-8 py-4 border-2 border-purple-500 text-purple-300 hover:bg-purple-600 hover:text-white font-bold text-lg rounded-2xl transition-all duration-200"
                                     >
                                         <Crown size={24} className="mr-2" />
-                                        View Pricing
+                                        {t('onboarding.viewPricing')}
                                     </Button>
                                 </div>
                             </div>
@@ -651,7 +663,7 @@ export default function OnboardingPage() {
                             }`}
                     >
                         <ChevronLeft size={20} className="mr-2" />
-                        Previous
+                        {t('onboarding.previous')}
                     </Button>
 
                     <div className="flex space-x-2">
@@ -674,7 +686,7 @@ export default function OnboardingPage() {
                             onClick={nextStep}
                             className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-105"
                         >
-                            Next
+                            {t('onboarding.next')}
                             <ChevronRight size={20} className="ml-2" />
                         </Button>
                     ) : (
@@ -682,7 +694,7 @@ export default function OnboardingPage() {
                             onClick={handleGetStarted}
                             className="px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold rounded-xl transition-all duration-200 transform hover:scale-105"
                         >
-                            Get Started
+                            {t('onboarding.getStarted')}
                             <ArrowRight size={20} className="ml-2" />
                         </Button>
                     )}

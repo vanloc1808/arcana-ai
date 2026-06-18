@@ -937,6 +937,18 @@ class AdminUserUpdate(BaseModel):
         return _sanitize_string(v, "Full name", min_length=1, max_length=100, allow_empty=False)
 
 
+class AdminUserPasswordResetRequest(BaseModel):
+    new_password: str
+
+    @field_validator("new_password")
+    def validate_new_password(cls, v):  # noqa: N805
+        if not v or not v.strip():
+            raise ValueError("Password cannot be empty")
+        if len(v.strip()) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        return v.strip()
+
+
 class AdminChatSessionResponse(BaseModel):
     id: int
     title: str

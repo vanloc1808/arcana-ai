@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import "@/app/admin/admin.css";
 import api, { tarot } from "@/lib/api";
 import { Icon, SearchInput, type IconName } from "@/components/admin/AdminUI";
@@ -54,12 +55,6 @@ function useAdminTheme() {
 }
 
 /* ─── Settings (theme switcher) popover ─────────────────────────────────── */
-const THEME_OPTS: { value: ThemePref; label: string; icon: IconName }[] = [
-    { value: "system", label: "System", icon: "monitor" },
-    { value: "dark", label: "Dark", icon: "moon" },
-    { value: "light", label: "Light", icon: "sun" },
-    { value: "hc", label: "Contrast", icon: "sparkle" },
-];
 const ACCENT_OPTS: { value: Accent; color: string }[] = [
     { value: "violet", color: "#a78bfa" },
     { value: "teal", color: "#5eead4" },
@@ -68,8 +63,16 @@ const ACCENT_OPTS: { value: Accent; color: string }[] = [
 ];
 
 function SettingsPopover({ theme }: { theme: ReturnType<typeof useAdminTheme> }) {
+    const { t } = useTranslation('admin');
     const [open, setOpen] = useState(false);
     const wrapRef = useRef<HTMLDivElement>(null);
+
+    const themeOpts: { value: ThemePref; label: string; icon: IconName }[] = [
+        { value: "system", label: t('layout.appearance.system'), icon: "monitor" },
+        { value: "dark", label: t('layout.appearance.dark'), icon: "moon" },
+        { value: "light", label: t('layout.appearance.light'), icon: "sun" },
+        { value: "hc", label: t('layout.appearance.contrast'), icon: "sparkle" },
+    ];
 
     useEffect(() => {
         if (!open) return;
@@ -84,18 +87,18 @@ function SettingsPopover({ theme }: { theme: ReturnType<typeof useAdminTheme> })
         <div className="settings-wrap" ref={wrapRef}>
             <button
                 className={`topbar-icon-btn ${open ? "is-active" : ""}`}
-                aria-label="Appearance settings"
+                aria-label={t('layout.appearance.label')}
                 aria-expanded={open}
                 onClick={() => setOpen((o) => !o)}
             >
                 <Icon name="settings" size={16} />
             </button>
             {open && (
-                <div className="settings-pop" role="dialog" aria-label="Appearance">
+                <div className="settings-pop" role="dialog" aria-label={t('layout.appearance.label')}>
                     <div className="settings-section">
-                        <div className="settings-label">Theme</div>
+                        <div className="settings-label">{t('layout.appearance.theme')}</div>
                         <div className="settings-segment">
-                            {THEME_OPTS.map((o) => (
+                            {themeOpts.map((o) => (
                                 <button
                                     key={o.value}
                                     className={`settings-seg-btn ${theme.pref === o.value ? "is-active" : ""}`}
@@ -108,7 +111,7 @@ function SettingsPopover({ theme }: { theme: ReturnType<typeof useAdminTheme> })
                         </div>
                     </div>
                     <div className="settings-section">
-                        <div className="settings-label">Accent</div>
+                        <div className="settings-label">{t('layout.appearance.accent')}</div>
                         <div className="settings-swatches">
                             {ACCENT_OPTS.map((o) => (
                                 <button
@@ -149,12 +152,13 @@ function useDailyCard(): DailyCard {
 }
 
 function OrnamentCard({ card }: { card: DailyCard }) {
+    const { t } = useTranslation('home');
     const [imageError, setImageError] = useState(false);
 
     return (
         <div className="ornament-card">
             <div className="ornament-glyph">✦</div>
-            <div className="ornament-title">Card of the day</div>
+            <div className="ornament-title">{t('card.cardOfTheDay')}</div>
             {card.image_url && !imageError && (
                 <Image
                     src={card.image_url}

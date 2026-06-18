@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { Bell, BellOff } from 'lucide-react';
 import { disablePush, enablePush, getCurrentSubscription, pushSupported } from '@/lib/webPush';
 import { webPush } from '@/lib/api';
@@ -16,6 +17,7 @@ type Status =
     | { kind: 'unsubscribed' };
 
 export function PushNotificationToggle() {
+    const { t } = useTranslation('profile');
     const [status, setStatus] = useState<Status>({ kind: 'loading' });
     const [working, setWorking] = useState(false);
 
@@ -52,7 +54,7 @@ export function PushNotificationToggle() {
         setWorking(false);
         if (result.ok) {
             setStatus({ kind: 'subscribed' });
-            toast.success('Push notifications enabled.');
+            toast.success(t('notifications.enableNotifications'));
         } else {
             toast.error(result.reason);
             if (result.reason.toLowerCase().includes('denied')) {
@@ -66,10 +68,10 @@ export function PushNotificationToggle() {
         try {
             await disablePush();
             setStatus({ kind: 'unsubscribed' });
-            toast.success('Push notifications disabled.');
+            toast.success(t('notifications.disabledNotifications'));
         } catch (err) {
             logError('Failed to disable push', err);
-            toast.error('Could not turn off push notifications.');
+            toast.error(t('notifications.couldNotTurnOff'));
         } finally {
             setWorking(false);
         }
@@ -80,20 +82,20 @@ export function PushNotificationToggle() {
         try {
             const result = await webPush.sendTest();
             if (result.sent > 0) {
-                toast.success(`Test sent (${result.sent} delivered).`);
+                toast.success(t('notifications.testSent', { count: result.sent }));
             } else {
-                toast.error('No push was delivered. Check your browser settings.');
+                toast.error(t('notifications.noTestDelivered'));
             }
         } catch (err) {
             logError('Failed to send test push', err);
-            toast.error('Could not send a test notification.');
+            toast.error(t('notifications.couldNotSendTest'));
         } finally {
             setWorking(false);
         }
     };
 
     if (status.kind === 'loading') {
-        return <div className="text-sm text-gray-400">Checking notification status…</div>;
+        return <div className="text-sm text-gray-400">{t('notifications.checkingStatus')}</div>;
     }
     if (status.kind === 'unsupported') {
         return (
@@ -132,8 +134,8 @@ export function PushNotificationToggle() {
                     </div>
                     <div className="text-sm text-gray-400">
                         {subscribed
-                            ? 'We can send reading reminders to this device.'
-                            : 'Get a nudge on this device when your readings are due.'}
+                            ? t('notifications.canSendReminders')
+                            : t('notifications.getANudge')}
                     </div>
                 </div>
             </div>

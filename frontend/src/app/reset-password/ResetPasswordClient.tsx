@@ -5,8 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiLoader } from 'react-icons/fi';
 import { auth } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 export default function ResetPasswordClient() {
+    const { t } = useTranslation('auth');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -18,9 +20,9 @@ export default function ResetPasswordClient() {
 
     useEffect(() => {
         if (!token) {
-            setError('Invalid reset link. Please request a new password reset.');
+            setError(t('invalidResetLink'));
         }
-    }, [token]);
+    }, [token, t]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,12 +30,12 @@ export default function ResetPasswordClient() {
         setSuccess('');
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            setError(t('passwordsMismatch'));
             return;
         }
 
         if (!token) {
-            setError('Invalid reset link. Please request a new password reset.');
+            setError(t('invalidResetLink'));
             return;
         }
 
@@ -41,13 +43,13 @@ export default function ResetPasswordClient() {
 
         try {
             await auth.resetPassword(token, password);
-            setSuccess('Password has been reset successfully. You will be redirected to login...');
+            setSuccess(t('passwordResetSuccess'));
 
             setTimeout(() => {
                 router.push('/login');
             }, 2000);
         } catch (err: unknown) {
-            let errorMessage = 'An error occurred';
+            let errorMessage = t('anErrorOccurred');
             if (typeof err === 'object' && err !== null) {
                 const errorObject = err as { response?: { data?: { error?: string } }, message?: string };
                 if (errorObject.response?.data?.error) {
@@ -65,7 +67,7 @@ export default function ResetPasswordClient() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-96">
-                <h1 className="text-2xl font-bold text-center mb-6 text-purple-600">Reset Password</h1>
+                <h1 className="text-2xl font-bold text-center mb-6 text-purple-600">{t('resetPasswordTitle')}</h1>
 
                 {error && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded">
@@ -82,7 +84,7 @@ export default function ResetPasswordClient() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                            New Password
+                            {t('newPassword')}
                         </label>
                         <input
                             id="password"
@@ -91,14 +93,14 @@ export default function ResetPasswordClient() {
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-purple-500 text-gray-900 dark:text-white placeholder-gray-400"
                             required
-                            placeholder="Enter your new password"
+                            placeholder={t('newPasswordPlaceholder')}
                             disabled={!token}
                         />
                     </div>
 
                     <div>
                         <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                            Confirm New Password
+                            {t('confirmNewPassword')}
                         </label>
                         <input
                             id="confirmPassword"
@@ -107,7 +109,7 @@ export default function ResetPasswordClient() {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-purple-500 text-gray-900 dark:text-white placeholder-gray-400"
                             required
-                            placeholder="Confirm your new password"
+                            placeholder={t('confirmNewPasswordPlaceholder')}
                             disabled={!token}
                         />
                     </div>
@@ -117,13 +119,13 @@ export default function ResetPasswordClient() {
                         disabled={loading || !token}
                         className="w-full py-2 px-4 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                        {loading ? <FiLoader className="animate-spin" /> : 'Reset Password'}
+                        {loading ? <FiLoader className="animate-spin" /> : t('resetPasswordButton')}
                     </button>
                 </form>
 
                 <div className="mt-4 text-center text-sm text-gray-600">
                     <Link href="/login" className="text-purple-600 hover:text-purple-700">
-                        Back to Login
+                        {t('backToLogin')}
                     </Link>
                 </div>
             </div>

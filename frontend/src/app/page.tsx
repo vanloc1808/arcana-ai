@@ -12,6 +12,7 @@ import { TarotCard } from '@/components/TarotCard';
 import { DrawnCardReveal } from '@/components/DrawnCardReveal';
 import { CardDrawingAnimation } from '@/components/CardDrawingAnimation';
 import { ArcanaHome } from '@/components/ArcanaHome';
+import { useTranslation } from 'react-i18next';
 
 const MessageContent = ({ content }: { content: string }) => {
   const isMarkdown = content.includes('**') || content.includes('#');
@@ -71,6 +72,7 @@ function HomeContent() {
     sendMessage,
   } = useChatSessions();
 
+  const { t } = useTranslation(['home', 'common']);
   const [input, setInput] = useState('');
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isNavigatingToSession, setIsNavigatingToSession] = useState(false);
@@ -238,7 +240,7 @@ function HomeContent() {
                             <div className="spinner-mystical w-5 h-5"></div>
                             <div className="absolute inset-0 spinner-mystical-dual w-5 h-5"></div>
                           </div>
-                          <span className="text-base text-purple-400 font-medium font-mystical">Consulting the cards...</span>
+                          <span className="text-base text-purple-400 font-medium font-mystical">{t('page.consultingCards')}</span>
                         </div>
                         <MessageContent content={streamingContent} />
                       </div>
@@ -270,7 +272,7 @@ function HomeContent() {
                           setInput(value);
                         }
                       }}
-                      placeholder="Ask your mystical question..."
+                      placeholder={t('page.askPlaceholder')}
                       maxLength={2000}
                       className="w-full px-4 md:px-6 py-4 md:py-5 pr-4 md:pr-6 chat-input bg-gray-800 border-2 border-purple-600 rounded-2xl focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 placeholder-purple-500 text-base md:text-lg touch-manipulation"
                       disabled={loading}
@@ -287,7 +289,7 @@ function HomeContent() {
                     className="btn-mystical flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none px-6 md:px-8 py-4 md:py-5 touch-manipulation min-w-[60px] md:min-w-[80px]"
                   >
                     {loading ? <FiLoader className="animate-spin w-5 h-5 md:w-6 md:h-6" /> : <FiSend className="w-5 h-5 md:w-6 md:h-6" />}
-                    <span className="hidden md:inline text-base">Send</span>
+                    <span className="hidden md:inline text-base">{t('page.send')}</span>
                   </button>
                 </div>
               </form>
@@ -310,12 +312,13 @@ function HomeContent() {
 }
 
 function LoadingFallback() {
+  const { t } = useTranslation('common');
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-purple-900">
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading...</p>
+          <p className="text-gray-400">{t('loading')}</p>
         </div>
       </div>
     </div>

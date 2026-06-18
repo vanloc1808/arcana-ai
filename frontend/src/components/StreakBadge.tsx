@@ -6,10 +6,12 @@ import { Flame } from 'lucide-react';
 import { streaks, StreakSummary } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { logDebug } from '@/lib/logger';
+import { useTranslation } from 'react-i18next';
 
 const REFRESH_INTERVAL_MS = 60_000;
 
 export function StreakBadge() {
+    const { t } = useTranslation('home');
     const { isAuthenticated } = useAuth();
     const [streak, setStreak] = useState<StreakSummary | null>(null);
 
@@ -41,8 +43,8 @@ export function StreakBadge() {
 
     const isDim = !streak.is_active_today;
     const title = streak.is_active_today
-        ? `${streak.current_streak}-day streak — keep it going!`
-        : `${streak.current_streak}-day streak — pull a card today to keep it`;
+        ? t('streak.active', { count: streak.current_streak })
+        : t('streak.inactive', { count: streak.current_streak });
 
     return (
         <Link

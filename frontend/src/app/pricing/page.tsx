@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import { Check, Crown, Star, Zap, Moon, Sun } from 'lucide-react';
 import { TarotAgentLogo } from '@/components/icons';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function PricingPage() {
     const { isAuthenticated } = useAuth();
     const router = useRouter();
+    const { t } = useTranslation(['subscription', 'common']);
 
     const handlePlanSelection = (planType: 'free' | 'mystic' | 'oracle') => {
         if (isAuthenticated) {
@@ -40,7 +42,7 @@ export default function PricingPage() {
                                 ArcanaAI
                             </h1>
                             <p className="text-xs md:text-sm text-gray-400 -mt-1">
-                                Mystical Guidance
+                                {t('pricing.mysticalJourney')}
                             </p>
                         </div>
                     </Link>
@@ -53,13 +55,13 @@ export default function PricingPage() {
                                     href="/profile"
                                     className="px-4 py-2 text-purple-300 hover:text-white transition-colors font-medium"
                                 >
-                                    Profile
+                                    {t('profile', { ns: 'nav', defaultValue: 'Profile' })}
                                 </Link>
                                 <Link
                                     href="/"
                                     className="px-6 md:px-8 py-3 md:py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold text-sm md:text-base rounded-xl hover:shadow-lg hover:shadow-purple-500/25 hover:from-purple-700 hover:to-purple-800 transition-all duration-200 min-w-[100px] md:min-w-[120px] flex items-center justify-center text-center"
                                 >
-                                    <span className="text-white">Dashboard</span>
+                                    <span className="text-white">{t('dashboard', { ns: 'nav', defaultValue: 'Dashboard' })}</span>
                                 </Link>
                             </>
                         ) : (
@@ -69,13 +71,13 @@ export default function PricingPage() {
                                     href="/login"
                                     className="px-4 py-2 text-purple-300 hover:text-white transition-colors font-medium"
                                 >
-                                    Login
+                                    {t('login', { ns: 'common' })}
                                 </Link>
                                 <Link
                                     href="/register"
                                     className="px-6 md:px-8 py-3 md:py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold text-sm md:text-base rounded-xl hover:shadow-lg hover:shadow-purple-500/25 hover:from-purple-700 hover:to-purple-800 transition-all duration-200 min-w-[100px] md:min-w-[120px] flex items-center justify-center text-center"
                                 >
-                                    <span className="text-white">Sign Up</span>
+                                    <span className="text-white">{t('signUp', { ns: 'common' })}</span>
                                 </Link>
                             </>
                         )}
@@ -89,14 +91,14 @@ export default function PricingPage() {
                     <div className="mb-8">
                         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
                             <span className="bg-gradient-to-r from-purple-400 via-purple-300 to-yellow-400 bg-clip-text text-transparent block">
-                                Choose Your
+                                {t('pricing.chooseJourney')}
                             </span>
                             <span className="bg-gradient-to-r from-yellow-400 via-purple-300 to-purple-400 bg-clip-text text-transparent block">
-                                Mystical Journey
+                                {t('pricing.mysticalJourney')}
                             </span>
                         </h1>
                         <p className="text-xl md:text-2xl text-gray-300 mb-8 leading-relaxed">
-                            Unlock the ancient wisdom of Tarot with AI-powered readings that illuminate your path
+                            {t('pricing.subtitle')}
                         </p>
                     </div>
 
@@ -121,30 +123,30 @@ export default function PricingPage() {
                             <div className="relative bg-gray-800/50 border border-gray-700 rounded-2xl p-8 backdrop-blur-sm hover:border-purple-500/50 transition-all duration-300">
                                 <div className="text-center mb-8">
                                     <Moon className="w-12 h-12 text-blue-400 mx-auto mb-4" />
-                                    <h3 className="text-2xl font-bold text-white mb-2">Seeker</h3>
-                                    <p className="text-gray-400 mb-6">Begin your mystical journey</p>
+                                    <h3 className="text-2xl font-bold text-white mb-2">{t('pricing.seeker')}</h3>
+                                    <p className="text-gray-400 mb-6">{t('pricing.seekerDesc')}</p>
                                     <div className="mb-4">
-                                        <span className="text-4xl font-bold text-white">Free</span>
+                                        <span className="text-4xl font-bold text-white">{t('free', { ns: 'common' })}</span>
                                     </div>
-                                    <p className="text-sm text-gray-400">5 readings per month</p>
+                                    <p className="text-sm text-gray-400">{t('pricing.fiveFree')}</p>
                                 </div>
 
                                 <ul className="space-y-4 mb-8">
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-blue-400" />
-                                        <span className="text-gray-300">5 AI-powered readings</span>
+                                        <span className="text-gray-300">{t('pricing.fiveReadings')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-blue-400" />
-                                        <span className="text-gray-300">Basic card spreads</span>
+                                        <span className="text-gray-300">{t('pricing.basicSpreads')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-blue-400" />
-                                        <span className="text-gray-300">Daily card insights</span>
+                                        <span className="text-gray-300">{t('pricing.dailyInsights')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-blue-400" />
-                                        <span className="text-gray-300">Reading history</span>
+                                        <span className="text-gray-300">{t('pricing.readingHistory')}</span>
                                     </li>
                                 </ul>
 
@@ -152,7 +154,7 @@ export default function PricingPage() {
                                     onClick={() => handlePlanSelection('free')}
                                     className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-lg rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
                                 >
-                                    <span className="text-white">Start Free</span>
+                                    <span className="text-white">{t('pricing.startFree')}</span>
                                 </button>
                             </div>
                         </div>
@@ -163,44 +165,44 @@ export default function PricingPage() {
                             <div className="relative bg-gray-800/50 border-2 border-purple-500 rounded-2xl p-8 backdrop-blur-sm hover:border-purple-400 transition-all duration-300">
                                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                                     <span className="bg-gradient-to-r from-purple-600 to-yellow-600 text-white px-4 py-2 rounded-full text-sm font-medium">
-                                        Most Popular
+                                        {t('mostPopular')}
                                     </span>
                                 </div>
 
                                 <div className="text-center mb-8">
                                     <Star className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-                                    <h3 className="text-2xl font-bold text-white mb-2">Mystic</h3>
-                                    <p className="text-gray-400 mb-6">Deepen your spiritual practice</p>
+                                    <h3 className="text-2xl font-bold text-white mb-2">{t('pricing.mystic')}</h3>
+                                    <p className="text-gray-400 mb-6">{t('pricing.mysticDesc')}</p>
                                     <div className="mb-4">
                                         <span className="text-4xl font-bold text-white">$3.99</span>
                                     </div>
-                                    <p className="text-sm text-gray-400">10 reading turns</p>
+                                    <p className="text-sm text-gray-400">{t('pricing.tenTurns')}</p>
                                 </div>
 
                                 <ul className="space-y-4 mb-8">
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-purple-400" />
-                                        <span className="text-gray-300">10 AI-powered readings</span>
+                                        <span className="text-gray-300">{t('pricing.tenReadings')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-purple-400" />
-                                        <span className="text-gray-300">Advanced spread layouts</span>
+                                        <span className="text-gray-300">{t('pricing.advancedSpreads')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-purple-400" />
-                                        <span className="text-gray-300">Detailed interpretations</span>
+                                        <span className="text-gray-300">{t('pricing.detailedInterp')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-purple-400" />
-                                        <span className="text-gray-300">Personal journal</span>
+                                        <span className="text-gray-300">{t('pricing.personalJournal')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-purple-400" />
-                                        <span className="text-gray-300">Reading sharing</span>
+                                        <span className="text-gray-300">{t('pricing.readingSharing')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-purple-400" />
-                                        <span className="text-gray-300">Turns never expire</span>
+                                        <span className="text-gray-300">{t('pricing.turnsNeverExpire')}</span>
                                     </li>
                                 </ul>
 
@@ -208,7 +210,7 @@ export default function PricingPage() {
                                     onClick={() => handlePlanSelection('mystic')}
                                     className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold text-lg rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-200"
                                 >
-                                    <span className="text-white">Choose Mystic</span>
+                                    <span className="text-white">{t('pricing.chooseMystic')}</span>
                                 </button>
                             </div>
                         </div>
@@ -219,38 +221,38 @@ export default function PricingPage() {
                             <div className="relative bg-gray-800/50 border border-gray-700 rounded-2xl p-8 backdrop-blur-sm hover:border-yellow-500/50 transition-all duration-300">
                                 <div className="text-center mb-8">
                                     <Crown className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-                                    <h3 className="text-2xl font-bold text-white mb-2">Oracle</h3>
-                                    <p className="text-gray-400 mb-6">Master the mystical arts</p>
+                                    <h3 className="text-2xl font-bold text-white mb-2">{t('pricing.oracle')}</h3>
+                                    <p className="text-gray-400 mb-6">{t('pricing.oracleDesc')}</p>
                                     <div className="mb-4">
                                         <span className="text-4xl font-bold text-white">$5.99</span>
                                     </div>
-                                    <p className="text-sm text-gray-400">20 reading turns</p>
+                                    <p className="text-sm text-gray-400">{t('pricing.twentyTurns')}</p>
                                 </div>
 
                                 <ul className="space-y-4 mb-8">
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-yellow-400" />
-                                        <span className="text-gray-300">20 AI-powered readings</span>
+                                        <span className="text-gray-300">{t('pricing.twentyReadings')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-yellow-400" />
-                                        <span className="text-gray-300">All Mystic features</span>
+                                        <span className="text-gray-300">{t('pricing.allMysticFeatures')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-yellow-400" />
-                                        <span className="text-gray-300">Exclusive deck access</span>
+                                        <span className="text-gray-300">{t('pricing.exclusiveDeck')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-yellow-400" />
-                                        <span className="text-gray-300">Advanced analytics</span>
+                                        <span className="text-gray-300">{t('pricing.advancedAnalytics')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-yellow-400" />
-                                        <span className="text-gray-300">Custom reading templates</span>
+                                        <span className="text-gray-300">{t('pricing.customTemplates')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <Check className="w-5 h-5 text-yellow-400" />
-                                        <span className="text-gray-300">Turns never expire</span>
+                                        <span className="text-gray-300">{t('pricing.turnsNeverExpire')}</span>
                                     </li>
                                 </ul>
 
@@ -258,7 +260,7 @@ export default function PricingPage() {
                                     onClick={() => handlePlanSelection('oracle')}
                                     className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-bold text-lg rounded-xl hover:shadow-lg hover:shadow-yellow-500/25 transition-all duration-200"
                                 >
-                                    <span className="text-white">Choose Oracle</span>
+                                    <span className="text-white">{t('pricing.chooseOracle')}</span>
                                 </button>
                             </div>
                         </div>
@@ -272,11 +274,11 @@ export default function PricingPage() {
                     <div className="text-center mb-12">
                         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                             <span className="bg-gradient-to-r from-purple-400 to-yellow-400 bg-clip-text text-transparent">
-                                Why Choose ArcanaAI?
+                                {t('pricing.whyChoose')}
                             </span>
                         </h2>
                         <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-                            Experience the future of Tarot reading with AI-powered insights that honor ancient wisdom
+                            {t('pricing.whySubtitle')}
                         </p>
                     </div>
 
@@ -285,24 +287,24 @@ export default function PricingPage() {
                             <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Zap className="w-8 h-8 text-white" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">AI-Powered Insights</h3>
-                            <p className="text-gray-400">Advanced AI trained on centuries of Tarot wisdom provides personalized interpretations</p>
+                            <h3 className="text-xl font-bold text-white mb-2">{t('pricing.aiInsights')}</h3>
+                            <p className="text-gray-400">{t('pricing.aiInsightsDesc')}</p>
                         </div>
 
                         <div className="text-center">
                             <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Moon className="w-8 h-8 text-white" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Sacred Traditions</h3>
-                            <p className="text-gray-400">Authentic Tarot spreads and interpretations rooted in mystical traditions</p>
+                            <h3 className="text-xl font-bold text-white mb-2">{t('pricing.sacredTraditions')}</h3>
+                            <p className="text-gray-400">{t('pricing.sacredTraditionsDesc')}</p>
                         </div>
 
                         <div className="text-center">
                             <div className="w-16 h-16 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Sun className="w-8 h-8 text-white" />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Personal Growth</h3>
-                            <p className="text-gray-400">Track your spiritual journey with detailed reading history and insights</p>
+                            <h3 className="text-xl font-bold text-white mb-2">{t('pricing.personalGrowth')}</h3>
+                            <p className="text-gray-400">{t('pricing.personalGrowthDesc')}</p>
                         </div>
                     </div>
                 </div>
@@ -314,25 +316,25 @@ export default function PricingPage() {
                     <div className="text-center mb-12">
                         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                             <span className="bg-gradient-to-r from-purple-400 to-yellow-400 bg-clip-text text-transparent">
-                                Frequently Asked Questions
+                                {t('pricing.faqTitle')}
                             </span>
                         </h2>
                     </div>
 
                     <div className="space-y-6">
                         <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
-                            <h3 className="text-xl font-bold text-white mb-2">How accurate are AI Tarot readings?</h3>
-                            <p className="text-gray-400">Our AI is trained on traditional Tarot interpretations and provides insights based on established meanings and symbolism. Remember, Tarot is a tool for reflection and guidance, not prediction.</p>
+                            <h3 className="text-xl font-bold text-white mb-2">{t('pricing.faq1Q')}</h3>
+                            <p className="text-gray-400">{t('pricing.faq1A')}</p>
                         </div>
 
                         <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
-                            <h3 className="text-xl font-bold text-white mb-2">Do my purchased turns expire?</h3>
-                            <p className="text-gray-400">No, purchased turns never expire. You can use them whenever you want. Your free monthly turns reset each month, but any purchased turns carry over.</p>
+                            <h3 className="text-xl font-bold text-white mb-2">{t('pricing.faq2Q')}</h3>
+                            <p className="text-gray-400">{t('pricing.faq2A')}</p>
                         </div>
 
                         <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
-                            <h3 className="text-xl font-bold text-white mb-2">What&apos;s the difference between the plans?</h3>
-                            <p className="text-gray-400">The Free plan offers 5 readings per month, Mystic provides 10 reading turns with advanced features, and Oracle includes 20 reading turns with exclusive content and premium features.</p>
+                            <h3 className="text-xl font-bold text-white mb-2">{t('pricing.faq3Q')}</h3>
+                            <p className="text-gray-400">{t('pricing.faq3A')}</p>
                         </div>
                     </div>
                 </div>
@@ -343,14 +345,14 @@ export default function PricingPage() {
                 <div className="max-w-6xl mx-auto px-4">
                     <div className="flex flex-col md:flex-row justify-between items-center">
                         <div className="text-gray-400 mb-4 md:mb-0">
-                            © 2025 ArcanaAI. All rights reserved.
+                            {t('pricing.footer')}
                         </div>
                         <div className="flex space-x-6">
                             <Link href="/privacy-policy" className="text-gray-400 hover:text-purple-400 transition-colors">
-                                Privacy Policy
+                                {t('privacyPolicy', { ns: 'common' })}
                             </Link>
                             <Link href="/terms-of-service" className="text-gray-400 hover:text-purple-400 transition-colors">
-                                Terms of Service
+                                {t('termsOfService', { ns: 'common' })}
                             </Link>
                         </div>
                     </div>

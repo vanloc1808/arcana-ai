@@ -7,6 +7,7 @@ import { FiLoader } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/api';
 import { isValidUsername } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface FieldErrors {
     username?: string;
@@ -16,6 +17,7 @@ interface FieldErrors {
 }
 
 export default function Register() {
+    const { t } = useTranslation('auth');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -66,7 +68,7 @@ export default function Register() {
         }
 
         if (!termsAccepted) {
-            setFieldErrors({ termsAccepted: 'Please agree to the Terms of Service and Privacy Policy' });
+            setFieldErrors({ termsAccepted: t('agreeToTerms') });
             return;
         }
 
@@ -148,7 +150,7 @@ export default function Register() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-purple-900">
             <div className="bg-gray-800 border border-purple-700/50 p-8 rounded-lg shadow-xl w-96 backdrop-blur-sm">
-                <h1 className="text-2xl font-bold text-center mb-6 text-gradient bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">Create an Account</h1>
+                <h1 className="text-2xl font-bold text-center mb-6 text-gradient bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">{t('registerTitle')}</h1>
 
                 {error && (
                     <div className="mb-4 p-3 bg-red-900/30 border border-red-700/50 text-red-400 rounded">
@@ -163,7 +165,7 @@ export default function Register() {
                 >
                     <div>
                         <label htmlFor="username" className="block text-sm font-medium text-gray-200 mb-1">
-                            Username
+                            {t('username')}
                         </label>
                         <input
                             id="username"
@@ -175,7 +177,7 @@ export default function Register() {
                                 : 'border-purple-600/50 focus:border-purple-500'
                                 }`}
                             required
-                            placeholder="Enter your username (letters, numbers, underscore)"
+                            placeholder={t('usernamePlaceholder')}
                         />
                         {fieldErrors.username && (
                             <p className="mt-1 text-sm text-red-500 font-medium">{fieldErrors.username}</p>
@@ -184,7 +186,7 @@ export default function Register() {
 
                     <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-1">
-                            Email
+                            {t('email')}
                         </label>
                         <input
                             id="email"
@@ -196,7 +198,7 @@ export default function Register() {
                                 : 'border-purple-600/50 focus:border-purple-500'
                                 }`}
                             required
-                            placeholder="Enter your email address"
+                            placeholder={t('emailPlaceholder')}
                         />
                         {fieldErrors.email && (
                             <p className="mt-1 text-sm text-red-500 font-medium">{fieldErrors.email}</p>
@@ -205,7 +207,7 @@ export default function Register() {
 
                     <div>
                         <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-1">
-                            Password
+                            {t('password')}
                         </label>
                         <input
                             id="password"
@@ -217,7 +219,7 @@ export default function Register() {
                                 : 'border-purple-600/50 focus:border-purple-500'
                                 }`}
                             required
-                            placeholder="Enter your password"
+                            placeholder={t('passwordPlaceholder')}
                         />
                         {fieldErrors.password && (
                             <p className="mt-1 text-sm text-red-500 font-medium">{fieldErrors.password}</p>
@@ -226,7 +228,7 @@ export default function Register() {
 
                     <div>
                         <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-200 mb-1">
-                            Confirm Password
+                            {t('confirmPassword')}
                         </label>
                         <input
                             id="confirmPassword"
@@ -235,7 +237,7 @@ export default function Register() {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             className="w-full p-2 border border-purple-600/50 rounded focus:outline-none focus:border-purple-500 bg-gray-900/50 text-white placeholder-gray-400"
                             required
-                            placeholder="Confirm your password"
+                            placeholder={t('confirmPasswordPlaceholder')}
                         />
                     </div>
 
@@ -264,13 +266,13 @@ export default function Register() {
                             </div>
                         </label>
                         <label htmlFor="termsAccepted" className="text-sm text-gray-300 leading-relaxed cursor-pointer select-none">
-                            I agree to the{' '}
+                            {t('iAgreeTo')}{' '}
                             <Link href="/terms-of-service" className="text-purple-400 hover:text-purple-300 transition-colors underline">
-                                Terms of Service
+                                {t('termsOfService', { ns: 'common' })}
                             </Link>{' '}
-                            and{' '}
+                            {t('and', { ns: 'common' })}{' '}
                             <Link href="/privacy-policy" className="text-purple-400 hover:text-purple-300 transition-colors underline">
-                                Privacy Policy
+                                {t('privacyPolicy', { ns: 'common' })}
                             </Link>
                         </label>
                     </div>
@@ -283,30 +285,30 @@ export default function Register() {
                             console.log('Register button clicked', { loading, username, email, password, confirmPassword, termsAccepted });
                         }}
                     >
-                        {loading ? <FiLoader className="animate-spin" /> : 'Register'}
+                        {loading ? <FiLoader className="animate-spin" /> : t('register')}
                     </button>
                 </form>
 
                 <div className="mt-4 flex flex-col items-center space-y-3">
                     <p className="text-center text-sm text-gray-300">
-                        Already have an account?{' '}
+                        {t('alreadyHaveAccount')}{' '}
                         <Link href="/login" className="text-purple-400 hover:text-purple-300 transition-colors">
-                            Log in
+                            {t('logIn')}
                         </Link>
                     </p>
                     <p className="text-center text-sm text-gray-300">
                         <Link href="/pricing" className="text-purple-400 hover:text-purple-300 transition-colors">
-                            View Pricing Plans
+                            {t('viewPricingPlans', { ns: 'common' })}
                         </Link>
                     </p>
 
                     <div className="flex items-center space-x-4 text-xs text-gray-400 pt-2 border-t border-gray-700">
                         <Link href="/terms-of-service" className="hover:text-purple-400 transition-colors">
-                            Terms of Service
+                            {t('termsOfService', { ns: 'common' })}
                         </Link>
                         <span>•</span>
                         <Link href="/privacy-policy" className="hover:text-purple-400 transition-colors">
-                            Privacy Policy
+                            {t('privacyPolicy', { ns: 'common' })}
                         </Link>
                     </div>
                 </div>

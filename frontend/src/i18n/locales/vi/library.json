@@ -1,0 +1,22 @@
+{
+  "title": "Thư viện",
+  "cards": "Bài",
+  "the": "The",
+  "arcana": "Arcana",
+  "description": "Mỗi lá bài trong bộ — lịch sử, giọng nói và những gì chúng muốn nói.",
+  "chooseDeck": "Chọn bộ bài của bạn",
+  "allCards": "Tất cả lá bài",
+  "majorArcana": "Đại Arcana",
+  "cups": "Ly",
+  "pentacles": "Đồng xu",
+  "swords": "Kiếm",
+  "wands": "Gậy",
+  "searchPlaceholder": "Tìm kiếm arcana…",
+  "noCardsFound": "Không tìm thấy lá bài",
+  "tryDifferentFilter": "Thử bộ lọc hoặc từ khóa tìm kiếm khác.",
+  "element": "Nguyên tố",
+  "arcanaLabel": "Arcana",
+  "majorLabel": "Đại",
+  "readFullMeaning": "Đọc ý nghĩa đầy đủ",
+  "saveToJournal": "Lưu vào nhật ký"
+}
