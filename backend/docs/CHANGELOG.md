@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the unused "Save" action from the chat session reading header, leaving only the "New spread" button in that action row.
 
 ### Fixed
+- Frontend responsive behavior has been restored across the refreshed experience on mobile widths, including the session detail flow and the redesigned home/dashboard surfaces: actions now wrap without clipping, reading/card/article typography scales correctly, and composer/CTA controls remain usable without horizontal overflow on small screens.
 - Session detail pages now always render assistant replies that do not include drawn cards, instead of hiding the conversation until a card-bearing assistant message appears.
 - Home page center "Card of the day" image now renders reliably for remote deck URLs by bypassing Next image optimization for that slot and falling back gracefully if the image fails to load.
 - Admin user deletion now performs a dedicated soft delete by marking `is_deleted=true` (and deactivating the account) instead of hard-deleting the database row, preventing foreign-key conflicts when related checkout sessions exist while keeping deleted state distinct from inactive users.
