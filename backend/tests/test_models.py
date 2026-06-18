@@ -44,43 +44,28 @@ class TestUserModel:
     def test_user_password_setter_hashes_password(self):
         """Test that password setter properly hashes the password."""
         user = User()
+        user.password = "plaintext_password"
 
-        # Mock the pwd_context.hash method
-        with patch('models.pwd_context') as mock_pwd_context:
-            mock_pwd_context.hash.return_value = "hashed_password_123"
-
-            user.password = "plaintext_password"
-
-            # Verify hash was called
-            mock_pwd_context.hash.assert_called_once_with("plaintext_password")
-
-            # Verify hashed password was stored
-            assert user.hashed_password == "hashed_password_123"
+        assert user.hashed_password is not None
+        assert user.hashed_password.startswith("$2b$")
 
     def test_user_verify_password_success(self):
         """Test successful password verification."""
         user = User()
-        user.hashed_password = "hashed_password_123"
+        user.password = "plaintext_password"
 
-        with patch('models.pwd_context') as mock_pwd_context:
-            mock_pwd_context.verify.return_value = True
+        result = user.verify_password("plaintext_password")
 
-            result = user.verify_password("plaintext_password")
-
-            assert result is True
-            mock_pwd_context.verify.assert_called_once_with("plaintext_password", "hashed_password_123")
+        assert result is True
 
     def test_user_verify_password_failure(self):
         """Test failed password verification."""
         user = User()
-        user.hashed_password = "hashed_password_123"
+        user.password = "plaintext_password"
 
-        with patch('models.pwd_context') as mock_pwd_context:
-            mock_pwd_context.verify.return_value = False
+        result = user.verify_password("wrong_password")
 
-            result = user.verify_password("wrong_password")
-
-            assert result is False
+        assert result is False
 
     def test_user_get_total_turns_specialized_premium(self):
         """Test getting total turns for specialized premium user."""

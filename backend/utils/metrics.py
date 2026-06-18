@@ -4,10 +4,43 @@ Prometheus metrics for the Tarot API application.
 
 import time
 from collections.abc import Callable
+from typing import List, Optional
 
 from fastapi import FastAPI
 from prometheus_client import Counter, Gauge, Histogram, Info
 from prometheus_fastapi_instrumentator import Instrumentator
+import prometheus_fastapi_instrumentator.routing as _pfi_routing
+from starlette.routing import Match, Mount, Route
+from starlette.types import Scope
+
+
+def _patched_get_route_name(
+    scope: Scope, routes: List, route_name: Optional[str] = None
+) -> Optional[str]:
+    """Route name resolver that safely skips routes without a path attribute."""
+    for route in routes:
+        match, child_scope = route.matches(scope)
+        if match == Match.FULL:
+            if not hasattr(route, "path"):
+                if hasattr(route, "routes") and route.routes:
+                    return _patched_get_route_name({**scope, **child_scope}, route.routes, route_name)
+                return route_name
+            route_name = route.path
+            child_scope = {**scope, **child_scope}
+            if isinstance(route, Mount) and route.routes:
+                child_route_name = _patched_get_route_name(child_scope, route.routes, route_name)
+                if child_route_name is None:
+                    route_name = None
+                else:
+                    route_name += child_route_name
+            return route_name
+        elif match == Match.PARTIAL and route_name is None:
+            if hasattr(route, "path"):
+                route_name = route.path
+    return None
+
+
+_pfi_routing._get_route_name = _patched_get_route_name
 
 # Application info metric
 app_info = Info("tarot_app", "Tarot application information")
