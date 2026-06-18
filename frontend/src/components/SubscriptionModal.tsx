@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useMetaMask } from '@/hooks/useMetaMask';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ interface SubscriptionModalProps {
 }
 
 export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
+    const { t } = useTranslation('subscription');
     const {
         turns,
         products,
@@ -84,12 +86,12 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                     <DialogTitle className="text-xl md:text-2xl lg:text-3xl font-bold text-center bg-gradient-to-r from-purple-400 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
                         <div className="flex items-center justify-center space-x-2 md:space-x-3">
                             <Crown className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-purple-500" />
-                            <span>Get More Turns</span>
+                            <span>{t('getMoreTurns')}</span>
                             <Star className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-purple-500" />
                         </div>
                     </DialogTitle>
                     <DialogDescription className="text-base md:text-lg text-purple-300 text-center">
-                        Pay with MetaMask USDT to top up your turns.
+                        {t('payWithMetaMask')}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -101,11 +103,11 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                 <div className="flex items-center space-x-3">
                                     <Wallet className="h-6 w-6 text-green-400" />
                                     <div>
-                                        <h3 className="font-medium text-green-400">MetaMask Wallet — USDT Payment</h3>
+                                        <h3 className="font-medium text-green-400">{t('metamaskWallet')}</h3>
                                         <p className="text-sm text-green-300">
                                             {isConnected
-                                                ? `Connected: ${account?.slice(0, 6)}...${account?.slice(-4)}`
-                                                : 'Pay instantly with USDT stablecoin'
+                                                ? `${t('connected')} ${account?.slice(0, 6)}...${account?.slice(-4)}`
+                                                : t('payWithUsdt')
                                             }
                                         </p>
                                     </div>
@@ -116,7 +118,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                         disabled={isLoading}
                                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-2"
                                     >
-                                        {isLoading ? 'Connecting...' : 'Connect'}
+                                        {isLoading ? t('connecting', { ns: 'common' }) : t('connect')}
                                     </Button>
                                 )}
                             </div>
@@ -131,19 +133,19 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                     <div className="text-2xl md:text-3xl font-bold text-blue-400">
                                         {turns?.total_turns ?? 0}
                                     </div>
-                                    <div className="text-xs md:text-sm text-gray-400">Remaining Turns</div>
+                                    <div className="text-xs md:text-sm text-gray-400">{t('remainingTurns')}</div>
                                 </div>
                                 <div className="space-y-2">
                                     <div className="text-2xl md:text-3xl font-bold text-purple-400">
                                         {getSubscriptionStatusText()}
                                     </div>
-                                    <div className="text-xs md:text-sm text-gray-400">Current Plan</div>
+                                    <div className="text-xs md:text-sm text-gray-400">{t('currentPlan')}</div>
                                 </div>
                                 <div className="space-y-2">
                                     <div className="text-2xl md:text-3xl font-bold text-green-400">
                                         {getDaysUntilReset()}
                                     </div>
-                                    <div className="text-xs md:text-sm text-gray-400">Days Until Reset</div>
+                                    <div className="text-xs md:text-sm text-gray-400">{t('daysUntilReset')}</div>
                                 </div>
                             </div>
                         </CardContent>
@@ -174,7 +176,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                         {isPopular && (
                                             <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                                                 <Badge className="bg-purple-600 text-white px-3 py-1 text-xs font-medium">
-                                                    MOST POPULAR
+                                                    {t('mostPopular')}
                                                 </Badge>
                                             </div>
                                         )}
@@ -194,11 +196,11 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                                     <span className="text-base md:text-lg font-medium text-white">
                                                         {product.variant === '10_turns' ? '10' :
                                                             product.variant === '20_turns' ? '20' :
-                                                                product.description?.match(/\d+/)?.[0] || '?'} Turns
+                                                                product.description?.match(/\d+/)?.[0] || '?'} {t('turns')}
                                                     </span>
                                                 </div>
                                                 <div className="text-xs md:text-sm text-gray-400 text-center">
-                                                    Turns never expire • Use anytime
+                                                    {t('turnsNeverExpire')}
                                                 </div>
                                             </div>
 
@@ -213,12 +215,12 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                                 {paymentLoading === product.variant ? (
                                                     <>
                                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                        Processing...
+                                                        {t('processing', { ns: 'common' })}
                                                     </>
                                                 ) : (
                                                     <>
                                                         <Wallet className="h-4 w-4 mr-2" />
-                                                        Pay with MetaMask ({product.variant === '10_turns' ? '3.99' : '5.99'} USDT)
+                                                        {t('payWith')}{product.variant === '10_turns' ? '3.99' : '5.99'} {t('usdt')}
                                                     </>
                                                 )}
                                             </Button>
@@ -232,23 +234,23 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                     {/* How it works */}
                     <Card className="bg-gray-800/50 border-gray-600">
                         <CardContent className="p-4 md:p-6">
-                            <h3 className="font-medium mb-3 md:mb-4 text-white text-lg md:text-base">How it works:</h3>
+                            <h3 className="font-medium mb-3 md:mb-4 text-white text-lg md:text-base">{t('howItWorks')}</h3>
                             <div className="space-y-3 md:space-y-2 text-sm md:text-sm text-gray-200">
                                 <div className="flex items-start space-x-3 md:space-x-2">
                                     <div className="w-2 h-2 md:w-1.5 md:h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                                    <span className="leading-relaxed">Every user gets 3 free turns each month, regardless of plan</span>
+                                    <span className="leading-relaxed">{t('freeMonthlyTurns')}</span>
                                 </div>
                                 <div className="flex items-start space-x-3 md:space-x-2">
                                     <div className="w-2 h-2 md:w-1.5 md:h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                                    <span className="leading-relaxed">Free turns are used first, then paid turns</span>
+                                    <span className="leading-relaxed">{t('freeFirst')}</span>
                                 </div>
                                 <div className="flex items-start space-x-3 md:space-x-2">
                                     <div className="w-2 h-2 md:w-1.5 md:h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                                    <span className="leading-relaxed">Free turns reset on the 1st of each month</span>
+                                    <span className="leading-relaxed">{t('freeReset')}</span>
                                 </div>
                                 <div className="flex items-start space-x-3 md:space-x-2">
                                     <div className="w-2 h-2 md:w-1.5 md:h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
-                                    <span className="leading-relaxed">Paid turns via MetaMask never expire and carry over month to month</span>
+                                    <span className="leading-relaxed">{t('paidNeverExpire')}</span>
                                 </div>
                             </div>
                         </CardContent>

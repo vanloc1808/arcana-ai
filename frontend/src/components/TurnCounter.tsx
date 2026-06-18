@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -78,6 +79,7 @@ interface TurnCounterProps {
  * @returns {JSX.Element} A card component displaying turn information
  */
 export function TurnCounter({ onPurchaseClick, showDetails = true, className = '' }: TurnCounterProps) {
+    const { t } = useTranslation('subscription');
     const {
         turns,
         loading,
@@ -108,7 +110,7 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                 <CardContent className="p-4">
                     <div className="flex items-center space-x-2">
                         <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
-                        <span className="text-sm text-gray-300">Loading turns...</span>
+                        <span className="text-sm text-gray-300">{t('loadingTurns')}</span>
                     </div>
                 </CardContent>
             </Card>
@@ -135,7 +137,7 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                                 </span>
                                 {!hasUnlimitedTurns && (
                                     <span className="text-sm text-gray-300 dark:text-gray-300">
-                                        {turns.total_turns === 1 ? 'turn' : 'turns'}
+                                        {turns.total_turns === 1 ? t('turnSingular', { ns: 'common' }) : t('turnPlural', { ns: 'common' })}
                                     </span>
                                 )}
                             </div>
@@ -156,7 +158,7 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                                 className="flex items-center space-x-1 bg-indigo-600 hover:bg-indigo-700 text-white ml-4"
                             >
                                 <Plus className="h-4 w-4" />
-                                <span>Get Turns</span>
+                                <span>{t('getTurns')}</span>
                             </Button>
                         )}
                     </div>
@@ -168,7 +170,7 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                                 /* Unlimited turns message */
                                 <div className="text-sm text-purple-200 bg-purple-800/50 dark:text-purple-200 dark:bg-purple-800/50 p-2 rounded flex items-center space-x-2">
                                     <Crown className="h-4 w-4" />
-                                    <span>You have unlimited tarot reading turns!</span>
+                                    <span>{t('unlimitedTurns')}</span>
                                 </div>
                             ) : (
                                 <>
@@ -177,12 +179,12 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                                         <div className="flex items-center space-x-4">
                                             <div className="flex items-center space-x-1">
                                                 <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                                                <span className="text-gray-200 dark:text-gray-200">Free: {turns.number_of_free_turns}</span>
+                                                <span className="text-gray-200 dark:text-gray-200">{t('freeTurns')} {turns.number_of_free_turns}</span>
                                             </div>
                                             {turns.number_of_paid_turns > 0 && (
                                                 <div className="flex items-center space-x-1">
                                                     <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                                                    <span className="text-gray-200 dark:text-gray-200">Paid: {turns.number_of_paid_turns}</span>
+                                                    <span className="text-gray-200 dark:text-gray-200">{t('paidTurns')} {turns.number_of_paid_turns}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -193,7 +195,7 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                                         <div className="flex items-center space-x-2 text-xs text-gray-400 dark:text-gray-400">
                                             <Clock className="h-3 w-3" />
                                             <span>
-                                                Free turns reset in {daysUntilReset} {daysUntilReset === 1 ? 'day' : 'days'}
+                                                {t('freeResetsIn')} {daysUntilReset} {daysUntilReset === 1 ? t('daySingular', { ns: 'common' }) : t('dayPlural', { ns: 'common' })}
                                             </span>
                                         </div>
                                     )}
@@ -201,14 +203,14 @@ export function TurnCounter({ onPurchaseClick, showDetails = true, className = '
                                     {/* No turns warning */}
                                     {turns.total_turns === 0 && (
                                         <div className="text-xs text-orange-200 bg-orange-800/50 dark:text-orange-200 dark:bg-orange-800/50 p-2 rounded">
-                                            You&apos;ve used all your turns! Top up to keep reading.
+                                            {t('usedAllTurns')}
                                         </div>
                                     )}
 
                                     {/* Low turns warning */}
                                     {hasLowTurns && turns.total_turns > 0 && (
                                         <div className="text-xs text-orange-200 bg-orange-800/50 dark:text-orange-200 dark:bg-orange-800/50 p-2 rounded">
-                                            Running low on turns!
+                                            {t('runningLow')}
                                         </div>
                                     )}
                                 </>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MysticCard, SectionHeader, FieldLabel, FieldInput, FieldSelect } from './MysticCard';
 import { ProfileIcon } from './ProfileIcon';
 import { GhostButton } from './ProfileInfoTab';
@@ -17,6 +18,7 @@ const TIMEZONE_FALLBACK_OPTIONS: TimezoneOption[] = [
 ];
 
 export function NotificationsTab() {
+    const { t } = useTranslation('profile');
     const [prefs, setPrefs] = useState({
         daily: true, weekly: false, lunar: true, journal: false,
         marketing: false, security: true,
@@ -144,15 +146,15 @@ export function NotificationsTab() {
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                     <div>
-                        <FieldLabel>From</FieldLabel>
+                        <FieldLabel>{t('notifications.fromLabel')}</FieldLabel>
                         <FieldInput defaultValue="22:00" type="time" />
                     </div>
                     <div>
-                        <FieldLabel>Until</FieldLabel>
+                        <FieldLabel>{t('notifications.untilLabel')}</FieldLabel>
                         <FieldInput defaultValue="08:00" type="time" />
                     </div>
                     <div>
-                        <FieldLabel>Timezone</FieldLabel>
+                        <FieldLabel>{t('notifications.timezoneLabel')}</FieldLabel>
                         <FieldSelect defaultValue="Asia/Ho_Chi_Minh">
                             {timezoneOptions.map((tz) => (
                                 <option key={tz.value} value={tz.value}>{tz.label}</option>

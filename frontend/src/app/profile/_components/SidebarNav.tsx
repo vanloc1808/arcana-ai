@@ -1,15 +1,8 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ProfileIcon } from './ProfileIcon';
-
-const TAB_DEFS = [
-    { id: 'profile', label: 'Profile Info', icon: 'user' as const, eyebrow: 'I.' },
-    { id: 'decks', label: 'Tarot Decks', icon: 'cards' as const, eyebrow: 'II.' },
-    { id: 'subscription', label: 'Subscription', icon: 'crown' as const, eyebrow: 'III.' },
-    { id: 'history', label: 'History', icon: 'history' as const, eyebrow: 'IV.' },
-    { id: 'notifications', label: 'Notifications', icon: 'bell' as const, eyebrow: 'V.' },
-];
 
 interface SidebarNavProps {
     active: string;
@@ -22,6 +15,16 @@ interface SidebarNavProps {
 }
 
 export function SidebarNav({ active, setActive, username, email, avatarUrl, tier = 'Free', showOmen = true }: SidebarNavProps) {
+    const { t } = useTranslation('profile');
+
+    const TAB_DEFS = [
+        { id: 'profile', label: t('tabs.profileInfo'), icon: 'user' as const, eyebrow: 'I.' },
+        { id: 'decks', label: t('tabs.tarotDecks'), icon: 'cards' as const, eyebrow: 'II.' },
+        { id: 'subscription', label: t('tabs.subscription'), icon: 'crown' as const, eyebrow: 'III.' },
+        { id: 'history', label: t('tabs.history'), icon: 'history' as const, eyebrow: 'IV.' },
+        { id: 'notifications', label: t('tabs.notifications'), icon: 'bell' as const, eyebrow: 'V.' },
+    ];
+
     return (
         <aside style={{ width: 280, flexShrink: 0, position: 'sticky', top: 88, alignSelf: 'flex-start' }}>
             {/* Mini profile card */}
@@ -94,7 +97,7 @@ export function SidebarNav({ active, setActive, username, email, avatarUrl, tier
                     display: 'flex', alignItems: 'center', gap: 10,
                 }}>
                     <span style={{ color: '#f5b942' }}>✦</span>
-                    <span>The five chambers</span>
+                    <span>{t('sidebar.fiveChambers')}</span>
                     <span style={{ flex: 1, height: 1, background: '#1f2148' }} />
                 </div>
                 {TAB_DEFS.map(t => (
@@ -126,14 +129,16 @@ export function SidebarNav({ active, setActive, username, email, avatarUrl, tier
                     }}>
                         &ldquo;What is hidden will surface — but only if you stop looking.&rdquo;
                     </div>
-                    <div style={{ fontSize: 11, color: '#7c799f', marginTop: 8 }}>The Hermit, reversed</div>
+                    <div style={{ fontSize: 11, color: '#7c799f', marginTop: 8 }}>{t('sidebar.theHermitReversed')}</div>
                 </div>
             )}
         </aside>
     );
 }
 
-function NavItem({ tab, active, onClick }: { tab: typeof import('./SidebarNav').TAB_DEFS[0]; active: boolean; onClick: () => void }) {
+type TabDef = { id: string; label: string; icon: 'user' | 'cards' | 'crown' | 'history' | 'bell'; eyebrow: string };
+
+function NavItem({ tab, active, onClick }: { tab: TabDef; active: boolean; onClick: () => void }) {
     const [hovered, setHovered] = React.useState(false);
 
     return (
@@ -185,5 +190,3 @@ function NavItem({ tab, active, onClick }: { tab: typeof import('./SidebarNav').
     );
 }
 
-// Export TAB_DEFS for use in page.tsx
-export { TAB_DEFS };

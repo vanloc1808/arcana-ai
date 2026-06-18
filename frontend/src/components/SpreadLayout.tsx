@@ -2,6 +2,7 @@
 
 import { Card, Spread } from '@/types/tarot';
 import Image from 'next/image';
+import { useTranslation } from 'react-i18next';
 import { DrawnCardReveal } from '@/components/DrawnCardReveal';
 
 interface SpreadLayoutProps {
@@ -17,6 +18,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
     brokenImages = new Set(),
     onImageError
 }) => {
+    const { t } = useTranslation('reading');
     if (!cards.length) return null;
 
     // If we have a spread, use its positioning
@@ -28,7 +30,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                 {/* Spread Layout - Mobile-first design */}
                 <div className="relative bg-gradient-to-br from-gray-800 to-purple-900/20 rounded-2xl p-4 md:p-6 lg:p-8 min-h-[400px] md:min-h-[500px] lg:min-h-[600px] overflow-hidden">
                     <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-white mb-6 md:mb-8 text-center font-mystical">
-                        {spread.name} Spread
+                        {t('spreadLayout.spreadSuffix', { name: spread.name })}
                     </h3>
 
                     {/* Mobile Layout - Always use grid for consistency */}
@@ -42,7 +44,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                         <div key={index} className="flex flex-col items-center space-y-3 touch-manipulation">
                                             <div className="text-center mb-2">
                                                 <p className="text-sm md:text-base font-medium text-purple-400 mb-1">
-                                                    {position?.name || `Position ${index + 1}`}
+                                                    {position?.name || t('spreadLayout.position', { number: index + 1 })}
                                                 </p>
                                                 {position?.description && (
                                                     <p className="text-xs md:text-sm text-gray-500 max-w-[140px] md:max-w-[180px] line-clamp-2">
@@ -72,7 +74,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                         <div key={index} className="flex flex-col items-center space-y-3 touch-manipulation">
                                             <div className="text-center mb-2">
                                                 <p className="text-sm md:text-base font-medium text-purple-400 mb-1">
-                                                    {position?.name || `Position ${index + 1}`}
+                                                    {position?.name || t('spreadLayout.position', { number: index + 1 })}
                                                 </p>
                                                 {position?.description && (
                                                     <p className="text-xs md:text-sm text-gray-500 max-w-[120px] md:max-w-[160px] line-clamp-2">
@@ -104,7 +106,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                             <div key={index} className="flex flex-col items-center space-y-3 touch-manipulation">
                                                 <div className="text-center mb-2">
                                                     <p className="text-sm font-medium text-purple-400 mb-1">
-                                                        {position?.name || `Position ${index + 1}`}
+                                                        {position?.name || t('spreadLayout.position', { number: index + 1 })}
                                                     </p>
                                                     {position?.description && (
                                                         <p className="text-xs text-gray-500 max-w-[200px] line-clamp-2">
@@ -144,7 +146,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                             >
                                                 <div className="text-center mb-2">
                                                     <p className="text-sm font-medium text-purple-400 mb-1">
-                                                        {position?.name || `Position ${index + 1}`}
+                                                        {position?.name || t('spreadLayout.position', { number: index + 1 })}
                                                     </p>
                                                 </div>
                                                 <CardComponent
@@ -170,7 +172,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                         <div key={index} className="flex flex-col items-center space-y-2 touch-manipulation">
                                             <div className="text-center mb-2">
                                                 <p className="text-xs md:text-sm font-medium text-purple-400 mb-1">
-                                                    {position?.name || `Position ${index + 1}`}
+                                                    {position?.name || t('spreadLayout.position', { number: index + 1 })}
                                                 </p>
                                                 {position?.description && (
                                                     <p className="text-xs text-gray-500 max-w-[100px] md:max-w-[120px] line-clamp-1">
@@ -196,7 +198,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                 {/* Card Details Section - Mobile-first layout */}
                 <div className="space-y-4 md:space-y-6">
                     <h4 className="text-lg md:text-xl font-semibold text-white text-center font-mystical">
-                        Card Interpretations
+                        {t('spreadLayout.cardInterpretations')}
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         {cards.map((card, index) => {
@@ -220,7 +222,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h5 className="text-sm md:text-base font-semibold text-white line-clamp-2">
-                                                {position?.name || `Position ${index + 1}`}: {card.name}
+                                                {position?.name || t('spreadLayout.position', { number: index + 1 })}: {card.name}
                                             </h5>
                                             <p className="text-xs md:text-sm text-purple-400 mt-1">
                                                 {card.orientation}
@@ -230,7 +232,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
 
                                     {position?.description && (
                                         <div className="border-l-2 border-purple-500/50 pl-3 md:pl-4">
-                                            <p className="text-xs md:text-sm font-medium text-purple-300 mb-2">Position Meaning:</p>
+                                            <p className="text-xs md:text-sm font-medium text-purple-300 mb-2">{t('spreadLayout.positionMeaning')}</p>
                                             <p className="text-xs md:text-sm text-gray-400 leading-relaxed">
                                                 {position.description}
                                             </p>
@@ -239,7 +241,7 @@ export const SpreadLayout: React.FC<SpreadLayoutProps> = ({
 
                                     {meaning && (
                                         <div className="border-l-2 border-green-500/50 pl-3 md:pl-4">
-                                            <p className="text-xs md:text-sm font-medium text-green-300 mb-2">Card Meaning:</p>
+                                            <p className="text-xs md:text-sm font-medium text-green-300 mb-2">{t('spreadLayout.cardMeaning')}</p>
                                             <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
                                                 {meaning}
                                             </p>

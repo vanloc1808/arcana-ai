@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 interface CardDrawingAnimationProps {
     count?: number;
@@ -13,6 +14,7 @@ interface CardDrawingAnimationProps {
  * the OS reduce-motion setting.
  */
 export function CardDrawingAnimation({ count = 3 }: CardDrawingAnimationProps) {
+    const { t } = useTranslation('home');
     const cards = Array.from({ length: Math.min(Math.max(count, 1), 10) });
 
     return (
@@ -24,7 +26,7 @@ export function CardDrawingAnimation({ count = 3 }: CardDrawingAnimationProps) {
                         <div className="absolute inset-0 spinner-mystical-dual w-5 h-5" />
                     </div>
                     <span className="text-base text-purple-400 font-medium font-mystical">
-                        Shuffling the deck and drawing your cards…
+                        {t('page.shufflingCards')}
                     </span>
                 </div>
 

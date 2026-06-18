@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 import {
     FiStar,
     FiMoon,
@@ -40,6 +41,7 @@ const mysticalQuotes = [
 ];
 
 export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
+    const { t } = useTranslation('home');
     const { user } = useAuth();
     const [dailyQuote, setDailyQuote] = useState('');
     const [moonPhase, setMoonPhase] = useState<MoonPhase>({ phase: 'New Moon', illumination: 0, emoji: '🌑' });
@@ -101,7 +103,7 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                         <div className="flex items-center justify-center gap-2 mb-3">
                             <FiStar className="w-5 h-5 text-yellow-400" />
                             <h3 className="text-lg font-mystical text-gradient bg-gradient-to-r from-purple-400 to-yellow-400 bg-clip-text text-transparent">
-                                Card of the Day
+                                {t('sidebar.cardOfTheDay')}
                             </h3>
                         </div>
 
@@ -126,10 +128,10 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <FiMoon className="w-4 h-4 text-blue-400" />
-                                <span className="text-sm font-medium text-gray-300">Lunar Phase</span>
+                                <span className="text-sm font-medium text-gray-300">{t('sidebar.lunarPhase')}</span>
                             </div>
                             <p className="text-lg font-mystical text-blue-300">{moonPhase.phase}</p>
-                            <p className="text-xs text-gray-400">{moonPhase.illumination}% illuminated</p>
+                            <p className="text-xs text-gray-400">{moonPhase.illumination}% {t('lunar.illuminated')}</p>
                         </div>
                         <div className="text-3xl">{moonPhase.emoji}</div>
                     </div>
@@ -142,7 +144,7 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                     <div className="text-center">
                         <div className="flex items-center justify-center gap-2 mb-3">
                             <span className="text-yellow-400">✦</span>
-                            <h3 className="text-sm font-medium text-gray-300">Daily Wisdom</h3>
+                            <h3 className="text-sm font-medium text-gray-300">{t('sidebar.dailyWisdom')}</h3>
                             <span className="text-yellow-400">✦</span>
                         </div>
                         <blockquote className="text-sm italic text-purple-200 leading-relaxed">
@@ -157,7 +159,7 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                 <CardContent className="p-4">
                     <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
                         <FiZap className="w-4 h-4 text-purple-400" />
-                        Quick Actions
+                        {t('sidebar.quickActions')}
                     </h3>
                     <div className="grid gap-2">
                         <Link
@@ -165,21 +167,21 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                             className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-purple-900/40 transition-colors text-sm leading-5 text-gray-300 hover:text-purple-300"
                         >
                             <FiSun className="w-4 h-4" />
-                            New Reading
+                            {t('sidebar.newReading')}
                         </Link>
                         <Link
                             href="/journal"
                             className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-purple-900/40 transition-colors text-sm leading-5 text-gray-300 hover:text-purple-300"
                         >
                             <FiBookOpen className="w-4 h-4" />
-                            Journal
+                            {t('sidebar.journal')}
                         </Link>
                         <Link
                             href="/profile"
                             className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-purple-900/40 transition-colors text-sm leading-5 text-gray-300 hover:text-purple-300"
                         >
                             <FiUser className="w-4 h-4" />
-                            Profile
+                            {t('sidebar.profile')}
                         </Link>
                     </div>
                 </CardContent>
@@ -191,19 +193,19 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
                     <CardContent className="p-4">
                         <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
                             <FiHeart className="w-4 h-4 text-red-400" />
-                            Your Journey
+                            {t('sidebar.yourJourney')}
                         </h3>
                         <div className="grid gap-2">
                             <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-400">Member since</span>
+                                <span className="text-xs text-gray-400">{t('sidebar.memberSince')}</span>
                                 <span className="text-xs text-purple-300">
                                     {new Date(user.created_at).toLocaleDateString()}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-400">Favorite deck</span>
+                                <span className="text-xs text-gray-400">{t('sidebar.favoriteDeck')}</span>
                                 <Badge variant="secondary" className="text-xs bg-purple-900/50 text-purple-300">
-                                    Rider-Waite
+                                    {t('sidebar.defaultDeck')}
                                 </Badge>
                             </div>
                         </div>
@@ -215,13 +217,13 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
             <Card className="bg-gray-800/80 border-purple-600/50 shadow-lg">
                 <CardContent className="p-4">
                     <div className="text-center">
-                        <h3 className="text-sm font-medium text-gray-300 mb-3">Celestial Energy</h3>
+                        <h3 className="text-sm font-medium text-gray-300 mb-3">{t('sidebar.celestialEnergy')}</h3>
                         <div className="flex justify-center items-center space-x-4 text-2xl">
                             <span className="animate-pulse">⭐</span>
                             <span className="animate-bounce">🔮</span>
                             <span className="animate-pulse">✨</span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-2">The cosmos aligns in your favor</p>
+                        <p className="text-xs text-gray-400 mt-2">{t('sidebar.cosmosAligns')}</p>
                     </div>
                 </CardContent>
             </Card>
@@ -230,7 +232,7 @@ export function MysticalSidebar({ className = '' }: MysticalSidebarProps) {
             <div className="flex-1 flex items-end justify-center pb-4">
                 <div className="text-center">
                     <div className="text-6xl text-purple-600/30 mb-2">⬟</div>
-                    <p className="text-xs text-gray-500 italic">Sacred geometry guides your path</p>
+                    <p className="text-xs text-gray-500 italic">{t('sidebar.sacredGeometry')}</p>
                 </div>
             </div>
         </div>

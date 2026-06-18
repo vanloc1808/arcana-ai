@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSpreads } from '@/hooks/useTarotReading';
+import { useTranslation } from 'react-i18next';
 
 interface SpreadSelectorProps {
     onSpreadChange: (spreadId: number | null) => void;
@@ -10,6 +11,7 @@ interface SpreadSelectorProps {
 }
 
 export const SpreadSelector = ({ onSpreadChange, selectedSpreadId = null, disabled = false }: SpreadSelectorProps) => {
+    const { t } = useTranslation(['home', 'common']);
     const { spreads, isLoading, error, fetchSpreads } = useSpreads();
     const [localSelectedId, setLocalSelectedId] = useState<number | null>(selectedSpreadId);
 
@@ -38,7 +40,7 @@ export const SpreadSelector = ({ onSpreadChange, selectedSpreadId = null, disabl
     if (error) {
         return (
             <div className="text-red-400 text-sm">
-                Error loading spreads: {error}
+                {t('spread.errorLoadingSpreads')} {error}
             </div>
         );
     }
@@ -46,7 +48,7 @@ export const SpreadSelector = ({ onSpreadChange, selectedSpreadId = null, disabl
     return (
         <div className="space-y-3">
             <label className="block text-mystical-accent text-accent-gradient mb-2">
-                Reading Template
+                {t('spread.readingTemplate')}
             </label>
 
             <div className="space-y-2">
@@ -61,10 +63,10 @@ export const SpreadSelector = ({ onSpreadChange, selectedSpreadId = null, disabl
                     <div className="flex items-center justify-between">
                         <div>
                             <h3 className="font-medium text-white">
-                                Custom Draw
+                                {t('spread.customDraw')}
                             </h3>
                             <p className="text-sm text-purple-300">
-                                Choose your own number of cards (1-10)
+                                {t('spread.customDrawDesc')}
                             </p>
                         </div>
                         <div className={`w-4 h-4 rounded-full border-2 ${localSelectedId === null
@@ -95,7 +97,7 @@ export const SpreadSelector = ({ onSpreadChange, selectedSpreadId = null, disabl
                                         {spread.name}
                                     </h3>
                                     <span className="text-xs bg-gray-700 text-purple-300 px-2 py-0.5 rounded">
-                                        {spread.num_cards} cards
+                                        {spread.num_cards} {t('cardPlural', { ns: 'common' })}
                                     </span>
                                 </div>
                                 <p className="text-sm text-purple-300 mt-1">

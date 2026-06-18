@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { DeckSelector } from '@/components/DeckSelector';
 import { SpreadSelector } from '@/components/SpreadSelector';
@@ -15,6 +16,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from 'react-hot-toast';
 
 export default function ReadingPage() {
+    const { t } = useTranslation('reading');
     const { isAuthenticated } = useAuth();
     const { cards, isLoading, error, getReading } = useTarotReading();
     const [selectedDeckId, setSelectedDeckId] = useState<number | null>(null);
@@ -60,17 +62,17 @@ export default function ReadingPage() {
             <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
                 <div className="bg-gray-800 p-6 sm:p-8 rounded-lg shadow-md max-w-md w-full">
                     <h1 className="text-xl sm:text-2xl font-bold text-center mb-4 text-white">
-                        Access Denied
+                        {t('accessDenied')}
                     </h1>
                     <p className="text-center text-gray-400 mb-4">
-                        Please log in to get tarot readings.
+                        {t('pleaseLoginForReadings')}
                     </p>
                     <div className="text-center">
                         <a
                             href="/login"
                             className="inline-block px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors w-full sm:w-auto"
                         >
-                            Login
+                            {t('login', { ns: 'common' })}
                         </a>
                     </div>
                 </div>
@@ -84,7 +86,7 @@ export default function ReadingPage() {
 
         // Check if user has turns available
         if (!hasTurnsAvailable()) {
-            toast.error('You have no turns remaining. Please purchase more turns to continue.');
+            toast.error(t('noTurnsRemaining'));
             setIsSubscriptionModalOpen(true);
             return;
         }
@@ -101,7 +103,7 @@ export default function ReadingPage() {
             if (err && typeof err === 'object' && 'response' in err) {
                 const axiosError = err as { response?: { status?: number } };
                 if (axiosError.response?.status === 402) {
-                    toast.error('You have no turns remaining. Please purchase more turns to continue.');
+                    toast.error(t('noTurnsRemaining'));
                     setIsSubscriptionModalOpen(true);
                     return;
                 }
@@ -122,13 +124,13 @@ export default function ReadingPage() {
                     {/* Reading Form */}
                     <div className="card-mystical shadow-lg p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8">
                         <h2 className="text-lg sm:text-xl lg:text-mystical-title text-gradient mb-4 sm:mb-6 lg:mb-8 text-center">
-                            🌙 Create Your Sacred Reading ✨
+                            {t('createReadingTitle')}
                         </h2>
 
                         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                             <div>
                                 <label htmlFor="concern" className="block text-sm sm:text-base text-mystical-accent text-accent-gradient mb-2">
-                                    Your Question or Concern *
+                                    {t('questionLabel')}
                                 </label>
                                 <div className="relative">
                                     <textarea
@@ -143,7 +145,7 @@ export default function ReadingPage() {
                                         maxLength={2000}
                                         className="w-full px-3 sm:px-4 py-2 sm:py-3 chat-input bg-gray-800 border-2 border-purple-600 rounded-xl focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 placeholder-purple-500 resize-none text-sm sm:text-base"
                                         rows={3}
-                                        placeholder="What mystical question seeks an answer? Share your heart's inquiry..."
+                                        placeholder={t('questionPlaceholder')}
                                         required
                                     />
                                     {concern.length > 1700 && (
@@ -170,7 +172,7 @@ export default function ReadingPage() {
                                     {!selectedSpreadId && (
                                         <div>
                                             <label htmlFor="numCards" className="block text-sm sm:text-base text-mystical-accent text-accent-gradient mb-2">
-                                                Number of Cards
+                                                {t('numberOfCards')}
                                             </label>
                                             <select
                                                 id="numCards"
@@ -178,11 +180,11 @@ export default function ReadingPage() {
                                                 onChange={(e) => setNumCards(parseInt(e.target.value))}
                                                 className="w-full p-2 sm:p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-700 text-white text-sm sm:text-base"
                                             >
-                                                <option value={1}>1 Card - Quick Insight</option>
-                                                <option value={3}>3 Cards - Simple Reading</option>
-                                                <option value={5}>5 Cards - Detailed Reading</option>
-                                                <option value={7}>7 Cards - In-depth Reading</option>
-                                                <option value={10}>10 Cards - Comprehensive Reading</option>
+                                                <option value={1}>{t('card1')}</option>
+                                                <option value={3}>{t('card3')}</option>
+                                                <option value={5}>{t('card5')}</option>
+                                                <option value={7}>{t('card7')}</option>
+                                                <option value={10}>{t('card10')}</option>
                                             </select>
                                         </div>
                                     )}
@@ -191,7 +193,7 @@ export default function ReadingPage() {
                                     {selectedSpreadId && currentSpread && (
                                         <div className="bg-primary-900/20 p-3 sm:p-4 rounded-lg border border-accent-300">
                                             <h3 className="text-sm sm:text-base text-card-position mb-2">
-                                                Selected Spread
+                                                {t('selectedSpread')}
                                             </h3>
                                             <p className="text-sm sm:text-base text-card-name text-primary-300 mb-1">
                                                 {currentSpread.name} ({currentSpread.num_cards} cards)
@@ -205,14 +207,14 @@ export default function ReadingPage() {
                                     {/* Deck Selection */}
                                     <div>
                                         <label className="block text-sm sm:text-base text-mystical-accent text-accent-gradient mb-2">
-                                            Deck Selection (Optional)
+                                            {t('deckSelection')}
                                         </label>
                                         <button
                                             type="button"
                                             onClick={() => setShowDeckSelector(!showDeckSelector)}
                                             className="w-full p-2 sm:p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-700 text-white text-left text-sm sm:text-base touch-manipulation"
                                         >
-                                            {selectedDeckId ? 'Custom deck selected' : 'Use favorite deck'}
+                                            {selectedDeckId ? t('customDeckSelected') : t('useFavoriteDeck')}
                                         </button>
                                     </div>
                                 </div>
@@ -224,7 +226,7 @@ export default function ReadingPage() {
                                     disabled={isLoading || !concern.trim()}
                                     className="btn-mystical px-6 sm:px-8 lg:px-12 py-3 sm:py-4 text-base sm:text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none touch-manipulation w-full sm:w-auto"
                                 >
-                                    {isLoading ? '🔮 Drawing Cards...' : '✨ Get Sacred Reading ✨'}
+                                    {isLoading ? t('drawingCards') : t('getSacredReading')}
                                 </button>
                             </div>
                         </form>
@@ -233,7 +235,7 @@ export default function ReadingPage() {
                         {showDeckSelector && (
                             <div className="mt-4 sm:mt-6 p-3 sm:p-4 border-t border-gray-700">
                                 <h3 className="text-base sm:text-lg lg:text-h3 text-primary-gradient mb-3 sm:mb-4">
-                                    Select Deck for This Reading
+                                    {t('selectDeckForReading')}
                                 </h3>
                                 <DeckSelector
                                     onDeckChange={setSelectedDeckId}
@@ -246,7 +248,7 @@ export default function ReadingPage() {
                     {/* Error Display */}
                     {error && (
                         <div className="bg-red-900/20 border border-red-500 text-red-400 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-                            <p className="text-sm sm:text-base">Error: {error}</p>
+                            <p className="text-sm sm:text-base">{t('error')} {error}</p>
                         </div>
                     )}
 
@@ -255,14 +257,14 @@ export default function ReadingPage() {
                         <div className="bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
                                 <h2 className="text-lg sm:text-xl lg:text-h1 text-primary-gradient">
-                                    Your Sacred Reading
+                                    {t('yourSacredReading')}
                                 </h2>
                                 <button
                                     onClick={() => setIsShareModalOpen(true)}
                                     className="btn-mystical flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 text-sm sm:text-base touch-manipulation"
                                 >
                                     <FiShare2 className="w-4 h-4" />
-                                    Share Reading
+                                    {t('shareReading')}
                                 </button>
                             </div>
 

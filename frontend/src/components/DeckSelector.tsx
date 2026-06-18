@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { TarotCardIcon, TarotAgentLogo, StarIcon } from '@/components/icons';
+import { useTranslation } from 'react-i18next';
 
 interface DeckSelectorProps {
     onDeckChange?: (deckId: number) => void;
@@ -36,6 +37,7 @@ function getDeckMeta(name: string) {
 }
 
 export function DeckSelector({ onDeckChange, showAsFavoriteSetter = false }: DeckSelectorProps) {
+    const { t } = useTranslation('home');
     const { profile, decks, isLoading, error, fetchProfile, fetchDecks, updateFavoriteDeck } = useUserProfile();
     const [selectedDeckId, setSelectedDeckId] = useState<number | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
@@ -71,7 +73,7 @@ export function DeckSelector({ onDeckChange, showAsFavoriteSetter = false }: Dec
         return (
             <div className="flex items-center justify-center p-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                <span className="ml-2 text-gray-400">Loading decks...</span>
+                <span className="ml-2 text-gray-400">{t('deck.loadingDecks')}</span>
             </div>
         );
     }
@@ -79,7 +81,7 @@ export function DeckSelector({ onDeckChange, showAsFavoriteSetter = false }: Dec
     if (error) {
         return (
             <div className="p-4 bg-red-900/20 border border-red-500 text-red-400 rounded-lg">
-                <p>Error loading decks: {error}</p>
+                <p>{t('deck.errorLoadingDecks')} {error}</p>
             </div>
         );
     }
@@ -91,14 +93,14 @@ export function DeckSelector({ onDeckChange, showAsFavoriteSetter = false }: Dec
                     <div className="flex items-center justify-center mb-2">
                         <TarotAgentLogo size={32} className="text-primary-600 mr-2" />
                         <h3 className="text-lg font-semibold font-mystical text-purple-400">
-                            Choose Your Favorite Deck
+                            {t('deck.chooseFavoriteDeck')}
                         </h3>
                         <TarotAgentLogo size={32} className="text-primary-600 ml-2" />
                     </div>
                     <div className="divider-mystical"></div>
                     {profile?.favorite_deck && (
                         <div className="text-sm text-gray-400">
-                            Current: {profile.favorite_deck.name}
+                            {t('deck.current')} {profile.favorite_deck.name}
                         </div>
                     )}
                 </div>

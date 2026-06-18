@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,6 +49,7 @@ const ALLOWED_EXTENSIONS = [
 ];
 
 export function SupportModal({ isOpen, onClose }: SupportModalProps) {
+    const { t } = useTranslation('admin');
     const [formData, setFormData] = useState<SupportFormData>({
         title: '',
         description: '',
@@ -252,11 +254,11 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                         <DialogTitle className="text-xl md:text-2xl font-bold text-center bg-gradient-to-r from-purple-400 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
                             <div className="flex items-center justify-center space-x-2">
                                 <HelpCircle className="h-6 w-6 md:h-7 md:w-7 text-purple-500" />
-                                <span>Contact Support</span>
+                                <span>{t('support.title')}</span>
                             </div>
                         </DialogTitle>
                         <DialogDescription className="text-center text-gray-300">
-                            Need help? Submit a support request and our team will assist you as soon as possible.
+                            {t('support.description')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -265,12 +267,12 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="title" className="text-sm font-medium text-gray-200">
-                                        Subject *
+                                        {t('support.subject')}
                                     </Label>
                                     <Input
                                         id="title"
                                         type="text"
-                                        placeholder="Brief description of your issue..."
+                                        placeholder={t('support.subjectPlaceholder')}
                                         value={formData.title}
                                         onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                                         className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
@@ -278,17 +280,17 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                                         disabled={isSubmitting}
                                     />
                                     <div className="text-xs text-gray-400 text-right">
-                                        {formData.title.length}/200 characters
+                                        {formData.title.length}/200 {t('support.characters')}
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label htmlFor="description" className="text-sm font-medium text-gray-200">
-                                        Description *
+                                        {t('support.descriptionLabel')}
                                     </Label>
                                     <Textarea
                                         id="description"
-                                        placeholder="Provide detailed information about your issue..."
+                                        placeholder={t('support.descriptionPlaceholder')}
                                         value={formData.description}
                                         onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                                         className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 min-h-[120px]"
@@ -296,13 +298,13 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                                         disabled={isSubmitting}
                                     />
                                     <div className="text-xs text-gray-400 text-right">
-                                        {formData.description.length}/2000 characters
+                                        {formData.description.length}/2000 {t('support.characters')}
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label className="text-sm font-medium text-gray-200">
-                                        Attachments (Optional)
+                                        {t('support.attachments')}
                                     </Label>
                                     <div
                                         className={cn(
@@ -319,9 +321,9 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                                     >
                                         <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                                         <p className="text-gray-300 mb-2">
-                                            Drag and drop files here, or{' '}
+                                            {t('support.dragAndDrop')}{' '}
                                             <label className="text-purple-400 hover:text-purple-300 cursor-pointer underline">
-                                                browse
+                                                {t('support.browse')}
                                                 <input
                                                     type="file"
                                                     multiple
@@ -333,14 +335,14 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                                             </label>
                                         </p>
                                         <p className="text-xs text-gray-400">
-                                            Max {MAX_FILES} files, 25MB each.
+                                            {t('support.maxFiles')} {MAX_FILES} {t('support.filesLimit')}
                                         </p>
                                     </div>
 
                                     {formData.files.length > 0 && (
                                         <div className="space-y-2">
                                             <Label className="text-sm font-medium text-gray-200">
-                                                Selected Files ({formData.files.length}/{MAX_FILES})
+                                                {t('support.selectedFiles')}{formData.files.length}/{MAX_FILES})
                                             </Label>
                                             <div className="space-y-2 max-h-32 overflow-y-auto">
                                                 {formData.files.map((file, index) => (
@@ -382,7 +384,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                                         disabled={isSubmitting}
                                         className="border-gray-600 text-gray-300 hover:bg-gray-700"
                                     >
-                                        Cancel
+                                        {t('cancel', { ns: 'common' })}
                                     </Button>
                                     <Button
                                         type="submit"
@@ -392,12 +394,12 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                                         {isSubmitting ? (
                                             <>
                                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                                                Submitting...
+                                                {t('submitting', { ns: 'common' })}
                                             </>
                                         ) : (
                                             <>
                                                 <Send className="h-4 w-4 mr-2" />
-                                                Submit Request
+                                                {t('support.submitRequest')}
                                             </>
                                         )}
                                     </Button>
@@ -419,25 +421,25 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
-                                <span>Support Ticket Created!</span>
+                                <span>{t('support.ticketCreated')}</span>
                             </div>
                         </DialogTitle>
                     </DialogHeader>
 
                     <div className="text-center space-y-4 py-4">
                         <p className="text-gray-300 text-lg">
-                            Your support request has been submitted successfully!
+                            {t('support.ticketSuccess')}
                         </p>
 
                         <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
-                            <p className="text-sm text-gray-400 mb-1">Ticket ID:</p>
+                            <p className="text-sm text-gray-400 mb-1">{t('support.ticketId')}</p>
                             <p className="text-green-400 font-mono text-lg font-semibold break-all">
                                 #{successTicketId}
                             </p>
                         </div>
 
                         <div className="space-y-2 text-gray-300">
-                            <p className="font-medium">✅ Our team will contact you soon!</p>
+                            <p className="font-medium">✅ {t('support.teamContact')}</p>
                         </div>
 
                         <Button
@@ -447,7 +449,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                             <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
-                            Close
+                            {t('close', { ns: 'common' })}
                         </Button>
                     </div>
                 </DialogContent>

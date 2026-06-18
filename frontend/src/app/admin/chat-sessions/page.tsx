@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslation } from 'react-i18next';
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, StatCard, SearchInput, Icon, Table, type Column } from "@/components/admin/AdminUI";
@@ -44,8 +45,9 @@ function SearchParamSync({ setQ }: { setQ: (q: string) => void }) {
 }
 
 export default function AdminChatSessionsPage() {
+    const { t } = useTranslation('admin');
     return (
-        <Suspense fallback={<AdminLoadingScreen label="Loading sessions…" />}>
+        <Suspense fallback={<AdminLoadingScreen label={t('chatSessions.loading')} />}>
             <AdminChatSessionsPageContent />
         </Suspense>
     );
@@ -54,6 +56,7 @@ export default function AdminChatSessionsPage() {
 function AdminChatSessionsPageContent() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
+    const { t } = useTranslation('admin');
     const [sessions, setSessions] = useState<AdminChatSession[]>([]);
     const [stats, setStats] = useState<DashboardStats>({});
     const [sortField, setSortField] = useState<SortField>("created_at");
@@ -126,34 +129,34 @@ function AdminChatSessionsPageContent() {
         );
     }, [sessions, q]);
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading sessions…" />;
+    if (isAuthLoading || !user) return <AdminLoadingScreen label={t('chatSessions.loading')} />;
     if (!user.is_admin) return null;
-    if (loading) return <AdminLoadingScreen label="Consulting the ether…" />;
+    if (loading) return <AdminLoadingScreen label={t('chatSessions.consulting')} />;
 
     const maxUser = metrics.topUsers[0]?.count || 1;
 
     return (
-        <AdminLayout activePath="/admin/chat-sessions" breadcrumb="Chat Sessions" username={user.username ?? "Admin"}>
+        <AdminLayout activePath="/admin/chat-sessions" breadcrumb={t('chatSessions.title')} username={user.username ?? "Admin"}>
             <Suspense fallback={null}>
                 <SearchParamSync setQ={setQ} />
             </Suspense>
             <div className="view">
                 <PageHeader
                     kicker="Conversations"
-                    title="Chat sessions"
-                    subtitle="Engagement metrics across reading conversations with the Arcana oracle."
+                    title={t('chatSessions.title')}
+                    subtitle={t('chatSessions.subtitle')}
                     actions={(
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                            <label className="muted" style={{ fontSize: 12 }}>Sort by</label>
+                            <label className="muted" style={{ fontSize: 12 }}>{t('chatSessions.sortBy')}</label>
                             <select className="btn btn-sm btn-secondary" value={sortField} onChange={(e) => setSortField(e.target.value as SortField)}>
-                                <option value="created_at">Started</option>
-                                <option value="username">User</option>
-                                <option value="title">Title</option>
-                                <option value="messages_count">Messages</option>
+                                <option value="created_at">{t('chatSessions.sortStarted')}</option>
+                                <option value="username">{t('chatSessions.sortUser')}</option>
+                                <option value="title">{t('chatSessions.sortTitle')}</option>
+                                <option value="messages_count">{t('chatSessions.sortMessages')}</option>
                             </select>
                             <select className="btn btn-sm btn-secondary" value={sortDirection} onChange={(e) => setSortDirection(e.target.value as SortDirection)}>
-                                <option value="desc">Descending</option>
-                                <option value="asc">Ascending</option>
+                                <option value="desc">{t('chatSessions.descending')}</option>
+                                <option value="asc">{t('chatSessions.ascending')}</option>
                             </select>
                         </div>
                     )}
@@ -170,12 +173,12 @@ function AdminChatSessionsPageContent() {
                     <div className="card panel">
                         <div className="panel-header">
                             <div>
-                                <div className="panel-eyebrow">Engagement</div>
-                                <h3 className="panel-title">Most active users</h3>
+                                <div className="panel-eyebrow">{t('chatSessions.engagement')}</div>
+                                <h3 className="panel-title">{t('chatSessions.mostActiveUsers')}</h3>
                             </div>
                         </div>
                         {metrics.topUsers.length === 0 ? (
-                            <div className="table-empty">No sessions yet.</div>
+                            <div className="table-empty">{t('chatSessions.noSessions')}</div>
                         ) : (
                             <div className="suit-list">
                                 {metrics.topUsers.map((u) => (
@@ -194,8 +197,8 @@ function AdminChatSessionsPageContent() {
                     <div className="card panel">
                         <div className="panel-header">
                             <div>
-                                <div className="panel-eyebrow">Health</div>
-                                <h3 className="panel-title">Session breakdown</h3>
+                                <div className="panel-eyebrow">{t('chatSessions.health')}</div>
+                                <h3 className="panel-title">{t('chatSessions.sessionBreakdown')}</h3>
                             </div>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
@@ -211,14 +214,14 @@ function AdminChatSessionsPageContent() {
                             ))}
                         </div>
                         <div className="panel-foot">
-                            <div className="foot-stat"><span className="foot-label">Sessions</span><span className="foot-value">{metrics.totalSessions.toLocaleString()}</span></div>
-                            <div className="foot-stat"><span className="foot-label">Messages</span><span className="foot-value">{metrics.totalMessages.toLocaleString()}</span></div>
-                            <div className="foot-stat"><span className="foot-label">Avg / session</span><span className="foot-value">{metrics.avgMessages}</span></div>
+                            <div className="foot-stat"><span className="foot-label">{t('chatSessions.sessions')}</span><span className="foot-value">{metrics.totalSessions.toLocaleString()}</span></div>
+                            <div className="foot-stat"><span className="foot-label">{t('chatSessions.messages')}</span><span className="foot-value">{metrics.totalMessages.toLocaleString()}</span></div>
+                            <div className="foot-stat"><span className="foot-label">{t('chatSessions.avgPerSession')}</span><span className="foot-value">{metrics.avgMessages}</span></div>
                         </div>
                     </div>
                 </div>
                 <div className="toolbar">
-                    <SearchInput value={q} onChange={setQ} placeholder="Search sessions by title or username…" />
+                    <SearchInput value={q} onChange={setQ} placeholder={t('chatSessions.searchPlaceholder')} />
                 </div>
 
                 <Table
@@ -230,7 +233,7 @@ function AdminChatSessionsPageContent() {
                             <td>
                                 <div className="cell-session">
                                     <div className="session-icon"><Icon name="chat" size={14} /></div>
-                                    <span className="cell-session-title">{s.title || "Untitled session"}</span>
+                                    <span className="cell-session-title">{s.title || t('chatSessions.untitledSession')}</span>
                                 </div>
                             </td>
                             <td className="muted">@{s.username} <span style={{ color: "var(--text-4)" }}>#{s.user_id}</span></td>

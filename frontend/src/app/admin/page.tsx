@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from 'react-i18next';
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, StatCard, Icon, type IconName } from "@/components/admin/AdminUI";
@@ -51,6 +52,7 @@ const ACTIVITY_ICON: Record<ActivityType, IconName> = { user: "users", session: 
 export default function AdminDashboard() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
+    const { t } = useTranslation('admin');
     const [stats, setStats] = useState<DashboardStats>({});
     const [decks, setDecks] = useState<DeckLite[]>([]);
     const [loading, setLoading] = useState(true);
@@ -78,24 +80,24 @@ export default function AdminDashboard() {
         }
     };
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading admin console…" />;
+    if (isAuthLoading || !user) return <AdminLoadingScreen label={t('loading')} />;
     if (!user.is_admin) return null;
-    if (loading) return <AdminLoadingScreen label="Consulting the oracle…" />;
+    if (loading) return <AdminLoadingScreen label={t('consultingOracle')} />;
 
     const newUsers = stats.recent_users?.length ?? 0;
     const newReadings = stats.recent_shared_readings?.length ?? 0;
 
     const activity: ActivityItem[] = [
         ...(stats.recent_users ?? []).map((u): ActivityItem => ({
-            id: `u${u.id}`, type: "user", title: "New user joined",
+            id: `u${u.id}`, type: "user", title: t('newUserJoined'),
             detail: `@${u.username} · ${u.email}`, at: new Date(u.created_at).getTime(),
         })),
         ...(stats.recent_chat_sessions ?? []).map((s): ActivityItem => ({
-            id: `s${s.id}`, type: "session", title: s.title || "New chat session",
+            id: `s${s.id}`, type: "session", title: s.title || t('newChatSession'),
             detail: `@${s.username} · ${s.messages_count} messages`, at: new Date(s.created_at).getTime(),
         })),
         ...(stats.recent_shared_readings ?? []).map((r): ActivityItem => ({
-            id: `r${r.id}`, type: "reading", title: r.title || "Reading shared",
+            id: `r${r.id}`, type: "reading", title: r.title || t('readingShared'),
             detail: `@${r.username}${r.spread_name ? ` · ${r.spread_name}` : ""}`, at: new Date(r.created_at).getTime(),
         })),
     ].sort((a, b) => b.at - a.at).slice(0, 7);
@@ -104,21 +106,21 @@ export default function AdminDashboard() {
     const maxDeck = topDecks[0]?.cards_count || 1;
 
     const quickLinks: { href: string; icon: IconName; title: string; sub: string }[] = [
-        { href: "/admin/users", icon: "users", title: "Users", sub: `${(stats.total_users ?? 0).toLocaleString()} total` },
-        { href: "/admin/decks", icon: "decks", title: "Decks", sub: `${stats.total_decks ?? 0} collections` },
-        { href: "/admin/cards", icon: "cards", title: "Cards", sub: `${(stats.total_cards ?? 0).toLocaleString()} across all decks` },
-        { href: "/admin/spreads", icon: "spreads", title: "Spreads", sub: `${stats.total_spreads ?? 0} layouts` },
-        { href: "/admin/chat-sessions", icon: "chat", title: "Chat sessions", sub: `${(stats.total_chat_sessions ?? 0).toLocaleString()} total` },
-        { href: "/admin/shared-readings", icon: "shared", title: "Shared readings", sub: `${(stats.total_shared_readings ?? 0).toLocaleString()} links` },
+        { href: "/admin/users", icon: "users", title: t('users.title'), sub: `${(stats.total_users ?? 0).toLocaleString()} total` },
+        { href: "/admin/decks", icon: "decks", title: t('decks.title'), sub: `${stats.total_decks ?? 0} collections` },
+        { href: "/admin/cards", icon: "cards", title: t('cards.title'), sub: `${(stats.total_cards ?? 0).toLocaleString()} across all decks` },
+        { href: "/admin/spreads", icon: "spreads", title: t('spreads.title'), sub: `${stats.total_spreads ?? 0} layouts` },
+        { href: "/admin/chat-sessions", icon: "chat", title: t('chatSessions.title'), sub: `${(stats.total_chat_sessions ?? 0).toLocaleString()} total` },
+        { href: "/admin/shared-readings", icon: "shared", title: t('sharedReadings.title'), sub: `${(stats.total_shared_readings ?? 0).toLocaleString()} links` },
     ];
 
     return (
-        <AdminLayout activePath="/admin" breadcrumb="Overview" username={user.username ?? "Admin"}>
+        <AdminLayout activePath="/admin" breadcrumb={t('overview')} username={user.username ?? "Admin"}>
             <div className="view">
                 <PageHeader
                     kicker="Dashboard"
-                    title="Overview"
-                    subtitle="Realm-wide health, activity, and engagement at a glance."
+                    title={t('overview')}
+                    subtitle={t('overviewSubtitle')}
                 />
 
                 <div className="stats-grid">
@@ -146,12 +148,12 @@ export default function AdminDashboard() {
                     <div className="card panel">
                         <div className="panel-header">
                             <div>
-                                <div className="panel-eyebrow">Live</div>
-                                <h3 className="panel-title">Recent activity</h3>
+                                <div className="panel-eyebrow">{t('liveActivity')}</div>
+                                <h3 className="panel-title">{t('recentActivity')}</h3>
                             </div>
                         </div>
                         {activity.length === 0 ? (
-                            <div className="table-empty">No recent activity.</div>
+                            <div className="table-empty">{t('noRecentActivity')}</div>
                         ) : (
                             <ul className="activity-list">
                                 {activity.map((a) => (
@@ -171,8 +173,8 @@ export default function AdminDashboard() {
                     <div className="card panel">
                         <div className="panel-header">
                             <div>
-                                <div className="panel-eyebrow">Quick links</div>
-                                <h3 className="panel-title">Manage your realm</h3>
+                                <div className="panel-eyebrow">{t('quickLinks')}</div>
+                                <h3 className="panel-title">{t('manageRealm')}</h3>
                             </div>
                         </div>
                         <div className="quicklinks">
@@ -193,13 +195,13 @@ export default function AdminDashboard() {
                 <div className="card panel">
                     <div className="panel-header">
                         <div>
-                            <div className="panel-eyebrow">Distribution</div>
-                            <h3 className="panel-title">Cards by deck</h3>
+                            <div className="panel-eyebrow">{t('distribution')}</div>
+                            <h3 className="panel-title">{t('cardsByDeck')}</h3>
                         </div>
-                        <Link href="/admin/decks" className="panel-link">View decks <Icon name="chevron_right" size={11} /></Link>
+                        <Link href="/admin/decks" className="panel-link">{t('viewDecks')} <Icon name="chevron_right" size={11} /></Link>
                     </div>
                     {topDecks.length === 0 ? (
-                        <div className="table-empty">No decks yet.</div>
+                        <div className="table-empty">{t('noDecksYet')}</div>
                     ) : (
                         <div className="suit-list">
                             {topDecks.map((d) => (

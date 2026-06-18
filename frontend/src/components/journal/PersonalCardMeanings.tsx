@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { PersonalCardMeaning } from "@/types/tarot";
 import { PlusIcon, PencilIcon, TrashIcon, TagIcon } from "@heroicons/react/24/outline";
 
@@ -10,6 +11,7 @@ interface PersonalCardMeaningsProps {
 }
 
 export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCardMeaningsProps) {
+    const { t } = useTranslation(['journal', 'common']);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingMeaning, setEditingMeaning] = useState<PersonalCardMeaning | null>(null);
 
@@ -19,10 +21,10 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                        Personal Card Meanings ({meanings.length})
+                        {t('cardMeanings.title', { count: meanings.length })}
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Create your own interpretations and emotional keywords for tarot cards
+                        {t('cardMeanings.subtitle')}
                     </p>
                 </div>
                 <button
@@ -30,7 +32,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                     className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
                 >
                     <PlusIcon className="w-4 h-4" />
-                    <span>Add Meaning</span>
+                    <span>{t('cardMeanings.addMeaning')}</span>
                 </button>
             </div>
 
@@ -40,15 +42,15 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                     <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                         <TagIcon className="w-12 h-12 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No personal meanings yet</h3>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('cardMeanings.noMeanings')}</h3>
                     <p className="text-gray-500 dark:text-gray-400 mb-4">
-                        Start building your personal tarot dictionary by adding your own card interpretations.
+                        {t('cardMeanings.noMeaningsDesc')}
                     </p>
                     <button
                         onClick={() => setShowCreateForm(true)}
                         className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
                     >
-                        Add Your First Meaning
+                        {t('cardMeanings.addFirstMeaning')}
                     </button>
                 </div>
             ) : (
@@ -63,7 +65,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                                            {meaning.card?.name || `Card ${meaning.card_id}`}
+                                            {meaning.card?.name || t('cardMeanings.cardFallback', { id: meaning.card_id })}
                                         </h3>
                                         {meaning.card?.suit && (
                                             <p className="text-sm text-purple-600 dark:text-purple-400">
@@ -72,11 +74,11 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                                         )}
                                         <div className="flex items-center space-x-2 mt-1">
                                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                Used {meaning.usage_count} times
+                                                {t('cardMeanings.usedTimes', { count: meaning.usage_count })}
                                             </span>
                                             {!meaning.is_active && (
                                                 <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-400 text-xs rounded-full">
-                                                    Inactive
+                                                    {t('cardMeanings.inactive')}
                                                 </span>
                                             )}
                                         </div>
@@ -90,7 +92,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                                         </button>
                                         <button
                                             onClick={async () => {
-                                                if (window.confirm("Are you sure you want to delete this personal meaning?")) {
+                                                if (window.confirm(t('cardMeanings.confirmDelete'))) {
                                                     // Handle delete - would call API
                                                     await onUpdate();
                                                 }
@@ -108,7 +110,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                                 {/* Personal Meaning */}
                                 <div className="mb-4">
                                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Personal Meaning
+                                        {t('cardMeanings.personalMeaning')}
                                     </h4>
                                     <p className="text-gray-900 dark:text-white text-sm leading-relaxed">
                                         {meaning.personal_meaning}
@@ -119,7 +121,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                                 {meaning.emotional_keywords && meaning.emotional_keywords.length > 0 && (
                                     <div>
                                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Emotional Keywords
+                                            {t('cardMeanings.emotionalKeywords')}
                                         </h4>
                                         <div className="flex flex-wrap gap-2">
                                             {meaning.emotional_keywords.map((keyword, index) => (
@@ -138,7 +140,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                                 {meaning.card?.description_short && (
                                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-600">
                                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Traditional Meaning
+                                            {t('cardMeanings.traditionalMeaning')}
                                         </h4>
                                         <p className="text-gray-600 dark:text-gray-400 text-xs">
                                             {meaning.card.description_short}
@@ -157,14 +159,14 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                     <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         <div className="p-6">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                                {editingMeaning ? "Edit Personal Meaning" : "Add Personal Meaning"}
+                                {editingMeaning ? t('cardMeanings.editTitle') : t('cardMeanings.addTitle')}
                             </h3>
 
                             {/* Simple form - would need full implementation */}
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Card ID
+                                        {t('cardMeanings.cardId')}
                                     </label>
                                     <input
                                         type="number"
@@ -175,7 +177,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Personal Meaning
+                                        {t('cardMeanings.personalMeaning')}
                                     </label>
                                     <textarea
                                         defaultValue={editingMeaning?.personal_meaning || ""}
@@ -186,7 +188,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Emotional Keywords (comma-separated)
+                                        {t('cardMeanings.emotionalKeywordsCsv')}
                                     </label>
                                     <input
                                         type="text"
@@ -204,7 +206,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                                     }}
                                     className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md"
                                 >
-                                    Cancel
+                                    {t('common:cancel')}
                                 </button>
                                 <button
                                     onClick={async () => {
@@ -215,7 +217,7 @@ export default function PersonalCardMeanings({ meanings, onUpdate }: PersonalCar
                                     }}
                                     className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
                                 >
-                                    {editingMeaning ? "Update" : "Create"}
+                                    {editingMeaning ? t('cardMeanings.update') : t('cardMeanings.create')}
                                 </button>
                             </div>
                         </div>

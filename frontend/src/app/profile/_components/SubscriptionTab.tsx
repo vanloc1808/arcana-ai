@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { MysticCard, SectionHeader } from './MysticCard';
 import { ProfileIcon } from './ProfileIcon';
 import { MysticButton, GhostButton } from './ProfileInfoTab';
@@ -14,9 +15,25 @@ interface SubscriptionTabProps {
 }
 
 export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionTabProps) {
+    const { t } = useTranslation('profile');
     const isPremium = hasProfileUnlimitedAccess(profile);
     const planName = getProfilePlanName(profile);
     const planPrice = isPremium ? '$19/mo' : 'Free';
+
+    const benefits: [string, string][] = [
+        [t('subscription.dailyCardPull'), t('subscription.dailyCardPullDesc')],
+        [t('subscription.singleSpreads'), t('subscription.singleSpreadsDesc')],
+        [t('subscription.allDecks'), t('subscription.allDecksDesc')],
+        [t('subscription.unlimitedSpreads'), t('subscription.unlimitedSpreadsDesc')],
+        [t('subscription.voiceChat'), t('subscription.voiceChatDesc')],
+        [t('subscription.journalHistory'), t('subscription.journalHistoryDesc')],
+    ];
+
+    const plans = [
+        { name: t('subscription.novice'), price: 'Free', turns: t('subscription.freeTurnsPerDay'), tier: 'free' },
+        { name: t('subscription.adept'), price: '$9/mo', turns: t('subscription.adeptTurns'), tier: 'mid' },
+        { name: t('subscription.unlimitedSeer'), price: '$19/mo', turns: t('common:unlimited'), tier: 'top' },
+    ];
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -32,13 +49,13 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
                                 background: 'linear-gradient(90deg, rgba(245,185,66,0.18), rgba(245,185,66,0.08))',
                                 border: '1px solid rgba(245,185,66,0.35)', color: '#f5b942',
                             }}>
-                                <ProfileIcon name="crown" size={11} /> Active
+                                <ProfileIcon name="crown" size={11} /> {t('subscriptionTab.active')}
                             </span>
                             <span style={{
                                 fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
                                 color: '#7c799f', letterSpacing: '0.1em',
                             }}>
-                                RENEWS DEC 14, 2026
+                                {t('subscriptionTab.renews')}
                             </span>
                         </div>
                         <h2 style={{
@@ -54,14 +71,14 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
                         </h2>
                         <p style={{ margin: '12px 0 24px', color: '#b3b0d4', fontSize: 15, maxWidth: 500 }}>
                             {isPremium
-                                ? 'Boundless readings, full deck library, deep-spread chat sessions, and priority cosmic alignment.'
-                                : 'Start your journey with 3 free readings per day. Upgrade to unlock unlimited access.'}
+                                ? t('subscription.boundlessDesc')
+                                : t('subscription.freeDesc')}
                         </p>
                         <div style={{ display: 'flex', gap: 10 }}>
                             <MysticButton onClick={onManageSubscription}>
-                                <ProfileIcon name="external" size={14} /> Manage subscription
+                                <ProfileIcon name="external" size={14} /> {t('subscriptionTab.manageSubscription')}
                             </MysticButton>
-                            <GhostButton>View invoices</GhostButton>
+                            <GhostButton>{t('subscriptionTab.viewInvoices')}</GhostButton>
                         </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -69,14 +86,14 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
                             fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
                             color: '#7c799f', letterSpacing: '0.1em', marginBottom: 6,
                         }}>
-                            BILLED
+                            {t('subscriptionTab.billed')}
                         </div>
                         <div style={{
                             fontFamily: "'Cormorant Garamond', serif", fontSize: 52,
                             fontWeight: 500, lineHeight: 1, color: '#f4f1ff',
                         }}>
                             {planPrice.split('/')[0]}
-                            {isPremium && <span style={{ fontSize: 20, color: '#7c799f' }}>/mo</span>}
+                            {isPremium && <span style={{ fontSize: 20, color: '#7c799f' }}>{t('subscriptionTab.perMonth')}</span>}
                         </div>
                         {isPremium && (
                             <div style={{ marginTop: 12, fontSize: 12, color: '#7c799f' }}>Visa •••• 4429</div>
@@ -87,7 +104,7 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
 
             {/* Turn counter (real data) */}
             <MysticCard>
-                <SectionHeader eyebrow="Turn balance" title="Reading turns" />
+                <SectionHeader eyebrow={t('subscriptionTab.turnBalance')} title={t('subscriptionTab.readingTurns')} />
                 <div style={{ marginTop: 20 }}>
                     <TurnCounter onPurchaseClick={onManageSubscription} showDetails={true} />
                 </div>
@@ -103,13 +120,13 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
                     }}>
                         <div>
                             <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#f5b942', fontWeight: 600 }}>
-                                ✦ Available
+                                ✦ {t('subscriptionTab.available')}
                             </div>
                             <h3 style={{
                                 margin: '4px 0 0', fontSize: 22, fontWeight: 500,
                                 fontFamily: "'Cormorant Garamond', serif", color: '#f4f1ff',
                             }}>
-                                Current balance
+                                {t('subscriptionTab.currentBalance')}
                             </h3>
                         </div>
                         <span style={{ color: '#b3b0d4' }}><ProfileIcon name="bolt" size={26} /></span>
@@ -122,7 +139,7 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
                             {isPremium ? '∞' : (profile ? profile.number_of_free_turns + profile.number_of_paid_turns : 0)}
                         </span>
                         <span style={{ color: '#7c799f', fontSize: 14 }}>
-                            {isPremium ? 'unlimited until renewal' : 'turns remaining'}
+                            {isPremium ? t('subscriptionTab.unlimitedUntilRenewal') : t('subscriptionTab.turnsRemaining')}
                         </span>
                     </div>
                     <div style={{ height: 6, background: 'rgba(7,7,26,0.5)', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
@@ -135,10 +152,10 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
                     {profile && !isPremium && (
                         <div style={{ marginTop: 12, display: 'flex', gap: 16 }}>
                             <span style={{ fontSize: 12, color: '#7c799f' }}>
-                                Free: <span style={{ color: '#b3b0d4', fontWeight: 600 }}>{profile.number_of_free_turns}</span>
+                                {t('subscriptionTab.free')}<span style={{ color: '#b3b0d4', fontWeight: 600 }}>{profile.number_of_free_turns}</span>
                             </span>
                             <span style={{ fontSize: 12, color: '#7c799f' }}>
-                                Paid: <span style={{ color: '#b3b0d4', fontWeight: 600 }}>{profile.number_of_paid_turns}</span>
+                                {t('subscriptionTab.paid')}<span style={{ color: '#b3b0d4', fontWeight: 600 }}>{profile.number_of_paid_turns}</span>
                             </span>
                         </div>
                     )}
@@ -147,23 +164,23 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
                 {/* Plan benefits */}
                 <MysticCard>
                     <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#f5b942', fontWeight: 600 }}>
-                        ✦ Plan benefits
+                        ✦ {t('subscriptionTab.planBenefits')}
                     </div>
                     <h3 style={{
                         margin: '4px 0 16px', fontSize: 22, fontWeight: 500,
                         fontFamily: "'Cormorant Garamond', serif", color: '#f4f1ff',
                     }}>
-                        Included with {planName}
+                        {t('subscriptionTab.includedWith')}{planName}
                     </h3>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {BENEFITS.slice(0, isPremium ? 4 : 2).map(([t, d]) => (
-                            <li key={t} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        {benefits.slice(0, isPremium ? 4 : 2).map(([label, desc]) => (
+                            <li key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                                 <span style={{ color: '#a855f7', marginTop: 2, flexShrink: 0 }}>
                                     <ProfileIcon name="check" size={14} />
                                 </span>
                                 <div>
-                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#f4f1ff' }}>{t}</div>
-                                    <div style={{ fontSize: 12, color: '#7c799f' }}>{d}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#f4f1ff' }}>{label}</div>
+                                    <div style={{ fontSize: 12, color: '#7c799f' }}>{desc}</div>
                                 </div>
                             </li>
                         ))}
@@ -173,9 +190,9 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
 
             {/* Plan ladder */}
             <MysticCard>
-                <SectionHeader eyebrow="Pathways" title="Available plans" />
+                <SectionHeader eyebrow={t('subscriptionTab.pathways')} title={t('subscriptionTab.availablePlans')} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 20 }}>
-                    {PLANS.map(p => (
+                    {plans.map(p => (
                         <PlanCard key={p.name} plan={p} active={isPremium ? p.tier === 'top' : p.tier === 'free'} />
                     ))}
                 </div>
@@ -184,22 +201,10 @@ export function SubscriptionTab({ profile, onManageSubscription }: SubscriptionT
     );
 }
 
-const BENEFITS: [string, string][] = [
-    ['Daily card pull', '3 draws per day'],
-    ['Single-spread readings', 'three-card and horseshoe'],
-    ['All six tarot decks', 'rider, thoth, marseille, wild, shadow, light'],
-    ['Unlimited spreads', 'celtic cross, horseshoe, year-ahead, custom'],
-    ['Voice & chat seer', 'multi-turn conversations with memory'],
-    ['Journal & history archive', 'every spread preserved with annotations'],
-];
+interface PlanInfo { name: string; price: string; turns: string; tier: string; }
 
-const PLANS = [
-    { name: 'Novice', price: 'Free', turns: '3 turns / day', tier: 'free' },
-    { name: 'Adept', price: '$9/mo', turns: '60 turns / month', tier: 'mid' },
-    { name: 'Unlimited Seer', price: '$19/mo', turns: 'Unlimited', tier: 'top' },
-];
-
-function PlanCard({ plan, active }: { plan: typeof PLANS[0]; active: boolean }) {
+function PlanCard({ plan, active }: { plan: PlanInfo; active: boolean }) {
+    const { t } = useTranslation('profile');
     return (
         <div style={{
             padding: 20, borderRadius: 14, position: 'relative',
@@ -214,7 +219,7 @@ function PlanCard({ plan, active }: { plan: typeof PLANS[0]; active: boolean }) 
                     fontSize: 10, letterSpacing: '0.15em', color: '#07071a',
                     background: '#f5b942', padding: '3px 10px', borderRadius: 999, fontWeight: 700,
                 }}>
-                    CURRENT
+                    {t('subscriptionTab.current')}
                 </div>
             )}
             <div style={{

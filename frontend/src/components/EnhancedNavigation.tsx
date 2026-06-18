@@ -40,50 +40,28 @@ import { SubscriptionModal } from '@/components/SubscriptionModal';
 import { TarotCardIcon, TarotAgentLogo } from '@/components/icons';
 import { FiMessageCircle } from 'react-icons/fi';
 import { SupportModal } from '@/components/SupportModal';
-
-/* ── nav items ────────────────────────────────────────────── */
-const NAV_ITEMS = [
-    {
-        label: 'Reading',
-        href: '/reading',
-        Icon: TarotCardIcon,
-        match: (p: string) => p.startsWith('/reading'),
-    },
-    {
-        label: 'Journal',
-        href: '/journal',
-        Icon: BookOpen,
-        match: (p: string) => p.startsWith('/journal'),
-    },
-    {
-        label: 'Library',
-        href: '/library',
-        Icon: Library,
-        match: (p: string) => p.startsWith('/library'),
-    },
-    {
-        label: 'Sessions',
-        href: '/session',
-        Icon: MessageCircle,
-        match: (p: string) => p.startsWith('/session'),
-    },
-];
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/config';
 
 /* ── plan badge ───────────────────────────────────────────── */
 function PlanBadge({
     isPremium,
     hasUnlimited,
     onUpgradeClick,
+    unlimitedLabel,
+    upgradeLabel,
 }: {
     isPremium: boolean;
     hasUnlimited: boolean;
     onUpgradeClick: () => void;
+    unlimitedLabel: string;
+    upgradeLabel: string;
 }) {
     if (hasUnlimited || isPremium) {
         return (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-400/25 bg-amber-400/8 text-xs font-semibold text-amber-200 tracking-wide select-none">
                 <Crown className="h-3 w-3 text-amber-400" aria-hidden />
-                UNLIMITED
+                {unlimitedLabel}
             </div>
         );
     }
@@ -93,7 +71,7 @@ function PlanBadge({
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-violet-400/25 bg-violet-400/8 text-xs font-semibold text-violet-200 tracking-wide hover:bg-violet-400/15 transition-colors"
         >
             <Crown className="h-3 w-3 text-violet-400" aria-hidden />
-            Upgrade
+            {upgradeLabel}
         </button>
     );
 }
@@ -105,6 +83,34 @@ export function EnhancedNavigation() {
     const { user, isAuthenticated, logout } = useAuth();
     const { isPremium, hasUnlimitedTurns, getSubscriptionStatusText } = useSubscription();
     const { searchResults, isSearching, performSearch, clearSearch } = useSearch();
+    const { t } = useTranslation(['nav', 'common']);
+
+    const NAV_ITEMS = [
+        {
+            label: t('reading', { ns: 'nav' }),
+            href: '/reading',
+            Icon: TarotCardIcon,
+            match: (p: string) => p.startsWith('/reading'),
+        },
+        {
+            label: t('journal', { ns: 'nav' }),
+            href: '/journal',
+            Icon: BookOpen,
+            match: (p: string) => p.startsWith('/journal'),
+        },
+        {
+            label: t('library', { ns: 'nav' }),
+            href: '/library',
+            Icon: Library,
+            match: (p: string) => p.startsWith('/library'),
+        },
+        {
+            label: t('sessions', { ns: 'nav' }),
+            href: '/session',
+            Icon: MessageCircle,
+            match: (p: string) => p.startsWith('/session'),
+        },
+    ];
 
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearchResults, setShowSearchResults] = useState(false);
@@ -199,7 +205,7 @@ export function EnhancedNavigation() {
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-300/70 w-4 h-4 pointer-events-none" />
                             <Input
                                 type="text"
-                                placeholder="Search readings, chats, journal…"
+                                placeholder={t('searchPlaceholder', { ns: 'nav' })}
                                 value={searchQuery}
                                 onChange={handleSearchChange}
                                 onKeyDown={handleSearchKeyDown}
@@ -257,6 +263,8 @@ export function EnhancedNavigation() {
                                 isPremium={premium}
                                 hasUnlimited={isUnlimited}
                                 onUpgradeClick={() => setIsSubscriptionModalOpen(true)}
+                                unlimitedLabel={t('unlimited', { ns: 'nav' })}
+                                upgradeLabel={t('upgrade', { ns: 'nav' })}
                             />
                         </div>
 
@@ -270,7 +278,7 @@ export function EnhancedNavigation() {
                         {/* Bell — desktop */}
                         <button
                             className="hidden lg:grid h-8 w-8 place-items-center rounded-lg text-violet-300/70 hover:text-violet-200 hover:bg-violet-400/8 transition-colors"
-                            aria-label="Notifications"
+                            aria-label={t('notifications', { ns: 'nav' })}
                         >
                             <Bell className="h-4 w-4" />
                         </button>
@@ -301,7 +309,7 @@ export function EnhancedNavigation() {
                                     <DropdownMenuLabel className="px-4 py-3">
                                         <div className="flex flex-col gap-1">
                                             <p className="text-sm font-medium text-white leading-none">
-                                                {user.username || 'Mystical Seeker'}
+                                                {user.username || t('mysticalSeeker', { ns: 'nav' })}
                                             </p>
                                             <p className="text-xs text-violet-300/60 leading-none">
                                                 {user.email}
@@ -311,9 +319,9 @@ export function EnhancedNavigation() {
                                                 className="mt-1.5 w-fit"
                                             >
                                                 {premium ? (
-                                                    <><Crown className="w-3 h-3 mr-1" />Premium</>
+                                                    <><Crown className="w-3 h-3 mr-1" />{t('premium', { ns: 'common' })}</>
                                                 ) : (
-                                                    <><Star className="w-3 h-3 mr-1" />Free</>
+                                                    <><Star className="w-3 h-3 mr-1" />{t('free', { ns: 'common' })}</>
                                                 )}
                                             </Badge>
                                         </div>
@@ -333,7 +341,7 @@ export function EnhancedNavigation() {
                                         <DropdownMenuItem asChild className="px-4 py-3">
                                             <Link href="/reading" className="flex items-center gap-3">
                                                 <Plus className="w-4 h-4 text-violet-400" />
-                                                New Reading
+                                                {t('newReading', { ns: 'nav' })}
                                             </Link>
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator className="bg-violet-400/15" />
@@ -342,7 +350,7 @@ export function EnhancedNavigation() {
                                     <DropdownMenuItem asChild className="px-4 py-3">
                                         <Link href="/profile" className="flex items-center gap-3">
                                             <Settings className="w-4 h-4" />
-                                            Profile Settings
+                                            {t('profileSettings', { ns: 'nav' })}
                                         </Link>
                                     </DropdownMenuItem>
 
@@ -352,7 +360,7 @@ export function EnhancedNavigation() {
                                             className="px-4 py-3 cursor-pointer"
                                         >
                                             <CreditCard className="w-4 h-4 mr-3" />
-                                            Upgrade to Premium
+                                            {t('upgradeToPremium', { ns: 'nav' })}
                                         </DropdownMenuItem>
                                     )}
 
@@ -361,20 +369,20 @@ export function EnhancedNavigation() {
                                         className="px-4 py-3 cursor-pointer"
                                     >
                                         <HelpCircle className="w-4 h-4 mr-3" />
-                                        Support
+                                        {t('support', { ns: 'nav' })}
                                     </DropdownMenuItem>
 
                                     <DropdownMenuItem asChild className="px-4 py-3">
                                         <Link href="/onboarding" className="flex items-center gap-3">
                                             <Star className="w-4 h-4" />
-                                            Take the Tour
+                                            {t('takeTour', { ns: 'nav' })}
                                         </Link>
                                     </DropdownMenuItem>
 
                                     <DropdownMenuItem asChild className="px-4 py-3">
                                         <Link href="/?history=true" className="flex items-center gap-3">
                                             <History className="w-4 h-4" />
-                                            Reading History
+                                            {t('readingHistory', { ns: 'nav' })}
                                         </Link>
                                     </DropdownMenuItem>
 
@@ -384,11 +392,28 @@ export function EnhancedNavigation() {
                                             <DropdownMenuItem asChild className="px-4 py-3">
                                                 <Link href="/admin" className="flex items-center gap-3 text-amber-400">
                                                     <Crown className="w-4 h-4" />
-                                                    Admin Panel
+                                                    {t('adminPanel', { ns: 'nav' })}
                                                 </Link>
                                             </DropdownMenuItem>
                                         </>
                                     )}
+
+                                    <DropdownMenuSeparator className="bg-violet-400/15" />
+                                    <DropdownMenuLabel className="text-xs text-gray-400 px-4 py-1">
+                                        {t('language', { ns: 'common' })}
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                        onClick={() => i18n.changeLanguage('en')}
+                                        className={`px-4 py-2 cursor-pointer${i18n.language?.startsWith('en') ? ' text-violet-200 font-medium' : ''}`}
+                                    >
+                                        {i18n.language?.startsWith('en') ? '✓ ' : '  '}English
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => i18n.changeLanguage('vi')}
+                                        className={`px-4 py-2 cursor-pointer${i18n.language?.startsWith('vi') ? ' text-violet-200 font-medium' : ''}`}
+                                    >
+                                        {i18n.language?.startsWith('vi') ? '✓ ' : '  '}Tiếng Việt
+                                    </DropdownMenuItem>
 
                                     <DropdownMenuSeparator className="bg-violet-400/15" />
                                     <DropdownMenuItem
@@ -396,7 +421,7 @@ export function EnhancedNavigation() {
                                         className="px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-900/20 cursor-pointer"
                                     >
                                         <LogOut className="w-4 h-4 mr-3" />
-                                        Sign Out
+                                        {t('signOut', { ns: 'nav' })}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -406,13 +431,13 @@ export function EnhancedNavigation() {
                                     href="/login"
                                     className="text-sm text-violet-200/70 hover:text-violet-100 px-3 py-1.5 rounded-lg hover:bg-violet-400/8 transition-colors"
                                 >
-                                    Sign In
+                                    {t('signIn', { ns: 'common' })}
                                 </Link>
                                 <Link
                                     href="/register"
                                     className="text-sm font-medium bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg transition-colors"
                                 >
-                                    Get Started
+                                    {t('getStarted', { ns: 'common' })}
                                 </Link>
                             </div>
                         )}
@@ -425,7 +450,7 @@ export function EnhancedNavigation() {
                         const active = match(pathname ?? '');
                         return (
                             <Link
-                                key={label}
+                                key={href}
                                 href={href}
                                 className={`relative flex items-center gap-2 px-4 pt-2.5 pb-3 text-[15px] font-medium transition-colors ${
                                     active
@@ -473,7 +498,7 @@ export function EnhancedNavigation() {
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-violet-300/60 w-5 h-5" />
                                 <Input
                                     type="text"
-                                    placeholder="Search readings, chats, journal…"
+                                    placeholder={t('searchPlaceholder', { ns: 'nav' })}
                                     className="pl-11 pr-4 py-3.5 text-base bg-violet-400/6 border-violet-400/20 focus:border-violet-400/45 text-white placeholder:text-violet-300/50 rounded-2xl"
                                     value={searchQuery}
                                     onChange={handleSearchChange}
@@ -524,18 +549,18 @@ export function EnhancedNavigation() {
                             ) : searchQuery ? (
                                 <div className="flex flex-col items-center justify-center h-full text-center p-8">
                                     <Search className="w-12 h-12 text-violet-400/30 mb-4" />
-                                    <h3 className="text-lg font-medium text-white mb-2">No results found</h3>
-                                    <p className="text-violet-200/55 text-sm">Try different keywords</p>
+                                    <h3 className="text-lg font-medium text-white mb-2">{t('noResultsFound', { ns: 'nav' })}</h3>
+                                    <p className="text-violet-200/55 text-sm">{t('tryDifferentKeywords', { ns: 'nav' })}</p>
                                 </div>
                             ) : (
                                 <div className="p-4">
                                     <h3 className="text-sm font-medium text-violet-200/70 uppercase tracking-widest mb-4">
-                                        Quick Access
+                                        {t('quickAccess', { ns: 'nav' })}
                                     </h3>
                                     <div className="space-y-2.5">
                                         {NAV_ITEMS.map(({ label, href, Icon }) => (
                                             <Link
-                                                key={label}
+                                                key={href}
                                                 href={href}
                                                 onClick={() => setIsMobileMenuOpen(false)}
                                                 className="flex items-center gap-3 p-4 bg-violet-400/6 rounded-xl border border-violet-400/14 hover:bg-violet-400/12 transition-colors"
@@ -553,8 +578,8 @@ export function EnhancedNavigation() {
                                         >
                                             <Plus className="w-5 h-5 text-violet-300 shrink-0" />
                                             <div>
-                                                <div className="text-white font-medium">New Reading</div>
-                                                <div className="text-violet-200/55 text-sm">Get mystical guidance</div>
+                                                <div className="text-white font-medium">{t('newReading', { ns: 'nav' })}</div>
+                                                <div className="text-violet-200/55 text-sm">{t('getMysticalGuidance', { ns: 'nav' })}</div>
                                             </div>
                                         </Link>
                                     </div>

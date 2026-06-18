@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { useSessionCtx } from './context';
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
@@ -18,18 +19,19 @@ const IconArrow = () => (
 );
 
 
-const PROMPTS = [
-  'What does this week ask of me?',
-  'Where should I focus my energy right now?',
-  'What am I not seeing clearly?',
-  'What is holding me back from moving forward?',
-  'What do I most need to understand today?',
-];
-
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function SessionHomePage() {
   const router = useRouter();
+  const { t } = useTranslation('reading');
   const { createSession } = useSessionCtx();
+
+  const PROMPTS = [
+    t('session.question1'),
+    t('session.question2'),
+    t('session.question3'),
+    t('session.question4'),
+    t('session.question5'),
+  ];
 
   const handleNew = async () => {
     const session = await createSession();
@@ -50,13 +52,13 @@ export default function SessionHomePage() {
             <circle cx="11" cy="11" r="2.2" fill="var(--sess-bg)" stroke="none" />
           </svg>
         </div>
-        <h1 className="sess-home-title">The cards are waiting</h1>
+        <h1 className="sess-home-title">{t('session.cardsWaiting')}</h1>
         <p className="sess-home-sub">
-          Begin a new reading, or return to a session in the rail to the left.
+          {t('session.beginOrReturn')}
         </p>
         <button className="sess-primary-btn" onClick={handleNew}>
           <IconSparkle />
-          Begin a new reading
+          {t('session.beginNewReading')}
         </button>
       </div>
 
@@ -64,7 +66,7 @@ export default function SessionHomePage() {
       <div className="sess-home-prompts">
         <div className="sess-home-prompts-label">
           <span className="sess-divider-line" />
-          <span>Questions to ask the cards</span>
+          <span>{t('session.questionsToAsk')}</span>
           <span className="sess-divider-line" />
         </div>
         <ul className="sess-prompt-list">
