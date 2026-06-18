@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { tarot, auth } from '@/lib/api';
@@ -32,12 +33,12 @@ interface Deck {
 // ─── Filter config ───────────────────────────────────────────────────────────
 
 const SUIT_FILTERS = [
-    { label: 'All Cards', value: '' },
-    { label: 'Major Arcana', value: 'Major Arcana' },
-    { label: 'Cups', value: 'Cups' },
-    { label: 'Pentacles', value: 'Pentacles' },
-    { label: 'Swords', value: 'Swords' },
-    { label: 'Wands', value: 'Wands' },
+    { key: 'allCards', value: '' },
+    { key: 'majorArcana', value: 'Major Arcana' },
+    { key: 'cups', value: 'Cups' },
+    { key: 'pentacles', value: 'Pentacles' },
+    { key: 'swords', value: 'Swords' },
+    { key: 'wands', value: 'Wands' },
 ];
 
 // ─── Deck Picker ─────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ function DeckPicker({
     saving: boolean;
     onChange: (id: number) => void;
 }) {
+    const { t } = useTranslation('library');
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
 
@@ -90,7 +92,7 @@ function DeckPicker({
                 <div className="absolute right-0 top-full mt-1 z-40 w-64 bg-gray-900 border border-purple-700/50 rounded-lg shadow-2xl overflow-hidden">
                     <div className="px-3 py-2 border-b border-gray-800">
                         <p className="font-mono text-[10px] text-gray-500 uppercase tracking-widest">
-                            Choose your deck
+                            {t('chooseDeck')}
                         </p>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
@@ -216,6 +218,7 @@ function CardDetailPanel({ card, onClose }: { card: LibraryCard; onClose: () => 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function LibraryPage() {
+    const { t } = useTranslation('library');
     const { isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
 
@@ -330,14 +333,14 @@ export default function LibraryPage() {
                 <div className="flex items-start justify-between gap-4 mb-8">
                     <div>
                         <p className="font-mono text-xs text-amber-500 uppercase tracking-[0.36em] mb-2">
-                            The Library · {counts[''] ?? 78} Cards
+                            {t('title')} · {counts[''] ?? 78} {t('cards')}
                         </p>
                         <h1 className="font-mystical font-normal leading-none tracking-tight text-5xl md:text-6xl text-white mb-4">
-                            The{' '}
-                            <em className="text-amber-500 not-italic">Arcana</em>
+                            {t('the')}{' '}
+                            <em className="text-amber-500 not-italic">{t('arcana')}</em>
                         </h1>
                         <p className="font-serif-alt italic text-gray-400 text-lg max-w-lg">
-                            Every card in the deck — their history, their voices, and what they have to say.
+                            {t('description')}
                         </p>
                     </div>
 
@@ -376,7 +379,7 @@ export default function LibraryPage() {
                                         : 'border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300'
                                 }`}
                             >
-                                {f.label}{count !== undefined ? ` · ${count}` : ''}
+                                {t(f.key)}{count !== undefined ? ` · ${count}` : ''}
                             </button>
                         );
                     })}
@@ -386,7 +389,7 @@ export default function LibraryPage() {
                         <Search size={12} className="text-gray-500 flex-shrink-0" />
                         <input
                             type="text"
-                            placeholder="Search the arcana…"
+                            placeholder={t('searchPlaceholder')}
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             className="bg-transparent text-sm text-gray-300 placeholder-gray-600 outline-none w-full min-h-0"
@@ -407,8 +410,8 @@ export default function LibraryPage() {
                     </div>
                 ) : cards.length === 0 ? (
                     <div className="text-center py-24 text-gray-500">
-                        <p className="font-serif-alt italic text-xl mb-2">No cards found</p>
-                        <p className="text-sm">Try a different filter or search term.</p>
+                        <p className="font-serif-alt italic text-xl mb-2">{t('noCardsFound')}</p>
+                        <p className="text-sm">{t('tryDifferentFilter')}</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 justify-items-center">

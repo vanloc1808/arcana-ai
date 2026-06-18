@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from 'react-i18next';
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, Pill } from "@/components/admin/AdminUI";
@@ -24,6 +25,7 @@ function layout(n: number): Array<[number, number]> {
 export default function AdminSpreadsPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
+    const { t } = useTranslation('admin');
     const [spreads, setSpreads] = useState<AdminSpread[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -46,17 +48,17 @@ export default function AdminSpreadsPage() {
         }
     };
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading spreads…" />;
+    if (isAuthLoading || !user) return <AdminLoadingScreen label={t('spreads.loadingSpread')} />;
     if (!user.is_admin) return null;
-    if (loading) return <AdminLoadingScreen label="Laying out the cards…" />;
+    if (loading) return <AdminLoadingScreen label={t('spreads.layingOut')} />;
 
     return (
-        <AdminLayout activePath="/admin/spreads" breadcrumb="Spreads" username={user.username ?? "Admin"}>
+        <AdminLayout activePath="/admin/spreads" breadcrumb={t('spreads.title')} username={user.username ?? "Admin"}>
             <div className="view">
-                <PageHeader kicker="Content" title="Spreads" subtitle="Reading layouts available to your users." />
+                <PageHeader kicker={t('spreads.kicker')} title={t('spreads.title')} subtitle={t('spreads.subtitle')} />
 
                 {spreads.length === 0 ? (
-                    <div className="card table-empty">No spreads found.</div>
+                    <div className="card table-empty">{t('spreads.noSpreads')}</div>
                 ) : (
                     <div className="spread-grid">
                         {spreads.map((s) => (
@@ -72,9 +74,9 @@ export default function AdminSpreadsPage() {
                                         <span className="muted mono">#{s.id}</span>
                                     </div>
                                     <h4 className="spread-name">{s.name}</h4>
-                                    <p className="spread-desc">{s.description || "No description."}</p>
+                                    <p className="spread-desc">{s.description || t('spreads.noDescription')}</p>
                                     <div className="spread-foot">
-                                        <span className="muted">Added {new Date(s.created_at).toLocaleDateString()}</span>
+                                        <span className="muted">{t('spreads.added')} {new Date(s.created_at).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                             </div>

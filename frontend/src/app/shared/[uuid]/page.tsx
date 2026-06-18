@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 import { FiEye, FiCalendar, FiUser, FiArrowLeft, FiShare2 } from 'react-icons/fi';
 import { SharedReading } from '@/types/tarot';
 import { sharing } from '@/lib/api';
@@ -11,6 +12,7 @@ import { SpreadLayout } from '@/components/SpreadLayout';
 export default function SharedReadingPage() {
     const params = useParams();
     const uuid = params.uuid as string;
+    const { t } = useTranslation('admin');
     const [reading, setReading] = useState<SharedReading | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -46,7 +48,7 @@ export default function SharedReadingPage() {
             <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Loading reading...</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">{t('sharedPage.loadingReading')}</p>
                 </div>
             </div>
         );
@@ -60,7 +62,7 @@ export default function SharedReadingPage() {
                         <FiShare2 className="w-6 h-6 sm:w-8 sm:h-8 text-red-600 dark:text-red-400" />
                     </div>
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                        Reading Not Found
+                        {t('sharedPage.readingNotFound')}
                     </h1>
                     <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm sm:text-base">
                         {error}
@@ -70,7 +72,7 @@ export default function SharedReadingPage() {
                         className="inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors touch-manipulation"
                     >
                         <FiArrowLeft className="w-4 h-4" />
-                        <span className="text-sm sm:text-base">Go to ArcanaAI</span>
+                        <span className="text-sm sm:text-base">{t('sharedPage.goToArcana')}</span>
                     </Link>
                 </div>
             </div>
@@ -116,7 +118,7 @@ export default function SharedReadingPage() {
                                 className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors touch-manipulation self-start"
                             >
                                 <FiArrowLeft className="w-4 h-4" />
-                                <span className="text-sm sm:text-base">Try ArcanaAI</span>
+                                <span className="text-sm sm:text-base">{t('sharedPage.tryArcana')}</span>
                             </Link>
                         </div>
 
@@ -131,7 +133,7 @@ export default function SharedReadingPage() {
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                                         <FiEye className="w-4 h-4" />
-                                        <span>{reading.view_count} view{reading.view_count !== 1 ? 's' : ''}</span>
+                                        <span>{reading.view_count} {t('sharedPage.views')}</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -168,7 +170,7 @@ export default function SharedReadingPage() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <FiEye className="w-4 h-4" />
-                                    <span>{reading.view_count} view{reading.view_count !== 1 ? 's' : ''}</span>
+                                    <span>{reading.view_count} {t('sharedPage.views')}</span>
                                 </div>
                                 {reading.spread_name && (
                                     <div className="flex items-center gap-2">
@@ -227,7 +229,7 @@ export default function SharedReadingPage() {
                                 className="inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors touch-manipulation"
                             >
                                 <FiShare2 className="w-4 h-4" />
-                                <span className="text-sm sm:text-base font-medium">Try ArcanaAI</span>
+                                <span className="text-sm sm:text-base font-medium">{t('sharedPage.tryArcana')}</span>
                             </Link>
                         </div>
                     </div>

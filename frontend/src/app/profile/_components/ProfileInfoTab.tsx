@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { MysticCard, SectionHeader, FieldLabel, FieldInput, FieldSelect, FieldTextarea } from './MysticCard';
 import { ProfileIcon } from './ProfileIcon';
 import { Deck, ProfileUpdatePayload, TimezoneOption, UserProfile } from '@/types/tarot';
@@ -44,11 +45,6 @@ const TIMEZONE_FALLBACK_OPTIONS: TimezoneOption[] = [
     { value: 'Pacific/Auckland', label: 'Pacific/Auckland' },
 ];
 
-const CARD_ANIMATION_OPTIONS: { value: string; label: string; desc: string }[] = [
-    { value: 'cinematic', label: 'Cinematic', desc: 'Full shuffle + reveal sequence' },
-    { value: 'minimal', label: 'Minimal', desc: 'Quick fade, no shuffle' },
-    { value: 'off', label: 'Off', desc: 'Cards appear instantly' },
-];
 
 const READING_LANGUAGE_OPTIONS = ['English', 'Vietnamese', 'Chinese (Simplified)', 'Spanish', 'French', 'German'];
 
@@ -66,6 +62,14 @@ function toForm(p: UserProfile): FormState {
 }
 
 export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetchProfile, updateProfile }: ProfileInfoTabProps) {
+    const { t } = useTranslation('profile');
+
+    const CARD_ANIMATION_OPTIONS: { value: string; label: string; desc: string }[] = [
+        { value: 'cinematic', label: t('info.cinematic'), desc: t('info.cinematicDesc') },
+        { value: 'minimal', label: t('info.minimal'), desc: t('info.minimalDesc') },
+        { value: 'off', label: t('info.off'), desc: t('info.offDesc') },
+    ];
+
     const baseline = useMemo(() => (profile ? toForm(profile) : null), [profile]);
     const [form, setForm] = useState<FormState | null>(baseline);
     const [isSaving, setIsSaving] = useState(false);
@@ -147,10 +151,10 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
         try {
             const ok = await updateProfile(payload);
             if (ok) {
-                toast.success('Profile updated');
+                toast.success(t('info.profileUpdated'));
                 setIsEditing(false);
             } else {
-                toast.error('Could not save your profile. Please try again.');
+                toast.error(t('info.couldNotSave'));
             }
         } finally {
             setIsSaving(false);
@@ -173,7 +177,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                     borderTopColor: '#a855f7',
                     animation: 'spin 0.8s linear infinite',
                 }} />
-                <span style={{ marginLeft: 12, color: '#7c799f', fontSize: 14 }}>Loading profile…</span>
+                <span style={{ marginLeft: 12, color: '#7c799f', fontSize: 14 }}>{t('info.loadingProfile')}</span>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
@@ -233,7 +237,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                                 background: 'linear-gradient(90deg, rgba(245,185,66,0.18), rgba(245,185,66,0.08))',
                                 border: '1px solid rgba(245,185,66,0.35)', color: '#f5b942',
                             }}>
-                                <ProfileIcon name="crown" size={11} /> Unlimited Seer
+                                <ProfileIcon name="crown" size={11} /> {t('subscription.unlimitedSeer')}
                             </span>
                             <span style={{ color: '#7c799f', fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}>
                                 ● Member since {memberSince}
@@ -266,58 +270,58 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                 />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
                     <div>
-                        <FieldLabel>Username</FieldLabel>
+                        <FieldLabel>{t('info.usernameLabel')}</FieldLabel>
                         <FieldInput value={profile.username} readOnly style={{ opacity: 0.7, cursor: 'default' }} />
                     </div>
                     <div>
-                        <FieldLabel>Email</FieldLabel>
+                        <FieldLabel>{t('info.emailLabel')}</FieldLabel>
                         <FieldInput value={profile.email} readOnly style={{ opacity: 0.7, cursor: 'default' }} />
                     </div>
                     <div style={{ gridColumn: '1 / -1' }}>
-                        <FieldLabel>Full name (display name)</FieldLabel>
+                        <FieldLabel>{t('info.fullNameLabel')}</FieldLabel>
                         <FieldInput
                             value={form.full_name}
                             onChange={(e) => setField('full_name', e.target.value)}
-                            placeholder={isEditing ? 'Enter your full name' : 'Not set'}
+                            placeholder={isEditing ? t('info.fullNamePlaceholder') : t('info.notSet')}
                             readOnly={locked}
                             maxLength={100}
                             style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
                         />
                     </div>
                     <div>
-                        <FieldLabel>Timezone</FieldLabel>
+                        <FieldLabel>{t('info.timezoneLabel')}</FieldLabel>
                         <FieldSelect
                             value={form.timezone}
                             onChange={(e) => setField('timezone', e.target.value)}
                             disabled={locked}
                             style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
                         >
-                            <option value="">Not set</option>
+                            <option value="">{t('info.notSet')}</option>
                             {timezoneOptions.map((tz) => (
                                 <option key={tz.value} value={tz.value}>{tz.label}</option>
                             ))}
                         </FieldSelect>
                     </div>
                     <div>
-                        <FieldLabel>Favorite deck</FieldLabel>
+                        <FieldLabel>{t('info.favoriteDeckLabel')}</FieldLabel>
                         <FieldSelect
                             value={form.favorite_deck_id === '' ? '' : String(form.favorite_deck_id)}
                             onChange={(e) => setField('favorite_deck_id', e.target.value === '' ? '' : Number(e.target.value))}
                             disabled={locked || deckOptions.length === 0}
                             style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
                         >
-                            {form.favorite_deck_id === '' && <option value="">No deck selected</option>}
+                            {form.favorite_deck_id === '' && <option value="">{t('info.noDeckSelected')}</option>}
                             {deckOptions.map((deck) => (
                                 <option key={deck.id} value={String(deck.id)}>{deck.name}</option>
                             ))}
                         </FieldSelect>
                     </div>
                     <div style={{ gridColumn: '1 / -1' }}>
-                        <FieldLabel>Bio · what the cards reveal about you</FieldLabel>
+                        <FieldLabel>{t('info.bioLabel')}</FieldLabel>
                         <FieldTextarea
                             value={form.bio}
                             onChange={(e) => setField('bio', e.target.value)}
-                            placeholder={isEditing ? 'Reader of the Thoth deck. Drawn to the Major Arcana, fascinated by reversals.' : 'No bio yet'}
+                            placeholder={isEditing ? t('info.bioPlaceholder') : t('info.noBio')}
                             readOnly={locked}
                             maxLength={500}
                             style={locked ? { opacity: 0.7, cursor: 'default' } : undefined}
@@ -345,7 +349,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                     />
                     <SelectRow
                         icon="sparkle"
-                        label="Card animations"
+                        label={t('info.animationStyle')}
                         desc={CARD_ANIMATION_OPTIONS.find((o) => o.value === form.card_animations)?.desc ?? ''}
                         value={form.card_animations}
                         disabled={locked}
@@ -354,7 +358,7 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                     />
                     <SelectRow
                         icon="globe"
-                        label="Reading language"
+                        label={t('info.readingLanguage')}
                         desc="Used for all generated interpretations"
                         value={form.reading_language}
                         disabled={locked}
@@ -377,9 +381,9 @@ export function ProfileInfoTab({ profile, decks, isLoading, onAvatarChange, fetc
                                 You have unsaved changes
                             </span>
                         )}
-                        <GhostButton onClick={handleCancel} disabled={isSaving}>Cancel</GhostButton>
+                        <GhostButton onClick={handleCancel} disabled={isSaving}>{t('info.cancelEdit')}</GhostButton>
                         <MysticButton onClick={handleSave} disabled={isSaving || !isDirty}>
-                            <ProfileIcon name="check" size={14} /> {isSaving ? 'Saving…' : 'Save profile'}
+                            <ProfileIcon name="check" size={14} /> {isSaving ? t('saving', { ns: 'common' }) : t('info.saveProfile')}
                         </MysticButton>
                     </div>
                 )}

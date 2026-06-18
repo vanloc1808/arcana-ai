@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from 'react-i18next';
 import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout, { AdminLoadingScreen } from "@/components/AdminLayout";
 import { PageHeader, Pill, Icon } from "@/components/admin/AdminUI";
@@ -28,6 +29,7 @@ const COVER_GRADIENTS = [
 export default function AdminDecksPage() {
     const { user, isAuthenticated, isAuthLoading } = useAuth();
     const router = useRouter();
+    const { t } = useTranslation('admin');
     const [decks, setDecks] = useState<AdminDeck[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -60,17 +62,17 @@ export default function AdminDecksPage() {
         }
     };
 
-    if (isAuthLoading || !user) return <AdminLoadingScreen label="Loading decks…" />;
+    if (isAuthLoading || !user) return <AdminLoadingScreen label={t('decks.loadingDecks')} />;
     if (!user.is_admin) return null;
-    if (loading) return <AdminLoadingScreen label="Summoning deck records…" />;
+    if (loading) return <AdminLoadingScreen label={t('decks.summoningRecords')} />;
 
     return (
-        <AdminLayout activePath="/admin/decks" breadcrumb="Decks" username={user.username ?? "Admin"}>
+        <AdminLayout activePath="/admin/decks" breadcrumb={t('decks.title')} username={user.username ?? "Admin"}>
             <div className="view">
-                <PageHeader kicker="Content" title="Decks" subtitle="The card collections users can read with." />
+                <PageHeader kicker={t('decks.kicker')} title={t('decks.title')} subtitle={t('decks.subtitle')} />
 
                 {decks.length === 0 ? (
-                    <div className="card table-empty">No decks found.</div>
+                    <div className="card table-empty">{t('decks.noDecks')}</div>
                 ) : (
                     <div className="deck-grid">
                         {decks.map((d) => (
@@ -85,6 +87,7 @@ export default function AdminDecksPage() {
 
 function DeckCard({ d, onSaved, onDelete }: { d: AdminDeck; onSaved: () => void; onDelete: () => void }) {
     const [open, setOpen] = useState(false);
+    const { t } = useTranslation('admin');
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -99,17 +102,17 @@ function DeckCard({ d, onSaved, onDelete }: { d: AdminDeck; onSaved: () => void;
                 </div>
                 <div className="deck-body">
                     <div className="deck-meta-row">
-                        <Pill tone="info" dot>Active</Pill>
-                        <span className="deck-meta-count">{d.cards_count} cards</span>
+                        <Pill tone="info" dot>{t('decks.active')}</Pill>
+                        <span className="deck-meta-count">{d.cards_count} {t('decks.cards')}</span>
                     </div>
-                    <p className="deck-desc">{d.description || "No description."}</p>
+                    <p className="deck-desc">{d.description || t('decks.noDescription')}</p>
                     <div className="deck-foot">
-                        <span className="muted">Added {new Date(d.created_at).toLocaleDateString()}</span>
+                        <span className="muted">{t('decks.added')} {new Date(d.created_at).toLocaleDateString()}</span>
                         <div className="row-actions">
-                            <button className="row-action" title="Edit" onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+                            <button className="row-action" title={t('decks.edit')} onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
                                 <Icon name="edit" size={14} />
                             </button>
-                            <button className="row-action danger" title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+                            <button className="row-action danger" title={t('decks.delete')} onClick={(e) => { e.stopPropagation(); onDelete(); }}>
                                 <Icon name="trash" size={14} />
                             </button>
                         </div>
@@ -118,7 +121,7 @@ function DeckCard({ d, onSaved, onDelete }: { d: AdminDeck; onSaved: () => void;
             </div>
             <DialogContent className="admin-dialog">
                 <DialogHeader>
-                    <DialogTitle className="admin-dialog-title">Edit deck</DialogTitle>
+                    <DialogTitle className="admin-dialog-title">{t('decks.editDeck')}</DialogTitle>
                 </DialogHeader>
                 <form
                     onSubmit={async (e) => {
@@ -136,14 +139,14 @@ function DeckCard({ d, onSaved, onDelete }: { d: AdminDeck; onSaved: () => void;
                     className="space-y-4 mt-2"
                 >
                     <div>
-                        <label className="admin-field-label">Name</label>
+                        <label className="admin-field-label">{t('decks.nameLabel')}</label>
                         <input name="name" defaultValue={d.name} required className="admin-input" />
                     </div>
                     <div>
-                        <label className="admin-field-label">Description</label>
+                        <label className="admin-field-label">{t('decks.descriptionLabel')}</label>
                         <input name="description" defaultValue={d.description} className="admin-input" />
                     </div>
-                    <button type="submit" className="admin-dialog-submit">Save changes</button>
+                    <button type="submit" className="admin-dialog-submit">{t('decks.saveChanges')}</button>
                 </form>
             </DialogContent>
         </Dialog>

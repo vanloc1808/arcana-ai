@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import { useTranslation } from 'react-i18next';
 import { FiArrowLeft, FiHeart } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -18,6 +19,7 @@ import { logError } from '@/lib/logger';
 const DRAW_ANIMATION_MS = 5000;
 
 export default function CompatibilityReadingPage() {
+    const { t } = useTranslation('reading');
     const { isAuthenticated } = useAuth();
     const { hasTurnsAvailable, refreshData } = useSubscription();
     const [personAName, setPersonAName] = useState('');
@@ -121,15 +123,14 @@ export default function CompatibilityReadingPage() {
             <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
                 <div className="flex items-center justify-between mb-6">
                     <Link href="/reading" className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white">
-                        <FiArrowLeft className="w-4 h-4" /> Back to readings
+                        <FiArrowLeft className="w-4 h-4" /> {t('compatibility.backToReadings')}
                     </Link>
                     <TurnCounter onPurchaseClick={() => setIsSubscriptionModalOpen(true)} showDetails={false} />
                 </div>
 
-                <h1 className="text-3xl sm:text-4xl font-serif mb-2">Compatibility Reading</h1>
+                <h1 className="text-3xl sm:text-4xl font-serif mb-2">{t('compatibility.title')}</h1>
                 <p className="text-gray-300 mb-8 text-base">
-                    Draw a five-card Relationship Cross to see how two people show up in their bond — what
-                    connects them, what tests them, and where the relationship is heading.
+                    {t('compatibility.description')}
                 </p>
 
                 <form
@@ -139,12 +140,12 @@ export default function CompatibilityReadingPage() {
                 >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <fieldset className="space-y-3">
-                            <legend className="text-base font-medium text-purple-200">First person</legend>
+                            <legend className="text-base font-medium text-purple-200">{t('compatibility.firstPerson')}</legend>
                             <input
                                 type="text"
                                 value={personAName}
                                 onChange={(e) => setPersonAName(e.target.value)}
-                                placeholder="Name"
+                                placeholder={t('compatibility.name')}
                                 maxLength={80}
                                 required
                                 className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
@@ -159,12 +160,12 @@ export default function CompatibilityReadingPage() {
                         </fieldset>
 
                         <fieldset className="space-y-3">
-                            <legend className="text-base font-medium text-purple-200">Second person</legend>
+                            <legend className="text-base font-medium text-purple-200">{t('compatibility.secondPerson')}</legend>
                             <input
                                 type="text"
                                 value={personBName}
                                 onChange={(e) => setPersonBName(e.target.value)}
-                                placeholder="Name"
+                                placeholder={t('compatibility.name')}
                                 maxLength={80}
                                 required
                                 className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
@@ -181,14 +182,14 @@ export default function CompatibilityReadingPage() {
 
                     <div className="space-y-2">
                         <label htmlFor="focus" className="block text-base font-medium text-purple-200">
-                            Focus (optional)
+                            {t('compatibility.focus')}
                         </label>
                         <input
                             id="focus"
                             type="text"
                             value={focus}
                             onChange={(e) => setFocus(e.target.value)}
-                            placeholder="e.g. Are we ready to commit?"
+                            placeholder={t('compatibility.focusPlaceholder')}
                             maxLength={500}
                             className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
                         />
@@ -199,7 +200,7 @@ export default function CompatibilityReadingPage() {
                         disabled={isLoading}
                         className="btn-mystical w-full sm:w-auto px-6 py-3 rounded-md font-medium disabled:opacity-50 text-base"
                     >
-                        {isLoading ? 'Drawing cards…' : 'Draw the Relationship Cross'}
+                        {isLoading ? t('compatibility.drawingCards') : t('compatibility.drawCards')}
                     </button>
                 </form>
 
@@ -257,7 +258,7 @@ export default function CompatibilityReadingPage() {
                                             />
                                         ) : (
                                             <div className="w-full h-48 mb-3 flex items-center justify-center bg-gray-900 rounded text-gray-500 text-sm">
-                                                No image
+                                                {t('compatibility.noImage')}
                                             </div>
                                         )}
                                         <h3 className="text-lg font-semibold">{card.name}</h3>
@@ -271,12 +272,12 @@ export default function CompatibilityReadingPage() {
                             <div className="mt-8 bg-gray-800/60 border border-purple-700/40 rounded-xl p-5">
                                 <div className="flex items-center gap-2 mb-4">
                                     <FiHeart className="w-5 h-5 text-pink-400" />
-                                    <h3 className="text-xl font-serif">The Reader&apos;s Interpretation</h3>
+                                    <h3 className="text-xl font-serif">{t('compatibility.interpretation')}</h3>
                                 </div>
                                 {isInterpreting && interpretation === '' && (
                                     <div className="flex items-center gap-3 text-gray-300 text-base">
                                         <span className="inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-                                        Reading the cards for {result.person_a.name} &amp; {result.person_b.name}…
+                                        {t('compatibility.readingFor')} {result.person_a.name} &amp; {result.person_b.name}…
                                     </div>
                                 )}
                                 {interpretation && (
@@ -309,7 +310,7 @@ export default function CompatibilityReadingPage() {
                                         onClick={() => streamInterpretation(result)}
                                         className="text-base text-purple-300 underline hover:text-purple-200"
                                     >
-                                        Retry interpretation
+                                        {t('compatibility.retry')}
                                     </button>
                                 )}
                             </div>

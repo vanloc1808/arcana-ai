@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionProvider, useSessionCtx } from './context';
 import type { ChatSession } from './context';
@@ -117,6 +118,7 @@ function relDay(s: string): string {
 function LeftRail() {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation('reading');
   const { user } = useAuth();
   const { sessions, currentSession, createSession, setCurrentSession, hasMoreSessions, isLoadingMoreSessions, isLoadingSessions, loadMoreSessions } = useSessionCtx();
 
@@ -141,18 +143,18 @@ function LeftRail() {
   };
 
   const initials = user?.username ? user.username.charAt(0).toUpperCase() : 'S';
-  const planLabel = 'Seeker';
+  const planLabel = t('session.seeker');
 
   return (
     <aside className="sess-rail">
       <button className="sess-new-btn" onClick={handleNew}>
         <IconPlus />
-        <span>New reading</span>
+        <span>{t('session.newReading')}</span>
 
       </button>
 
       <div className="sess-rail-section">
-        <div className="sess-rail-section-h">Recent readings</div>
+        <div className="sess-rail-section-h">{t('session.recentReadings')}</div>
         <ul className="sess-reading-list">
           {isLoadingSessions ? (
             <li className="sess-rail-loading">
@@ -161,7 +163,7 @@ function LeftRail() {
               <span className="sess-rail-dot" />
             </li>
           ) : sessions.length === 0 ? (
-            <li className="sess-rail-empty">No readings yet</li>
+            <li className="sess-rail-empty">{t('session.noReadingsYet')}</li>
           ) : (
             sessions.map((s, idx) => {
               const active = s.id === activeId;
@@ -172,7 +174,7 @@ function LeftRail() {
                     onClick={() => handleSelectSession(s)}
                   >
                     <span className="sess-ri-num">№{idx + 1}</span>
-                    <span className="sess-ri-q">{s.title || 'New reading'}</span>
+                    <span className="sess-ri-q">{s.title || t('session.newReading')}</span>
                     <span className="sess-ri-date">{relDay(s.created_at)}</span>
                   </button>
                 </li>
@@ -192,11 +194,11 @@ function LeftRail() {
       </div>
 
       <div className="sess-rail-section">
-        <div className="sess-rail-section-h">Library</div>
+        <div className="sess-rail-section-h">{t('library', { ns: 'nav' })}</div>
         <ul className="sess-nav-list">
-          <li><Link href="/journal"><IconSearch /> Journal</Link></li>
-          <li><Link href="/library"><IconBookmark /> Card Library</Link></li>
-          <li><Link href="/reading"><IconCards /> Spreads</Link></li>
+          <li><Link href="/journal"><IconSearch /> {t('journal', { ns: 'nav' })}</Link></li>
+          <li><Link href="/library"><IconBookmark /> {t('session.cardLibrary')}</Link></li>
+          <li><Link href="/reading"><IconCards /> {t('session.spreads')}</Link></li>
         </ul>
       </div>
 
@@ -208,7 +210,7 @@ function LeftRail() {
         <div className="sess-user">
           <div className="sess-avatar">{initials}</div>
           <div className="sess-user-meta">
-            <div className="sess-user-name">{user?.username || 'Seeker'}</div>
+            <div className="sess-user-name">{user?.username || t('session.seeker')}</div>
             <div className="sess-user-plan">{planLabel}</div>
           </div>
         </div>

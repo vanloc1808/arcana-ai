@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { JournalFilters, TagUsage } from "@/types/tarot";
 import { journal } from "@/lib/api";
 import { logDebug } from "@/lib/logger";
@@ -18,6 +19,7 @@ function parseTagInput(value: string): string[] {
 }
 
 export default function JournalFiltersComponent({ filters, onFilterChange }: JournalFiltersProps) {
+    const { t } = useTranslation('journal');
     const [localFilters, setLocalFilters] = useState<JournalFilters>(filters);
     const [tagUsage, setTagUsage] = useState<TagUsage[]>([]);
     const [spreadOptions, setSpreadOptions] = useState<string[]>([]);
@@ -76,7 +78,7 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
     return (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 space-y-4">
             <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Filters</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('filters.title')}</h3>
                 <button
                     onClick={clearFilters}
                     className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
@@ -95,7 +97,7 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         type="text"
                         value={localFilters.search_notes || ""}
                         onChange={(e) => handleFilterChange("search_notes", e.target.value || undefined)}
-                        placeholder="Search in notes..."
+                        placeholder={t('filters.searchNotes')}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     />
                 </div>
@@ -109,7 +111,7 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         type="text"
                         value={localFilters.tags || ""}
                         onChange={(e) => handleFilterChange("tags", e.target.value || undefined)}
-                        placeholder="career, growth"
+                        placeholder={t('filters.tagsPlaceholder')}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     />
                 </div>
@@ -124,8 +126,8 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         onChange={(e) => handleFilterChange("tags_match", e.target.value as "all" | "any")}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     >
-                        <option value="all">Match all (AND)</option>
-                        <option value="any">Match any (OR)</option>
+                        <option value="all">{t('filters.matchAll')}</option>
+                        <option value="any">{t('filters.matchAny')}</option>
                     </select>
                 </div>
 
@@ -138,7 +140,7 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         type="text"
                         value={localFilters.card_name || ""}
                         onChange={(e) => handleFilterChange("card_name", e.target.value || undefined)}
-                        placeholder="e.g. The Fool"
+                        placeholder={t('filters.cardPlaceholder')}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     />
                 </div>
@@ -153,7 +155,7 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         onChange={(e) => handleFilterChange("spread_name", e.target.value || undefined)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     >
-                        <option value="">Any spread</option>
+                        <option value="">{t('filters.anySpread')}</option>
                         {spreadOptions.map((spread) => (
                             <option key={spread} value={spread}>{spread}</option>
                         ))}
@@ -195,7 +197,7 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         onChange={(e) => handleFilterChange("mood_min", e.target.value ? parseInt(e.target.value) : undefined)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     >
-                        <option value="">Any</option>
+                        <option value="">{t('filters.any')}</option>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                             <option key={num} value={num}>{num}</option>
                         ))}
@@ -211,7 +213,7 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         onChange={(e) => handleFilterChange("mood_max", e.target.value ? parseInt(e.target.value) : undefined)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     >
-                        <option value="">Any</option>
+                        <option value="">{t('filters.any')}</option>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                             <option key={num} value={num}>{num}</option>
                         ))}
@@ -228,11 +230,11 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         onChange={(e) => handleFilterChange("sort_by", e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     >
-                        <option value="created_at">Date Created</option>
-                        <option value="updated_at">Date Updated</option>
-                        <option value="mood_before">Mood Before</option>
-                        <option value="mood_after">Mood After</option>
-                        <option value="outcome_rating">Outcome Rating</option>
+                        <option value="created_at">{t('filters.sortBy.createdAt')}</option>
+                        <option value="updated_at">{t('filters.sortBy.updatedAt')}</option>
+                        <option value="mood_before">{t('filters.sortBy.moodBefore')}</option>
+                        <option value="mood_after">{t('filters.sortBy.moodAfter')}</option>
+                        <option value="outcome_rating">{t('filters.sortBy.outcomeRating')}</option>
                     </select>
                 </div>
 
@@ -245,8 +247,8 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
                         onChange={(e) => handleFilterChange("sort_order", e.target.value as "asc" | "desc")}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
                     >
-                        <option value="desc">Newest First</option>
-                        <option value="asc">Oldest First</option>
+                        <option value="desc">{t('filters.order.desc')}</option>
+                        <option value="asc">{t('filters.order.asc')}</option>
                     </select>
                 </div>
             </div>
@@ -254,7 +256,7 @@ export default function JournalFiltersComponent({ filters, onFilterChange }: Jou
             {/* Tag chips */}
             {tagUsage.length > 0 && (
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Your tags</div>
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('filters.yourTags')}</div>
                     <div className="flex flex-wrap gap-2">
                         {tagUsage.map(({ tag, count }) => {
                             const active = activeTagSet.has(tag);

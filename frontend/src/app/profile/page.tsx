@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -18,6 +19,7 @@ import { NotificationsTab } from './_components/NotificationsTab';
 type TabId = 'profile' | 'decks' | 'subscription' | 'history' | 'notifications';
 
 export default function ProfilePage() {
+    const { t } = useTranslation('profile');
     const { isAuthenticated } = useAuth();
     const { profile, decks, fetchProfile, fetchDecks, updateProfile } = useUserProfile();
     const { isPremium } = useSubscription();
@@ -47,10 +49,10 @@ export default function ProfilePage() {
                             fontFamily: "'Cormorant Garamond', serif",
                             fontSize: 32, fontWeight: 500, color: '#f4f1ff', marginBottom: 12,
                         }}>
-                            Access Denied
+                            {t('accessDenied')}
                         </div>
                         <p style={{ color: '#7c799f', fontSize: 15 }}>
-                            Please log in to enter the chambers.
+                            {t('pleaseLogin')}
                         </p>
                     </div>
                 </div>
@@ -58,7 +60,7 @@ export default function ProfilePage() {
         );
     }
 
-    const tierLabel = isPremium() ? 'Unlimited Seer' : 'Novice';
+    const tierLabel = isPremium() ? t('subscription.unlimitedSeer') : t('subscription.novice');
 
     return (
         <>

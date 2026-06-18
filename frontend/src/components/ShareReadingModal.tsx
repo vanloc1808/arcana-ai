@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiX, FiShare2, FiCopy, FiMail, FiMessageCircle, FiFacebook, FiTwitter, FiLoader } from 'react-icons/fi';
 import { Card, SharedReadingCreate, ShareResponse } from '@/types/tarot';
 import { sharing } from '@/lib/api';
@@ -22,6 +23,7 @@ export const ShareReadingModal = ({
     spreadName,
     deckName
 }: ShareReadingModalProps) => {
+    const { t } = useTranslation('admin');
     const [title, setTitle] = useState('');
     const [expiresInDays, setExpiresInDays] = useState<number | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +35,7 @@ export const ShareReadingModal = ({
 
     const handleCreateShare = async () => {
         if (!title.trim()) {
-            setError('Please enter a title for your reading');
+            setError(t('share.noTitle'));
             return;
         }
 
@@ -54,8 +56,8 @@ export const ShareReadingModal = ({
             setShareResponse(response);
         } catch (error: unknown) {
             const errorMessage = error && typeof error === 'object' && 'response' in error
-                ? (error as { response?: { data?: { detail?: { message?: string } } } }).response?.data?.detail?.message || 'Failed to create share link'
-                : 'Failed to create share link';
+                ? (error as { response?: { data?: { detail?: { message?: string } } } }).response?.data?.detail?.message || t('share.failedToCreate')
+                : t('share.failedToCreate');
             setError(errorMessage);
         } finally {
             setIsLoading(false);
@@ -119,7 +121,7 @@ export const ShareReadingModal = ({
                         <div className="flex items-center gap-2">
                             <FiShare2 className="w-5 h-5 text-purple-600" />
                             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                                Share Reading
+                                {t('share.title')}
                             </h2>
                         </div>
                         <button
@@ -135,38 +137,38 @@ export const ShareReadingModal = ({
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Reading Title *
+                                    {t('share.readingTitle')}
                                 </label>
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Give your reading a title..."
+                                    placeholder={t('share.titlePlaceholder')}
                                     className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                                 />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Link Expiration (Optional)
+                                    {t('share.expiration')}
                                 </label>
                                 <select
                                     value={expiresInDays || ''}
                                     onChange={(e) => setExpiresInDays(e.target.value ? parseInt(e.target.value) : undefined)}
                                     className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 >
-                                    <option value="">Never expires</option>
-                                    <option value="1">1 day</option>
-                                    <option value="7">1 week</option>
-                                    <option value="30">1 month</option>
-                                    <option value="90">3 months</option>
+                                    <option value="">{t('share.neverExpires')}</option>
+                                    <option value="1">{t('share.oneDay')}</option>
+                                    <option value="7">{t('share.oneWeek')}</option>
+                                    <option value="30">{t('share.oneMonth')}</option>
+                                    <option value="90">{t('share.threeMonths')}</option>
                                 </select>
                             </div>
 
                             <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
                                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    <strong>Preview:</strong> This will share your {cards.length}-card reading
-                                    {spreadName && ` using the ${spreadName} spread`} with the question: &ldquo;{concern}&rdquo;
+                                    <strong>{t('share.preview')}</strong> {t('share.previewText')} {cards.length}{t('share.cardReading')}
+                                    {spreadName && ` ${t('share.using')} ${spreadName} ${t('share.spread')}`} {t('share.withQuestion')}&ldquo;{concern}&rdquo;
                                 </p>
                             </div>
 
@@ -184,12 +186,12 @@ export const ShareReadingModal = ({
                                 {isLoading ? (
                                     <>
                                         <FiLoader className="w-4 h-4 animate-spin" />
-                                        Creating Share Link...
+                                        {t('share.creating')}
                                     </>
                                 ) : (
                                     <>
                                         <FiShare2 className="w-4 h-4" />
-                                        Create Share Link
+                                        {t('share.createLink')}
                                     </>
                                 )}
                             </button>
@@ -202,17 +204,17 @@ export const ShareReadingModal = ({
                                     <FiShare2 className="w-6 h-6 text-green-600 dark:text-green-400" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                                    Share Link Created!
+                                    {t('share.linkCreated')}
                                 </h3>
                                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    Your reading is now ready to share
+                                    {t('share.readyToShare')}
                                 </p>
                             </div>
 
                             {/* Copy Link */}
                             <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Share Link
+                                    {t('share.shareLink')}
                                 </label>
                                 <div className="flex gap-2">
                                     <input
@@ -237,7 +239,7 @@ export const ShareReadingModal = ({
                             {/* Social Share Options */}
                             <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Share On
+                                    {t('share.shareOn')}
                                 </label>
                                 <div className="grid grid-cols-2 gap-2">
                                     <button
@@ -245,28 +247,28 @@ export const ShareReadingModal = ({
                                         className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                     >
                                         <FiFacebook className="w-4 h-4 text-blue-600" />
-                                        <span className="text-sm text-gray-700 dark:text-gray-300">Facebook</span>
+                                        <span className="text-sm text-gray-700 dark:text-gray-300">{t('share.facebook')}</span>
                                     </button>
                                     <button
                                         onClick={() => handleSocialShare('twitter')}
                                         className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                     >
                                         <FiTwitter className="w-4 h-4 text-blue-400" />
-                                        <span className="text-sm text-gray-700 dark:text-gray-300">Twitter</span>
+                                        <span className="text-sm text-gray-700 dark:text-gray-300">{t('share.twitter')}</span>
                                     </button>
                                     <button
                                         onClick={() => handleSocialShare('whatsapp')}
                                         className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                     >
                                         <FiMessageCircle className="w-4 h-4 text-green-600" />
-                                        <span className="text-sm text-gray-700 dark:text-gray-300">WhatsApp</span>
+                                        <span className="text-sm text-gray-700 dark:text-gray-300">{t('share.whatsapp')}</span>
                                     </button>
                                     <button
                                         onClick={() => handleSocialShare('email')}
                                         className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                     >
                                         <FiMail className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                                        <span className="text-sm text-gray-700 dark:text-gray-300">Email</span>
+                                        <span className="text-sm text-gray-700 dark:text-gray-300">{t('share.email')}</span>
                                     </button>
                                 </div>
                             </div>
@@ -274,7 +276,7 @@ export const ShareReadingModal = ({
                             {shareResponse.expires_at && (
                                 <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                                     <p className="text-sm text-yellow-800 dark:text-yellow-400">
-                                        <strong>Note:</strong> This link will expire on{' '}
+                                        <strong>{t('share.note')}</strong> {t('share.expiresOn')}{' '}
                                         {new Date(shareResponse.expires_at).toLocaleDateString()}
                                     </p>
                                 </div>
@@ -284,7 +286,7 @@ export const ShareReadingModal = ({
                                 onClick={handleClose}
                                 className="w-full px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                             >
-                                Done
+                                {t('done', { ns: 'common' })}
                             </button>
                         </div>
                     )}

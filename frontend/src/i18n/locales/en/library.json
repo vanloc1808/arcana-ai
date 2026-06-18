@@ -1,0 +1,22 @@
+{
+  "title": "The Library",
+  "cards": "Cards",
+  "the": "The",
+  "arcana": "Arcana",
+  "description": "Every card in the deck — their history, their voices, and what they have to say.",
+  "chooseDeck": "Choose your deck",
+  "allCards": "All Cards",
+  "majorArcana": "Major Arcana",
+  "cups": "Cups",
+  "pentacles": "Pentacles",
+  "swords": "Swords",
+  "wands": "Wands",
+  "searchPlaceholder": "Search the arcana…",
+  "noCardsFound": "No cards found",
+  "tryDifferentFilter": "Try a different filter or search term.",
+  "element": "Element",
+  "arcanaLabel": "Arcana",
+  "majorLabel": "Major",
+  "readFullMeaning": "Read full meaning",
+  "saveToJournal": "Save to journal"
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSubscriptionHistory } from '@/hooks/useSubscriptionHistory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,7 @@ import {
 } from '@/types/tarot';
 
 export function SubscriptionHistory() {
+    const { t } = useTranslation('subscription');
     const {
         history,
         events,
@@ -52,7 +54,7 @@ export function SubscriptionHistory() {
         return (
             <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
-                <span className="ml-2 text-gray-400">Loading subscription history...</span>
+                <span className="ml-2 text-gray-400">{t('history.loadingHistory')}</span>
             </div>
         );
     }
@@ -61,7 +63,7 @@ export function SubscriptionHistory() {
         return (
             <div className="text-center py-12">
                 <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-white mb-2">Failed to Load History</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">{t('history.failedToLoad')}</h3>
                 <p className="text-gray-400 mb-4">{error}</p>
                 <Button onClick={() => refresh()} variant="outline" size="sm">
                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -97,11 +99,11 @@ export function SubscriptionHistory() {
             <div className="border-b border-gray-700">
                 <nav className="flex space-x-8">
                     {[
-                        { key: 'overview', label: 'Overview', icon: TrendingUp },
-                        { key: 'events', label: 'Events', icon: Activity },
-                        { key: 'transactions', label: 'Transactions', icon: CreditCard },
-                        { key: 'usage', label: 'Usage', icon: Zap },
-                        { key: 'plans', label: 'Plans', icon: Package },
+                        { key: 'overview', label: t('history.overview'), icon: TrendingUp },
+                        { key: 'events', label: t('history.events'), icon: Activity },
+                        { key: 'transactions', label: t('history.transactions'), icon: CreditCard },
+                        { key: 'usage', label: t('history.usage'), icon: Zap },
+                        { key: 'plans', label: t('history.plans'), icon: Package },
                     ].map((tab) => (
                         <button
                             key={tab.key}
@@ -170,6 +172,7 @@ function OverviewTab({
     history: SubscriptionHistoryType;
     formatCurrency: (amount: string, currency: string) => string;
 }) {
+    const { t } = useTranslation('subscription');
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Summary Cards */}
@@ -180,7 +183,7 @@ function OverviewTab({
                             <DollarSign className="h-6 w-6 text-green-400" />
                         </div>
                         <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-400">Total Spent</p>
+                            <p className="text-sm font-medium text-gray-400">{t('history.totalSpent')}</p>
                             <p className="text-2xl font-bold text-white">
                                 {formatCurrency(history.summary.total_spent_usd, 'USD')}
                             </p>
@@ -196,7 +199,7 @@ function OverviewTab({
                             <Zap className="h-6 w-6 text-blue-400" />
                         </div>
                         <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-400">Turns Purchased</p>
+                            <p className="text-sm font-medium text-gray-400">{t('history.turnsPurchased')}</p>
                             <p className="text-2xl font-bold text-white">
                                 {history.summary.total_turns_purchased}
                             </p>
@@ -212,7 +215,7 @@ function OverviewTab({
                             <Activity className="h-6 w-6 text-purple-400" />
                         </div>
                         <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-400">Turns Used (30d)</p>
+                            <p className="text-sm font-medium text-gray-400">{t('history.turnsUsed30d')}</p>
                             <p className="text-2xl font-bold text-white">
                                 {history.summary.total_turns_used_period}
                             </p>
@@ -247,23 +250,23 @@ function OverviewTab({
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex justify-between">
-                        <span className="text-gray-400">Subscription:</span>
+                        <span className="text-gray-400">{t('history.subscription')}</span>
                         <Badge variant="secondary" className="capitalize">
                             {history.summary.current_subscription_status}
                         </Badge>
                     </div>
                     <div className="flex justify-between">
-                        <span className="text-gray-400">Free Turns:</span>
+                        <span className="text-gray-400">{t('history.freeTurns')}</span>
                         <span className="text-white">{history.summary.current_free_turns}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span className="text-gray-400">Paid Turns:</span>
+                        <span className="text-gray-400">{t('history.paidTurns')}</span>
                         <span className="text-white">{history.summary.current_paid_turns}</span>
                     </div>
                     {history.summary.is_specialized_premium && (
                         <div className="flex justify-between">
-                            <span className="text-gray-400">Premium Status:</span>
-                            <Badge className="bg-yellow-900 text-yellow-200">Unlimited Access</Badge>
+                            <span className="text-gray-400">{t('history.premiumStatus')}</span>
+                            <Badge className="bg-yellow-900 text-yellow-200">{t('history.unlimitedAccess')}</Badge>
                         </div>
                     )}
                 </CardContent>
@@ -285,7 +288,7 @@ function OverviewTab({
                                     <span className="text-lg mr-2">
                                         {context === 'reading' ? '🃏' : context === 'chat' ? '💬' : '🔮'}
                                     </span>
-                                    <span className="text-gray-400 capitalize">{(context === 'unknown' || context === 'other') ? 'Other' : context}</span>
+                                    <span className="text-gray-400 capitalize">{(context === 'unknown' || context === 'other') ? t('history.other') : context}</span>
                                 </div>
                                 <span className="text-white font-medium">{count} turns</span>
                             </div>
@@ -309,6 +312,7 @@ function EventsTab({
     getStatusColor: (status: string) => string;
     formatDate: (date: string) => string;
 }) {
+    const { t } = useTranslation('subscription');
     return (
         <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
@@ -321,7 +325,7 @@ function EventsTab({
                 {events.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
                         <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No subscription events found</p>
+                        <p>{t('history.noEvents')}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -385,6 +389,7 @@ function TransactionsTab({
     formatCurrency: (amount: string, currency: string) => string;
     formatDate: (date: string) => string;
 }) {
+    const { t } = useTranslation('subscription');
     return (
         <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
@@ -397,7 +402,7 @@ function TransactionsTab({
                 {transactions.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
                         <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No payment transactions found</p>
+                        <p>{t('history.noTransactions')}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -423,17 +428,17 @@ function TransactionsTab({
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
-                                        <span className="text-gray-400">Method:</span>
+                                        <span className="text-gray-400">{t('history.method')}</span>
                                         <span className="text-white ml-2 capitalize">
                                             {transaction.payment_method.replace('_', ' ')}
                                         </span>
                                     </div>
                                     <div>
-                                        <span className="text-gray-400">Date:</span>
+                                        <span className="text-gray-400">{t('history.date')}</span>
                                         <span className="text-white ml-2">{formatDate(transaction.created_at)}</span>
                                     </div>
                                     <div className="col-span-2">
-                                        <span className="text-gray-400">Transaction ID:</span>
+                                        <span className="text-gray-400">{t('history.transactionId')}</span>
                                         <code className="text-white ml-2 bg-gray-600 px-2 py-1 rounded text-xs">
                                             {transaction.external_transaction_id}
                                         </code>
@@ -468,6 +473,7 @@ function UsageTab({
     formatDate: (date: string) => string;
     getUsageContextIcon: (context: string) => string;
 }) {
+    const { t } = useTranslation('subscription');
     return (
         <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
@@ -480,7 +486,7 @@ function UsageTab({
                 {usageHistory.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
                         <Zap className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No usage history found for the last 30 days</p>
+                        <p>{t('history.noUsage')}</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -490,7 +496,7 @@ function UsageTab({
                                     <span className="text-lg">{getUsageContextIcon(usage.usage_context)}</span>
                                     <div>
                                         <p className="text-white font-medium capitalize">
-                                            {(usage.usage_context === 'unknown' || usage.usage_context === 'other') ? 'Other' : usage.usage_context} • {usage.turn_type} turn
+                                            {(usage.usage_context === 'unknown' || usage.usage_context === 'other') ? t('history.other') : usage.usage_context} • {usage.turn_type} turn
                                         </p>
                                         <p className="text-sm text-gray-400">
                                             {usage.feature_used && `${usage.feature_used} • `}
@@ -523,6 +529,7 @@ function PlansTab({
     formatCurrency: (amount: string, currency: string) => string;
     formatDate: (date: string) => string;
 }) {
+    const { t } = useTranslation('subscription');
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {plans.map((plan) => (
@@ -559,7 +566,7 @@ function PlansTab({
 
                         {plan.features && plan.features.length > 0 && (
                             <div>
-                                <p className="text-sm font-medium text-gray-300 mb-2">Features:</p>
+                                <p className="text-sm font-medium text-gray-300 mb-2">{t('history.features')}</p>
                                 <ul className="space-y-1">
                                     {plan.features.map((feature: string, index: number) => (
                                         <li key={index} className="text-sm text-gray-400 flex items-center">
@@ -572,8 +579,8 @@ function PlansTab({
                         )}
 
                         <div className="text-xs text-gray-500 pt-2 border-t border-gray-600">
-                            <p>Created: {formatDate(plan.created_at)}</p>
-                            <p>Code: {plan.plan_code}</p>
+                            <p>{t('history.created')} {formatDate(plan.created_at)}</p>
+                            <p>{t('history.code')} {plan.plan_code}</p>
                         </div>
                     </CardContent>
                 </Card>
