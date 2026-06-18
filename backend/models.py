@@ -2,7 +2,7 @@ import json
 import uuid
 from datetime import UTC
 
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -10,7 +10,13 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 Base = declarative_base()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+_BCRYPT_MAX_BYTES = 72
+
+
+def _prepare_password(password: str | bytes) -> bytes:
+    secret = password.encode("utf-8") if isinstance(password, str) else password
+    return secret[:_BCRYPT_MAX_BYTES]
 
 
 class User(Base):
@@ -109,7 +115,7 @@ class User(Base):
         Args:
             password (str): The plain text password to hash and store.
         """
-        self.hashed_password = pwd_context.hash(password)
+        self.hashed_password = bcrypt.hashpw(_prepare_password(password), bcrypt.gensalt()).decode("utf-8")
 
     def verify_password(self, password):
         """Verifies a plain password against the stored hash.
@@ -120,7 +126,7 @@ class User(Base):
         Returns:
             bool: True if the password matches, False otherwise.
         """
-        return pwd_context.verify(password, self.hashed_password)
+        return bcrypt.checkpw(_prepare_password(password), self.hashed_password.encode("utf-8"))
 
     def get_total_turns(self):
         """Get total available turns (free + paid). Returns -1 for unlimited (specialized premium)."""
