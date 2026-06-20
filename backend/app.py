@@ -63,6 +63,7 @@ from utils.error_handlers import (
     tarot_exception_handler,
     validation_exception_handler,
 )
+from utils.metrics import setup_metrics
 from utils.middleware import RequestLoggingMiddleware
 from utils.rate_limiter import limiter, rate_limit_exceeded_handler
 
@@ -90,6 +91,8 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 # Add custom middleware
 # Request logging middleware must be added before CORS middleware
 app.add_middleware(RequestLoggingMiddleware)
+
+setup_metrics(app, env=settings.FASTAPI_ENV)
 
 
 @app.middleware("http")
@@ -162,7 +165,7 @@ app.include_router(journal.router)  # Advanced tarot journal and personal growth
 app.include_router(support.router)  # Support ticket system with file uploads
 app.include_router(changelog.router)  # Changelog and version information
 app.include_router(streaks.router)  # Daily streaks and achievements
-app.include_router(stats.router)    # Aggregated dashboard statistics
+app.include_router(stats.router)  # Aggregated dashboard statistics
 app.include_router(web_push.router)  # Web Push (VAPID) subscriptions and delivery
 app.include_router(utilities.router)  # Shared utility endpoints
 
