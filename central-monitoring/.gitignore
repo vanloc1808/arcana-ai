@@ -1,0 +1,9 @@
+# Secrets and host-specific overrides
+.env
+*.local.yaml
+*.local.yml
+docker-compose.override.yaml
+docker-compose.override.yml
+
+# Allow the committed examples
+!docker-compose.prod.override.yaml.example

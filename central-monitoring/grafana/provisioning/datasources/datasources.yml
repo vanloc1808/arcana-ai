@@ -1,0 +1,14 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    # Internal container DNS name of the Prometheus service in this stack.
+    url: http://monitoring-prometheus:9090
+    isDefault: true
+    editable: true
+    # Keep this UID stable: dashboards reference the datasource by UID.
+    uid: prometheus
+    jsonData:
+      timeInterval: "5s"
