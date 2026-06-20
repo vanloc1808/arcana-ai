@@ -12,12 +12,12 @@ Arguments:
     --dry-run    Show what would be changed without making any modifications
 """
 
-import os
-import sys
-import shutil
 import argparse
-from pathlib import Path
+import os
+import shutil
+import sys
 from datetime import datetime
+from pathlib import Path
 
 # Add backend to Python path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -122,16 +122,16 @@ def migrate_avatars(dry_run=False):
                 try:
                     # Copy file to new location
                     shutil.copy2(old_file_path, new_file_path)
-                    print(f"   ✅ Copied file successfully")
+                    print("   ✅ Copied file successfully")
 
                     # Update database
                     user.avatar_filename = new_filename
                     db.commit()
-                    print(f"   ✅ Updated database record")
+                    print("   ✅ Updated database record")
 
                     # Delete old file
                     old_file_path.unlink()
-                    print(f"   ✅ Deleted old file")
+                    print("   ✅ Deleted old file")
 
                     migrated_count += 1
 

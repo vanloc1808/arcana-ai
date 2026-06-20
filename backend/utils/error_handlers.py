@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from jose import JWTError, jwt
+from jose import jwt
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from config import settings

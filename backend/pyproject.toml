@@ -90,6 +90,7 @@ dependencies = [
     "yarl>=1.24.2",
     "pytest-asyncio>=1.4.0",
     "web3>=7.12.0",
+    "prometheus-client>=0.25.0",
 ]
 
 [tool.ruff]

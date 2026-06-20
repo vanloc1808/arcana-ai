@@ -61,7 +61,7 @@ Version: 1.0.0
 
 import re
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -1555,14 +1555,14 @@ class JournalEntryCreate(BaseModel):
         is_favorite (bool): Whether entry is marked as favorite.
     """
 
-    reading_id: Optional[int] = None
+    reading_id: int | None = None
     reading_snapshot: dict[str, Any]
-    personal_notes: Optional[str] = None
-    mood_before: Optional[int] = Field(None, ge=1, le=10)
-    mood_after: Optional[int] = Field(None, ge=1, le=10)
-    outcome_rating: Optional[int] = Field(None, ge=1, le=5)
-    follow_up_date: Optional[datetime] = None
-    tags: Optional[list[str]] = []
+    personal_notes: str | None = None
+    mood_before: int | None = Field(None, ge=1, le=10)
+    mood_after: int | None = Field(None, ge=1, le=10)
+    outcome_rating: int | None = Field(None, ge=1, le=5)
+    follow_up_date: datetime | None = None
+    tags: list[str] | None = []
     is_favorite: bool = False
 
     @field_validator("personal_notes")
@@ -1602,13 +1602,13 @@ class JournalEntryUpdate(BaseModel):
         follow_up_completed (Optional[bool]): Whether follow-up was completed.
     """
 
-    personal_notes: Optional[str] = None
-    mood_after: Optional[int] = Field(None, ge=1, le=10)
-    outcome_rating: Optional[int] = Field(None, ge=1, le=5)
-    follow_up_date: Optional[datetime] = None
-    tags: Optional[list[str]] = None
-    is_favorite: Optional[bool] = None
-    follow_up_completed: Optional[bool] = None
+    personal_notes: str | None = None
+    mood_after: int | None = Field(None, ge=1, le=10)
+    outcome_rating: int | None = Field(None, ge=1, le=5)
+    follow_up_date: datetime | None = None
+    tags: list[str] | None = None
+    is_favorite: bool | None = None
+    follow_up_completed: bool | None = None
 
     @field_validator("personal_notes")
     def validate_personal_notes(cls, v):
@@ -1655,13 +1655,13 @@ class JournalEntryResponse(BaseModel):
 
     id: int
     user_id: int
-    reading_id: Optional[int]
+    reading_id: int | None
     reading_snapshot: dict[str, Any]
-    personal_notes: Optional[str]
-    mood_before: Optional[int]
-    mood_after: Optional[int]
-    outcome_rating: Optional[int]
-    follow_up_date: Optional[datetime]
+    personal_notes: str | None
+    mood_before: int | None
+    mood_after: int | None
+    outcome_rating: int | None
+    follow_up_date: datetime | None
     follow_up_completed: bool
     tags: list[str]
     is_favorite: bool
@@ -1684,7 +1684,7 @@ class PersonalCardMeaningCreate(BaseModel):
 
     card_id: int
     personal_meaning: str
-    emotional_keywords: Optional[list[str]] = []
+    emotional_keywords: list[str] | None = []
 
     @field_validator("personal_meaning")
     def validate_personal_meaning(cls, v):
@@ -1715,8 +1715,8 @@ class PersonalCardMeaningUpdate(BaseModel):
         emotional_keywords (Optional[List[str]]): Updated emotional associations.
     """
 
-    personal_meaning: Optional[str] = None
-    emotional_keywords: Optional[list[str]] = None
+    personal_meaning: str | None = None
+    emotional_keywords: list[str] | None = None
 
     @field_validator("personal_meaning")
     def validate_personal_meaning(cls, v):
@@ -1766,7 +1766,7 @@ class PersonalCardMeaningResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-    card: Optional[Card] = None
+    card: Card | None = None
 
     class Config:
         from_attributes = True
@@ -1794,9 +1794,9 @@ class JournalAnalytics(BaseModel):
     mood_trends: dict[str, Any]
     reading_frequency: dict[str, int]
     growth_metrics: dict[str, Any]
-    average_mood_improvement: Optional[float] = None
+    average_mood_improvement: float | None = None
     most_used_tags: list[dict[str, Any]]
-    follow_up_completion_rate: Optional[float] = None
+    follow_up_completion_rate: float | None = None
 
 
 class ReminderCreate(BaseModel):
@@ -1812,7 +1812,7 @@ class ReminderCreate(BaseModel):
     journal_entry_id: int
     reminder_type: str = Field(..., pattern="^(anniversary|follow_up|milestone)$")
     reminder_date: datetime
-    message: Optional[str] = None
+    message: str | None = None
 
     @field_validator("message")
     def validate_message(cls, v):
@@ -1843,11 +1843,11 @@ class ReminderResponse(BaseModel):
     journal_entry_id: int
     reminder_type: str
     reminder_date: datetime
-    message: Optional[str]
+    message: str | None
     is_sent: bool
     is_completed: bool
     created_at: datetime
-    journal_entry: Optional[JournalEntryResponse] = None
+    journal_entry: JournalEntryResponse | None = None
 
     class Config:
         from_attributes = True
@@ -1869,15 +1869,15 @@ class JournalFilters(BaseModel):
         search_notes (Optional[str]): Search in personal notes.
     """
 
-    tags: Optional[str] = None
+    tags: str | None = None
     favorite_only: bool = False
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    mood_min: Optional[int] = Field(None, ge=1, le=10)
-    mood_max: Optional[int] = Field(None, ge=1, le=10)
-    has_follow_up: Optional[bool] = None
-    completed_follow_up: Optional[bool] = None
-    search_notes: Optional[str] = None
+    start_date: date | None = None
+    end_date: date | None = None
+    mood_min: int | None = Field(None, ge=1, le=10)
+    mood_max: int | None = Field(None, ge=1, le=10)
+    has_follow_up: bool | None = None
+    completed_follow_up: bool | None = None
+    search_notes: str | None = None
 
     @field_validator("search_notes")
     def validate_search_notes(cls, v):
@@ -1921,7 +1921,7 @@ class SupportTicketResponse(BaseModel):
 
     message: str
     ticket_id: str
-    slack_message_id: Optional[str] = None
+    slack_message_id: str | None = None
 
 
 # --- Streaks & Achievements ---
@@ -1931,7 +1931,7 @@ class StreakResponse(BaseModel):
     current_streak: int
     longest_streak: int
     total_active_days: int
-    last_activity_date: Optional[date] = None
+    last_activity_date: date | None = None
     is_active_today: bool
 
 
@@ -1940,7 +1940,7 @@ class AchievementResponse(BaseModel):
     title: str
     description: str
     unlocked: bool
-    unlocked_at: Optional[datetime] = None
+    unlocked_at: datetime | None = None
 
 
 class StreakProgressResponse(BaseModel):
@@ -1964,7 +1964,7 @@ class RecentReadingEntry(BaseModel):
     id: int
     turn_type: str
     usage_context: str
-    feature_used: Optional[str] = None
+    feature_used: str | None = None
     consumed_at: datetime
 
     class Config:
@@ -1993,7 +1993,7 @@ class UserDashboardStats(BaseModel):
     current_streak: int
     longest_streak: int
     total_active_days: int
-    last_activity_date: Optional[date] = None
+    last_activity_date: date | None = None
     is_active_today: bool
     period_days: int
     usage_by_context: list[UsageBreakdown]
@@ -2011,7 +2011,7 @@ class WebPushKeys(BaseModel):
 class WebPushSubscribeRequest(BaseModel):
     endpoint: str = Field(..., min_length=8, max_length=2000)
     keys: WebPushKeys
-    user_agent: Optional[str] = Field(None, max_length=255)
+    user_agent: str | None = Field(None, max_length=255)
 
 
 class WebPushSubscribeResponse(BaseModel):

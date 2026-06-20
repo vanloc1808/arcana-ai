@@ -23,11 +23,10 @@ Examples:
     python scripts/cleanup_avatars.py user --username john_doe --keep 1
 """
 
-import os
-import sys
 import argparse
+import sys
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timedelta
 
 # Add backend to Python path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -120,23 +119,23 @@ def find_orphaned_avatars(dry_run=False):
             print(f"     Age: {file_age.days} days")
 
             if dry_run:
-                print(f"     🔍 [DRY RUN] Would delete")
+                print("     🔍 [DRY RUN] Would delete")
             else:
                 try:
                     orphaned_file.unlink()
-                    print(f"     ✅ Deleted")
+                    print("     ✅ Deleted")
                 except Exception as e:
                     print(f"     ❌ Error deleting: {e}")
             print()
 
-        print(f"📊 Summary:")
+        print("📊 Summary:")
         print(f"   Orphaned files: {len(orphaned_files)}")
         print(f"   Total size: {total_size:,} bytes ({total_size/1024/1024:.1f} MB)")
 
         if dry_run:
-            print(f"   🔍 [DRY RUN] Files would be deleted")
+            print("   🔍 [DRY RUN] Files would be deleted")
         else:
-            print(f"   ✅ Files deleted")
+            print("   ✅ Files deleted")
 
         return len(orphaned_files)
 
@@ -188,18 +187,18 @@ def cleanup_old_avatars(keep_latest=1, dry_run=False):
                 print(f"         Age: {file_age.days} days, Size: {file_size:,} bytes")
 
                 if dry_run:
-                    print(f"         🔍 [DRY RUN] Would delete")
+                    print("         🔍 [DRY RUN] Would delete")
                 else:
                     try:
                         old_avatar.unlink()
-                        print(f"         ✅ Deleted")
+                        print("         ✅ Deleted")
                         total_deleted += 1
                     except Exception as e:
                         print(f"         ❌ Error deleting: {e}")
 
             print()
 
-        print(f"📊 Summary:")
+        print("📊 Summary:")
         print(f"   Total files deleted: {total_deleted}")
 
         return total_deleted
@@ -259,11 +258,11 @@ def cleanup_user_avatars(username, keep_latest=1, dry_run=False):
             print(f"      Size: {file_size:,} bytes")
 
             if dry_run:
-                print(f"      🔍 [DRY RUN] Would delete")
+                print("      🔍 [DRY RUN] Would delete")
             else:
                 try:
                     old_avatar.unlink()
-                    print(f"      ✅ Deleted successfully")
+                    print("      ✅ Deleted successfully")
                     deleted_count += 1
                 except Exception as e:
                     print(f"      ❌ Error deleting: {e}")
@@ -347,7 +346,7 @@ def main():
         parser.print_help()
         return
 
-    print(f"🛠️  Avatar Cleanup Tool")
+    print("🛠️  Avatar Cleanup Tool")
     print(f"📁 Avatar directory: {avatar_manager.upload_dir}")
     print()
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from config import settings
 from database import get_db
-from models import User, SubscriptionEvent, PaymentTransaction, TurnUsageHistory, CheckoutSession
+from models import CheckoutSession, PaymentTransaction, SubscriptionEvent, TurnUsageHistory, User
 from schemas import TurnConsumptionResult
 
 logger = logging.getLogger(__name__)

@@ -1,26 +1,26 @@
 import json
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
 from datetime import datetime, timedelta
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import desc
+from sqlalchemy.orm import Session
+
 from database import get_db
-from models import User, SubscriptionEvent, PaymentTransaction, TurnUsageHistory, SubscriptionPlan, CheckoutSession
+from models import PaymentTransaction, SubscriptionEvent, SubscriptionPlan, TurnUsageHistory, User
 from routers.auth import get_current_user
 from schemas import (
     CheckoutRequest,
     CheckoutResponse,
     EthereumPaymentRequest,
     EthereumPaymentResponse,
+    PaymentTransactionResponse,
+    SubscriptionEventResponse,
+    SubscriptionHistoryResponse,
+    SubscriptionPlanResponse,
     SubscriptionResponse,
     TurnsResponse,
-    SubscriptionEventResponse,
-    PaymentTransactionResponse,
     TurnUsageHistoryResponse,
-    SubscriptionPlanResponse,
-    SubscriptionHistoryResponse,
 )
 from services.ethereum_service import EthereumService
 from services.subscription_service import SubscriptionService
