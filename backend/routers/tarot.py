@@ -28,7 +28,6 @@ from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
 from utils.error_handlers import TarotAPIException, ValidationError, logger
-from utils.metrics import active_users, track_card_drawn, track_tarot_reading
 from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/tarot", tags=["tarot"])
@@ -213,7 +212,6 @@ async def get_reading(
         The meanings are contextually generated based on the user's concern.
     """
     start_time = time.time()
-    reading_type = f"{request_data.num_cards}_card"
 
     try:
         # Check and consume turns before generating reading
@@ -228,7 +226,6 @@ async def get_reading(
                 extra={"user_id": current_user.id},
             )
         elif not turn_result.success:
-            track_tarot_reading(reading_type, time.time() - start_time, "insufficient_turns")
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail={
@@ -239,15 +236,11 @@ async def get_reading(
                 },
             )
 
-        # Increment active users (simulate session tracking)
-        active_users.inc()
-
         # Get spread if specified
         spread = None
         if request_data.spread_id:
             spread = db.query(Spread).filter(Spread.id == request_data.spread_id).first()
             if not spread:
-                track_tarot_reading(reading_type, time.time() - start_time, "validation_error")
                 raise ValidationError(
                     message="Spread not found",
                     details={"spread_id": request_data.spread_id},
@@ -258,7 +251,6 @@ async def get_reading(
 
         # Validate number of cards
         if request_data.num_cards < 1 or request_data.num_cards > 10:
-            track_tarot_reading(reading_type, time.time() - start_time, "validation_error")
             raise ValidationError(
                 message="Invalid number of cards",
                 details={"num_cards": "Must be between 1 and 10"},
@@ -267,16 +259,12 @@ async def get_reading(
         # Initialize TarotReader with user's favorite deck
         reader = TarotReader(db=db, deck_id=current_user.favorite_deck_id)
 
-        # Draw cards with metrics tracking
+        # Draw cards
         cards = reader.shuffle_and_draw(request_data.num_cards, spread=spread)
 
-        # Format response and track individual cards
+        # Format response
         response_cards = []
         for i, card in enumerate(cards):
-            # Track each card drawn with position
-            position_name = card.get("position", f"position_{i + 1}")
-            track_card_drawn(card["name"], position_name)
-
             response_cards.append(
                 CardResponse(
                     name=card["name"],
@@ -288,9 +276,7 @@ async def get_reading(
                 )
             )
 
-        # Track successful reading
         duration = time.time() - start_time
-        track_tarot_reading(reading_type, duration, "success")
 
         try:
             record_streak_activity(db, current_user.id)
@@ -315,21 +301,13 @@ async def get_reading(
         return response_cards
 
     except ValidationError:
-        # Metrics already tracked above
         raise
     except Exception as e:
-        # Track failed reading
-        duration = time.time() - start_time
-        track_tarot_reading(reading_type, duration, "error")
-
         logger.logger.error(
             "Error generating reading",
             extra={"user_id": current_user.id, "error": str(e)},
         )
         raise TarotAPIException(message="Error generating reading", details={"error": str(e)})
-    finally:
-        # Decrement active users
-        active_users.dec()
 
 
 COMPATIBILITY_SPREAD_NAME = "Relationship Cross"
@@ -361,7 +339,6 @@ async def get_compatibility_reading(
     provided names. Consumes one turn (same as a standard reading).
     """
     start_time = time.time()
-    reading_type = "compatibility"
 
     spread = db.query(Spread).filter(Spread.name == COMPATIBILITY_SPREAD_NAME).first()
     if not spread:
@@ -380,7 +357,6 @@ async def get_compatibility_reading(
                 extra={"user_id": current_user.id},
             )
         elif not turn_result.success:
-            track_tarot_reading(reading_type, time.time() - start_time, "insufficient_turns")
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail={
@@ -391,7 +367,6 @@ async def get_compatibility_reading(
                 },
             )
 
-        active_users.inc()
         reader = TarotReader(db=db, deck_id=current_user.favorite_deck_id)
         drawn = reader.shuffle_and_draw(spread.num_cards, spread=spread)
 
@@ -401,7 +376,6 @@ async def get_compatibility_reading(
         for i, card in enumerate(drawn):
             position_name = card.get("position", f"Card {i + 1}")
             personalized = _personalize_position(position_name, person_a_name, person_b_name, i)
-            track_card_drawn(card["name"], position_name)
             response_cards.append(
                 CardResponse(
                     name=card["name"],
@@ -414,7 +388,6 @@ async def get_compatibility_reading(
             )
 
         duration = time.time() - start_time
-        track_tarot_reading(reading_type, duration, "success")
 
         try:
             record_streak_activity(db, current_user.id)
@@ -450,7 +423,6 @@ async def get_compatibility_reading(
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001
-        track_tarot_reading(reading_type, time.time() - start_time, "error")
         logger.logger.error(
             "Error generating compatibility reading",
             extra={"user_id": current_user.id, "error": str(e)},
@@ -458,8 +430,6 @@ async def get_compatibility_reading(
         raise TarotAPIException(
             message="Error generating compatibility reading", details={"error": str(e)}
         )
-    finally:
-        active_users.dec()
 
 
 @router.post("/compatibility/interpret", response_model=CompatibilityInterpretResponse)

@@ -338,8 +338,9 @@ The backend includes a comprehensive GitHub Actions workflow:
 - `GET /health/detailed` - Detailed system health
 
 ### Metrics
-- **Prometheus**: Application and system metrics
-- **Grafana**: Beautiful visualization dashboards
+- The backend currently exposes health endpoints and logs only.
+- Prometheus `/metrics` instrumentation has been removed and should be reimplemented intentionally when application metrics are needed again.
+- The central Prometheus/Grafana deployment is owned by the standalone `central-monitoring` repo, not this backend.
 - **Logging**: Structured logging with different levels
 
 ### Performance

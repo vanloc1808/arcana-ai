@@ -326,8 +326,7 @@ def mock_openai():
     """Mock OpenAI responses for chat functionality"""
     with patch('routers.chat.ChatOpenAI') as mock_llm, \
          patch('openai.OpenAI') as mock_client, \
-         patch('langchain_openai.ChatOpenAI') as mock_langchain, \
-         patch('utils.metrics.track_openai_request') as mock_track:
+         patch('langchain_openai.ChatOpenAI') as mock_langchain:
 
         # Mock the ChatOpenAI instance
         mock_instance = mock_llm.return_value
@@ -390,9 +389,6 @@ def mock_openai():
                 await asyncio.sleep(0)
 
         mock_langchain_instance.astream = mock_astream
-
-        # Mock metrics tracking
-        mock_track.return_value = None
 
         yield mock_instance
 

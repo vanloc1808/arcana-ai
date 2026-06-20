@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.19] - 2026-06-20
+
+### Changed
+- Monitoring documentation now treats ArcanaAI as a client of the standalone `central-monitoring` stack and provides a reimplementation guide for future application metrics and dashboards.
+
+### Removed
+- Removed the in-repository Prometheus/Grafana monitoring compose stack and dashboard/rule provisioning files.
+- Removed the backend Prometheus `/metrics` endpoint, custom metrics helper, tarot metric tracking calls, metrics tests, and Prometheus-related Python dependencies.
+
 ## [0.0.18] - 2026-05-25
 
 ### Added

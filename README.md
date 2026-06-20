@@ -47,7 +47,7 @@ Experience the full application with live tarot readings, user authentication, a
 ### Infrastructure
 - **Docker**: Containerization
 - **Traefik**: Reverse proxy and load balancer
-- **Prometheus & Grafana**: Monitoring and observability
+- **Central Monitoring Ready**: Health endpoints and a guide for connecting future app metrics to the standalone `central-monitoring` stack
 - **GitHub Actions**: CI/CD pipeline with automated testing
 - **Cloudflare R2**: Object storage for tarot card images
 
@@ -199,7 +199,7 @@ docker-compose down
 1. Set `FASTAPI_ENV=production` in backend environment
 2. Configure your reverse proxy (Traefik, Nginx, etc.)
 3. Set up SSL certificates
-4. Configure monitoring and logging
+4. Configure logging and central monitoring integration
 
 ### CI/CD Pipeline
 The project includes a comprehensive GitHub Actions workflow:
@@ -234,7 +234,7 @@ The project includes a comprehensive GitHub Actions workflow:
 ### Admin Features
 - **User Management**: View and manage all users
 - **Content Management**: Manage tarot cards and spreads
-- **Analytics**: User activity and system metrics
+- **Analytics**: User activity summaries and system administration views
 - **Support System**: Handle user support requests
 - **Specialized Premium**: VIP user management
 
@@ -288,13 +288,11 @@ alembic heads
 
 ## 📊 Monitoring
 
-The application includes comprehensive monitoring:
+ArcanaAI no longer runs or owns a Prometheus/Grafana stack in this repository. The central monitoring deployment lives in the standalone `central-monitoring` repo.
 
-- **Prometheus Metrics**: Application and system metrics
-- **Grafana Dashboards**: Beautiful visualization of metrics
-- **Health Checks**: API health endpoints
-- **Logging**: Structured logging with different levels
-- **Performance Monitoring**: Database and API performance tracking
+- **Health Checks**: API health endpoints such as `GET /health` remain available.
+- **Logging**: Backend structured logging remains available for operational diagnostics.
+- **Application Metrics**: The previous `/metrics` instrumentation has been removed. Reimplement Prometheus metrics when needed and connect them to the central stack using [docs/grafana-monitoring-guide.md](docs/grafana-monitoring-guide.md).
 
 ## 🤝 Contributing
 

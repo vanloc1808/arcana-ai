@@ -9,7 +9,6 @@ The application includes:
 - JWT-based authentication
 - Rate limiting
 - CORS configuration
-- Prometheus metrics collection
 - Comprehensive error handling
 - Database table creation
 - Multiple routers for different features
@@ -17,7 +16,6 @@ The application includes:
 Dependencies:
     - FastAPI for the web framework
     - SQLAlchemy for database operations
-    - Prometheus for metrics collection
     - Redis for rate limiting and caching
     - Custom middleware and error handlers
 
@@ -39,7 +37,23 @@ from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from config import settings
 from database import Base, engine
-from routers import admin, auth, changelog, chat, health, journal, sharing, stats, streaks, subscription, support, tarot, tasks, utilities, web_push
+from routers import (
+    admin,
+    auth,
+    changelog,
+    chat,
+    health,
+    journal,
+    sharing,
+    stats,
+    streaks,
+    subscription,
+    support,
+    tarot,
+    tasks,
+    utilities,
+    web_push,
+)
 from utils.error_handlers import (
     TarotAPIException,
     general_exception_handler,
@@ -49,7 +63,6 @@ from utils.error_handlers import (
     tarot_exception_handler,
     validation_exception_handler,
 )
-from utils.metrics import setup_metrics
 from utils.middleware import RequestLoggingMiddleware
 from utils.rate_limiter import limiter, rate_limit_exceeded_handler
 
@@ -73,10 +86,6 @@ app = FastAPI(
 # Add the limiter to the app state and register exception handler
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-
-# Setup Prometheus metrics collection
-# This enables monitoring and observability for the application
-instrumentator = setup_metrics(app)
 
 # Add custom middleware
 # Request logging middleware must be added before CORS middleware
