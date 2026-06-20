@@ -1,0 +1,30 @@
+groups:
+  - name: shared-infrastructure
+    rules:
+      # Fires for any PULLED target that stops responding. Pushed (remote_write)
+      # projects don't produce `up`; give them a heartbeat-style alert instead,
+      # e.g. absent(up{project="..."}) or alert on stale pushed series.
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target down: {{ $labels.job }} / {{ $labels.instance }}"
+          description: >
+            Prometheus has failed to scrape {{ $labels.instance }}
+            (project={{ $labels.project }}, component={{ $labels.component }})
+            for more than 2 minutes.
+
+      - alert: PushedProjectStale
+        # No fresh samples pushed for a project in 5 minutes. Adjust the
+        # selector to a metric your agents always send.
+        expr: |
+          count by (project) (
+            count_over_time(scrape_samples_scraped[5m])
+          ) == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No metrics from project {{ $labels.project }} in 5m"

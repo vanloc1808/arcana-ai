@@ -1,0 +1,22 @@
+# Production override: bind everything to localhost so ONLY the reverse proxy
+# is reachable from the internet. Copy to docker-compose.prod.override.yaml
+# (kept local, gitignored) and start with:
+#
+#   docker compose \
+#     -f docker-compose.yaml \
+#     -f docker-compose.prod.override.yaml \
+#     --env-file .env up -d
+services:
+  grafana:
+    ports:
+      - "127.0.0.1:3002:3000"
+    environment:
+      - GF_SERVER_DOMAIN=${GRAFANA_DOMAIN}
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL}
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=lax
+  prometheus:
+    # Keep Prometheus private. The remote_write receiver is exposed publicly
+    # ONLY through the reverse proxy (with auth) at metrics.<domain>/api/v1/write.
+    ports:
+      - "127.0.0.1:9090:9090"

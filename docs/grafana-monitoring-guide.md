@@ -1,23 +1,27 @@
-# Personal Grafana Monitoring Guide for grafana.nguyenvanloc.com
+# ArcanaAI Monitoring Guide (central Grafana at grafana.nguyenvanloc.com)
 
-A hands-on guide for building a **personal, central Grafana site** at
-`grafana.nguyenvanloc.com` and using it to monitor multiple projects,
-including ArcanaAI.
+A hands-on guide for monitoring ArcanaAI through a **central, standalone
+monitoring stack** — one Prometheus + Grafana that also serves your other
+projects.
 
 The intended end state is:
 
-- One private Grafana UI at `https://grafana.nguyenvanloc.com`.
-- One Prometheus instance that scrapes ArcanaAI now and can scrape more
-  projects later.
-- Project labels on every scrape target so dashboards can filter by
+- One private Grafana UI at `https://grafana.nguyenvanloc.com` for **all**
+  projects.
+- One Prometheus instance that ingests ArcanaAI now and more projects later.
+- A `project` label on every series so dashboards filter by
   `project="arcana-ai"`, `project="another-project"`, etc.
-- Grafana and Prometheus data persisted on disk so a container restart
-  does not wipe dashboards or metrics.
+- Grafana and Prometheus data persisted on disk so a restart does not wipe
+  dashboards or metrics.
 
-> Heads up: this repo already ships the **ArcanaAI monitoring config**
-> (`monitoring-docker-compose.yaml` + `monitoring/`). This guide adapts
-> that config into a personal monitoring stack instead of treating
-> Grafana as a one-off local dashboard for only this repository.
+> **Architecture note (changed).** The monitoring stack no longer lives in
+> this repository. It is its own repo — see the `central-monitoring/` draft at
+> the root of this repo, meant to be extracted into a standalone
+> `central-monitoring` repository. This guide covers (a) the ArcanaAI side —
+> exposing metrics and connecting to that central stack — and (b) the
+> ArcanaAI-specific PromQL, dashboards, and alerts you build once connected.
+> Operating the stack itself (compose, reverse proxy, network, secrets) lives
+> in the central repo's `README.md`.
 
 ---
 
@@ -26,7 +30,7 @@ The intended end state is:
 1. [What you're monitoring](#1-what-youre-monitoring)
 2. [Personal monitoring architecture](#2-personal-monitoring-architecture)
 3. [Grafana concepts in 5 minutes](#3-grafana-concepts-in-5-minutes)
-4. [Setup Grafana from scratch for grafana.nguyenvanloc.com](#4-setup-grafana-from-scratch-for-grafananguyenvanloccom)
+4. [Connect ArcanaAI to the central monitoring stack](#4-connect-arcanaai-to-the-central-monitoring-stack)
 5. [PromQL primer with this project's metrics](#5-promql-primer-with-this-projects-metrics)
 6. [Dashboards to build](#6-dashboards-to-build)
    - [6.1 Golden signals (API health)](#61-dashboard-1--golden-signals-api-health)
@@ -43,8 +47,9 @@ The intended end state is:
 
 ## 1. What you're monitoring
 
-This Grafana site is **not just for ArcanaAI**. Treat it as your personal
-observability home:
+The central Grafana site is **shared across projects**, not just ArcanaAI —
+treat it as your personal observability home. This guide focuses on the
+ArcanaAI slice of it:
 
 | Scope | Examples | How it appears in Grafana |
 |---|---|---|
@@ -72,60 +77,64 @@ The ArcanaAI backend already exposes Prometheus metrics at
 
 ---
 
-## 2. Personal monitoring architecture
+## 2. Architecture: ArcanaAI as a client of the central stack
 
-Use a central monitoring stack and add projects to it over time:
+The monitoring stack (Prometheus + Grafana) is **its own deployment**, in its
+own repository (`central-monitoring`). ArcanaAI is just one of several projects
+that feed metrics into it.
 
 ```text
-Internet
-  │
-  │ https://grafana.nguyenvanloc.com
-  ▼
-Caddy / Nginx reverse proxy with TLS
-  │
-  ▼
-Grafana container (private UI, port 3002 on localhost only)
-  │
-  ▼
-Prometheus container (not public, port 9090 on localhost only)
-  │
-  ├── ArcanaAI backend: tarot-backend:8000/metrics
-  ├── ArcanaAI frontend: tarot-frontend:3000/api/metrics (optional)
-  ├── cAdvisor: container metrics
-  ├── node-exporter: host metrics
-  └── Future projects: add more scrape jobs
+                              You (browser)
+                                   │ https://grafana.nguyenvanloc.com
+                                   ▼
+                              ┌─────────┐        ┌───────────────┐
+                              │ Grafana │ ─────▶ │  Prometheus   │
+                              └─────────┘ query  │  TSDB + rules │
+                                                 └───────────────┘
+                                                  ▲             ▲
+                                  pull (localnet) │             │ push (remote_write)
+                                                  │             │ https://metrics.../api/v1/write
+                             ┌────────────────────┘             └──────────────────┐
+                             │                                                      │
+                   ArcanaAI co-located                                  ArcanaAI on another host
+              (tarot-backend:8000/metrics, scraped)             (Alloy agent scrapes locally, pushes)
 ```
 
-### What this repository already provides
+### Three URLs, three jobs — don't conflate them
 
-Defined in `monitoring-docker-compose.yaml`:
+| Thing | URL | Who talks to it |
+|---|---|---|
+| **Grafana** (view UI) | `grafana.nguyenvanloc.com` | You, in a browser |
+| **Prometheus ingest** (push) | `metrics.nguyenvanloc.com/api/v1/write` | ArcanaAI's **agent** |
+| ArcanaAI **`/metrics`** | `tarot-backend:8000/metrics` (internal) | Prometheus, when it pulls |
 
-| Service | Current container | Current port mapping | Purpose |
-|---|---|---|---|
-| Prometheus | `tarot-prometheus` | `9090:9090` | Scrapes metrics, stores 30d, evaluates alert rules |
-| Grafana | `tarot-grafana` | `3002:3000` | Dashboards & alerts UI |
-| cAdvisor | `tarot-cadvisor` | `8090:8080` | Per-container CPU/mem/net metrics |
-| node-exporter | `tarot-node-exporter` | `9200:9100` | Host metrics (disk, load, network) |
+ArcanaAI **never** sends metrics to `grafana.nguyenvanloc.com` — that host is
+only the viewer. Metrics land in **Prometheus** (pushed there, or pulled by it),
+and Grafana reads them back out to draw graphs.
 
-Prometheus scrape targets (`monitoring/prometheus/prometheus.yml`):
+### Two ways ArcanaAI connects
 
-- `tarot-backend:8000/metrics` (every 10s)
-- `tarot-frontend:3000/api/metrics` (every 30s) — only if you add a
-  metrics route in Next.js
-- `tarot-node-exporter:9100`
-- `tarot-cadvisor:8080`
+| Mode | When | What ArcanaAI does |
+|---|---|---|
+| **Pull** | ArcanaAI is on the **same Docker host** as the stack | Expose `/metrics`, share `localnet`. The central repo adds `prometheus/targets/arcana-ai.yml`. No agent, no public endpoint. |
+| **Push** | ArcanaAI runs on a **different host** | Run the central repo's `agent/` next to ArcanaAI. It scrapes `tarot-backend:8000/metrics` locally and pushes to the ingest URL with a token. |
 
-Grafana is auto-provisioned via
-`monitoring/grafana/provisioning/`:
+The ArcanaAI backend already exposes Prometheus metrics at `GET /metrics`
+(see `backend/utils/metrics.py` and `backend/app.py:79`), so the ArcanaAI side
+of either mode is wiring, not code.
 
-- `datasources/datasources.yml` adds the Prometheus data source
-  (UID `prometheus`) — **use this UID in every panel query**.
-- `dashboards/dashboards.yml` loads any JSON dropped into
-  `monitoring/grafana/dashboards/`.
+### Select on labels, not on `job`
 
-There are 3 starter dashboard JSONs already, plus prebuilt alert rules
-in `monitoring/prometheus/rules/tarot_alerts.yml`. Treat those as
-ArcanaAI references, not as the entire personal Grafana site.
+Under the central stack the pull job is shared (`projects`, via file-based
+discovery) and pushed series come from the agent — so **don't select by
+`job="tarot-backend"`**. Every ArcanaAI series instead carries:
+
+- `project="arcana-ai"`
+- `component="backend"` (or `frontend`, `node-exporter`, `cadvisor`, …)
+- `env="production"`
+
+Use those in queries and as Grafana `$project` / `$component` variables. That is
+also what lets one dashboard switch between ArcanaAI and future projects.
 
 ### Recommended conventions for multiple projects
 
@@ -133,30 +142,11 @@ Use these conventions from day one so adding projects later is easy:
 
 | Convention | Recommendation |
 |---|---|
-| Prometheus job names | `<project>-<component>`, e.g. `arcana-ai-backend`, `blog-api`, `trading-bot-worker` |
-| Static labels | Add `project`, `component`, and `env` labels to every scrape job |
-| Grafana folders | One folder per project (`ArcanaAI`, `Personal Blog`, etc.) plus one `Shared Infrastructure` folder |
-| Dashboard variables | Add a top-level `$project` variable to shared dashboards |
-| Public exposure | Publish only Grafana through HTTPS; keep Prometheus, cAdvisor, and node-exporter private |
-| Secrets | Keep admin passwords, SMTP credentials, OAuth secrets, and webhook URLs in `.env`, never in git |
-
-For ArcanaAI, prefer this scrape naming when you are ready to update
-`monitoring/prometheus/prometheus.yml`:
-
-```yaml
-- job_name: "arcana-ai-backend"
-  static_configs:
-    - targets: ["tarot-backend:8000"]
-      labels:
-        project: "arcana-ai"
-        component: "backend"
-        env: "production"
-  metrics_path: "/metrics"
-  scrape_interval: 10s
-```
-
-That single `project` label lets one Grafana dashboard switch between
-projects later.
+| Target labels | Always set `project`, `component`, `env` — both pull target files and the agent config do this. |
+| Grafana folders | One folder per project (`ArcanaAI`, `Personal Blog`, …) plus one `Shared Infrastructure` folder. |
+| Dashboard variables | A top-level `$project` variable on shared dashboards. |
+| Public exposure | Only Grafana (view) and the authenticated `/api/v1/write` (ingest) are public; keep the Prometheus UI, cAdvisor, and node-exporter private. |
+| Secrets | Keep admin passwords, push tokens, SMTP credentials, and webhook URLs in `.env`, never in git. |
 
 ---
 
@@ -186,81 +176,14 @@ Rule of thumb for panel choice:
 
 ---
 
-## 4. Setup Grafana from scratch for grafana.nguyenvanloc.com
+## 4. Connect ArcanaAI to the central monitoring stack
 
-You're starting from zero. These steps assume a fresh VPS or server that
-will host your personal monitoring stack and expose only Grafana at
-`https://grafana.nguyenvanloc.com`.
+> Operating the stack itself — DNS, the shared `localnet` network, `.env`,
+> Grafana admin, the reverse proxy with the `grafana` and `metrics` vhosts, and
+> starting the containers — lives in the **central repo's `README.md`**. Stand
+> that up first. This section is only the ArcanaAI side.
 
-> If you are only testing locally, replace `grafana.nguyenvanloc.com`
-> with `localhost:3002` and skip the DNS / HTTPS reverse-proxy steps.
-
-### 4.1 Prerequisites
-
-- A server/VPS with Docker Engine ≥ 20.10 and Docker Compose v2
-  (`docker compose ...`, not `docker-compose ...`).
-- SSH access to the server.
-- DNS access for `nguyenvanloc.com`.
-- Ports `80` and `443` open to the internet for HTTPS.
-- Monitoring ports kept private or firewall-restricted:
-  - `3002` Grafana container port on the host.
-  - `9090` Prometheus.
-  - `8090` cAdvisor.
-  - `9200` node-exporter.
-- This repository checked out on the server.
-- The ArcanaAI backend `.env` file at `backend/.env` exists and is
-  populated if this same server is also running ArcanaAI.
-
-Check listening ports before starting:
-
-```bash
-ss -tlnp | grep -E ':(80|443|3002|9090|8090|9200) '
-```
-
-### 4.2 Point DNS at the monitoring server
-
-Create a DNS record:
-
-| Type | Name | Value |
-|---|---|---|
-| `A` | `grafana` | Your server IPv4 address |
-| `AAAA` | `grafana` | Your server IPv6 address, if you use IPv6 |
-
-Verify DNS from your machine:
-
-```bash
-dig +short grafana.nguyenvanloc.com
-```
-
-Do not continue with HTTPS setup until this returns your server IP.
-
-### 4.3 Create the shared Docker network
-
-All compose files in this repo attach to an **external** network called
-`localnet`. Prometheus uses container DNS over that network to reach
-ArcanaAI (`tarot-backend:8000`), so create it before starting either the
-app or monitoring stack:
-
-```bash
-docker network create localnet || true
-```
-
-Verify:
-
-```bash
-docker network ls | grep localnet
-```
-
-### 4.4 Start ArcanaAI if this server will monitor the local app
-
-If ArcanaAI runs on the same Docker host as Prometheus, start it first:
-
-```bash
-# From the repo root
-docker compose -f docker-compose.yaml up -d
-```
-
-Verify the backend exposes metrics:
+### 4.1 Confirm ArcanaAI exposes metrics
 
 ```bash
 docker exec tarot-backend curl -s http://localhost:8000/metrics | grep -E '^tarot_' | head
@@ -269,247 +192,66 @@ docker exec tarot-backend curl -s http://localhost:8000/metrics | grep -E '^taro
 You should see lines like `tarot_active_users 0.0`. If you see nothing:
 
 - `docker logs tarot-backend --tail 100` — look for import errors.
-- Confirm `setup_metrics(app)` is called in the backend app startup.
+- Confirm `setup_metrics(app)` runs at backend startup.
 
-If ArcanaAI runs on another host, skip this step and add a remote scrape
-job in [4.8](#48-add-arcanaai-and-future-projects-as-prometheus-targets).
+### 4.2 Pick pull or push
 
-### 4.5 Create the monitoring environment file
+**Pull — ArcanaAI shares the stack's Docker host (simplest).**
 
-Grafana refuses to start without `GRAFANA_ADMIN_PASSWORD`. Put secrets
-in a local `.env` file and never commit it:
+1. Make sure `tarot-backend` is on the external `localnet` network (it already
+   is in `docker-compose.yaml`) and the central stack joins `localnet` too.
+2. In the central repo, add `prometheus/targets/arcana-ai.yml`:
+   ```yaml
+   - targets: ["tarot-backend:8000"]
+     labels:
+       project: "arcana-ai"
+       component: "backend"
+       env: "production"
+   ```
+   (The `central-monitoring/` draft already ships this file.) Prometheus reloads
+   target files automatically — no restart needed.
 
-```bash
-# Repo root
-cat > .env <<'EOF'
-GRAFANA_ADMIN_USER=admin
-GRAFANA_ADMIN_PASSWORD=replace-with-a-long-random-password
-GRAFANA_DOMAIN=grafana.nguyenvanloc.com
-GRAFANA_ROOT_URL=https://grafana.nguyenvanloc.com/
-EOF
-chmod 600 .env
-```
+**Push — ArcanaAI runs on a different host.**
 
-Verify the file is ignored by git:
+1. Copy the central repo's `agent/` folder onto ArcanaAI's host.
+2. `cp agent/.env.example agent/.env` and set `PROJECT_NAME=arcana-ai`,
+   `APP_METRICS_ADDRESS=tarot-backend:8000`, the `METRICS_REMOTE_WRITE_URL`, and
+   the basic-auth token from the central stack.
+3. Start it:
+   ```bash
+   docker compose -f agent/docker-compose.agent.yaml --env-file agent/.env up -d
+   ```
 
-```bash
-git check-ignore -v .env
-```
+Either way, ArcanaAI's series arrive labelled `project="arcana-ai"`.
 
-If that command prints nothing, add `.env` to `.gitignore` before you
-continue.
+### 4.3 Verify the connection
 
-### 4.6 Add a production override for the personal domain
-
-The checked-in compose file is local-friendly. For your personal site,
-add a local override file that binds Grafana and Prometheus to localhost
-only and tells Grafana its real public URL:
-
-```bash
-cat > monitoring-docker-compose.prod.override.yaml <<'EOF'
-services:
-  grafana:
-    ports:
-      - "127.0.0.1:3002:3000"
-    environment:
-      - GF_SERVER_DOMAIN=${GRAFANA_DOMAIN}
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL}
-      - GF_SERVER_SERVE_FROM_SUB_PATH=false
-      - GF_SECURITY_COOKIE_SECURE=true
-      - GF_SECURITY_COOKIE_SAMESITE=lax
-  prometheus:
-    ports:
-      - "127.0.0.1:9090:9090"
-  cadvisor:
-    ports:
-      - "127.0.0.1:8090:8080"
-  node-exporter:
-    ports:
-      - "127.0.0.1:9200:9100"
-EOF
-```
-
-This file can stay uncommitted if it is specific to your server. The key
-security point is that **only the reverse proxy should be reachable from
-the public internet**.
-
-### 4.7 Label ArcanaAI targets for multi-project dashboards
-
-Update `monitoring/prometheus/prometheus.yml` so ArcanaAI targets carry
-stable labels. Example for the backend:
-
-```yaml
-  - job_name: "arcana-ai-backend"
-    static_configs:
-      - targets: ["tarot-backend:8000"]
-        labels:
-          project: "arcana-ai"
-          component: "backend"
-          env: "production"
-    metrics_path: "/metrics"
-    scrape_interval: 10s
-```
-
-You can do the same for the frontend, node-exporter, and cAdvisor jobs.
-For cAdvisor, the `project` label means "this exporter belongs to the
-host that runs ArcanaAI"; individual container names still come from the
-`name` label in cAdvisor metrics.
-
-After editing, validate the Prometheus config before restarting:
-
-```bash
-docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" prom/prometheus:latest promtool check config /etc/prometheus/prometheus.yml
-```
-
-### 4.8 Add ArcanaAI and future projects as Prometheus targets
-
-For each new project, add another scrape job with a unique `project`
-label. Examples:
-
-```yaml
-  - job_name: "personal-blog-api"
-    static_configs:
-      - targets: ["blog-api:8080"]
-        labels:
-          project: "personal-blog"
-          component: "api"
-          env: "production"
-    metrics_path: "/metrics"
-
-  - job_name: "remote-worker"
-    static_configs:
-      - targets: ["10.0.0.25:9105"]
-        labels:
-          project: "automation"
-          component: "worker"
-          env: "production"
-```
-
-For remote servers, prefer a private network such as WireGuard/Tailscale
-between Prometheus and the target. Do **not** expose `/metrics` publicly
-without authentication or network restrictions.
-
-### 4.9 Start the monitoring stack
-
-Start Grafana, Prometheus, cAdvisor, and node-exporter with your
-production override:
-
-```bash
-docker compose \
-  -f monitoring-docker-compose.yaml \
-  -f monitoring-docker-compose.prod.override.yaml \
-  --env-file .env \
-  up -d
-```
-
-Confirm all four monitoring containers came up:
-
-```bash
-docker ps --filter 'name=tarot-' --format 'table {{.Names}}\t{{.Status}}'
-```
-
-Expect to see `tarot-prometheus`, `tarot-grafana`, `tarot-cadvisor`, and
-`tarot-node-exporter` all `Up`.
-
-If Grafana keeps restarting:
-
-```bash
-docker logs tarot-grafana --tail 50
-```
-
-The most common error is a missing `GRAFANA_ADMIN_PASSWORD`; re-check
-[4.5](#45-create-the-monitoring-environment-file).
-
-### 4.10 Put HTTPS in front of Grafana
-
-Use a reverse proxy to terminate TLS and forward only Grafana traffic to
-`127.0.0.1:3002`. Caddy is the simplest option because it manages
-Let's Encrypt certificates automatically.
-
-Install Caddy, then create `/etc/caddy/Caddyfile`:
-
-```caddyfile
-grafana.nguyenvanloc.com {
-  reverse_proxy 127.0.0.1:3002
-}
-```
-
-Reload Caddy:
-
-```bash
-sudo caddy fmt --overwrite /etc/caddy/Caddyfile
-sudo systemctl reload caddy
-```
-
-Verify from your laptop/browser:
-
-```bash
-curl -I https://grafana.nguyenvanloc.com/login
-```
-
-You should get an HTTP response from Grafana, not a connection timeout.
-
-### 4.11 Verify Prometheus scraping
-
-Open Prometheus through an SSH tunnel instead of exposing it publicly:
+Reach Prometheus through an SSH tunnel (it stays private):
 
 ```bash
 ssh -L 9090:127.0.0.1:9090 your-user@your-server
+# open http://localhost:9090/targets  — for pull, the arcana-ai target is UP
 ```
 
-Then open <http://localhost:9090/targets>. You want every required job
-`UP`:
+Or in Grafana → Explore:
 
-| Job | Endpoint | Expected |
-|---|---|---|
-| `prometheus` | `localhost:9090/metrics` | UP |
-| `arcana-ai-backend` or `tarot-backend` | `tarot-backend:8000/metrics` | UP |
-| `arcana-ai-frontend` or `tarot-frontend` | `tarot-frontend:3000/api/metrics` | DOWN until you add a Next.js metrics route. OK to ignore for now. |
-| `node-exporter` | `tarot-node-exporter:9100/metrics` | UP |
-| `cadvisor` | `tarot-cadvisor:8080/metrics` | UP |
+```promql
+up{project="arcana-ai"}                     # pull: 1 = healthy
+count by (project) (scrape_samples_scraped) # push: arcana-ai should appear
+```
 
-Troubleshooting a DOWN backend target:
+Troubleshooting a DOWN pull target:
 
-1. *Connection refused* — backend container is not on `localnet`. Check
-   with `docker inspect tarot-backend -f '{{json .NetworkSettings.Networks}}'`.
-2. *No such host* — DNS lookup failed; Prometheus is on a different
-   Docker network than the backend.
-3. *Connection timeout* — backend is up but slow to respond. Curl from
-   inside the Prometheus container:
-   ```bash
-   docker exec tarot-prometheus wget -qO- http://tarot-backend:8000/metrics | head
-   ```
+1. *Connection refused / no such host* — `tarot-backend` is not on `localnet`
+   with Prometheus. Check
+   `docker inspect tarot-backend -f '{{json .NetworkSettings.Networks}}'`.
+2. *Timeout* — backend is slow; curl from inside Prometheus:
+   `docker exec monitoring-prometheus wget -qO- http://tarot-backend:8000/metrics | head`.
 
-Run a smoke-test query in Prometheus: open <http://localhost:9090/graph>,
-run `up`, and confirm you get one row per target.
+### 4.4 Generate a little traffic
 
-### 4.12 First Grafana login
-
-Open <https://grafana.nguyenvanloc.com>:
-
-- User: `admin`
-- Password: whatever you set in `.env`
-
-Then:
-
-1. **Change the admin password** at first prompt.
-2. Go to `Connections → Data sources`. There should already be a
-   Prometheus data source named "Prometheus" provisioned from
-   `monitoring/grafana/provisioning/datasources/datasources.yml`.
-   Click it, scroll to bottom, click **Save & test**. You want a green
-   "Successfully queried the Prometheus API.".
-3. Go to `Dashboards`. You'll see the provisioned ArcanaAI starter
-   dashboards. Open `tarot-overview` — if panels render data, your
-   pipeline works: ArcanaAI → Prometheus → Grafana → HTTPS domain.
-4. Create folders:
-   - `ArcanaAI`
-   - `Shared Infrastructure`
-   - One folder for each future project.
-
-### 4.13 Generate traffic so dashboards have data
-
-Brand-new Prometheus = empty time series database. Counters need a few
-data points before `rate()` returns anything. Generate a little traffic:
+A brand-new Prometheus has an empty TSDB; counters need a few samples before
+`rate()` returns anything:
 
 ```bash
 for i in $(seq 1 200); do
@@ -518,55 +260,21 @@ for i in $(seq 1 200); do
 done
 ```
 
-Wait ~30s, then refresh Grafana. Panels driven by
-`rate(http_requests_total[...])` should now have data.
-
-### 4.14 Stopping / cleaning up
-
-```bash
-# Stop monitoring only, keep data
-docker compose \
-  -f monitoring-docker-compose.yaml \
-  -f monitoring-docker-compose.prod.override.yaml \
-  down
-
-# Stop AND wipe Prometheus + Grafana data (starting over)
-docker compose \
-  -f monitoring-docker-compose.yaml \
-  -f monitoring-docker-compose.prod.override.yaml \
-  down -v
-```
-
-The `-v` flag deletes the named volumes `prometheus-data` and
-`grafana-data`. Do not run that in production unless you mean it.
-
-### 4.15 Setup recap
-
-You should now have:
-
-- DNS for `grafana.nguyenvanloc.com` pointing at your monitoring server.
-- HTTPS reverse proxy forwarding `grafana.nguyenvanloc.com` to Grafana.
-- `localnet` Docker network created.
-- Monitoring stack up: `tarot-prometheus`, `tarot-grafana`,
-  `tarot-cadvisor`, `tarot-node-exporter`.
-- ArcanaAI scraped by Prometheus with a `project="arcana-ai"` label.
-- Prometheus, cAdvisor, and node-exporter reachable only locally or over
-  SSH/private networking.
-- Grafana reachable at <https://grafana.nguyenvanloc.com> with the
-  Prometheus data source connected.
-- A path for adding more projects: add a scrape job, add labels, build a
-  folder/dashboard, then alert on it.
-
-If all of that is true, you're ready for the rest of this guide.
+Wait ~30s, refresh Grafana, and the ArcanaAI dashboards (Section 6) should have
+data. From here on, the rest of this guide — PromQL, dashboards, alerts — is the
+same regardless of pull vs push, because it all keys off the `project` and
+`component` labels.
 
 ---
 
 ## 5. PromQL primer with this project's metrics
 
-Three function patterns cover ~90% of dashboards. The examples below keep the
-current repo job name (`tarot-backend`) so they work with the checked-in config;
-if you renamed the job to `arcana-ai-backend` in Section 4, replace the job
-selector or filter by `project="arcana-ai"` instead.
+Three function patterns cover ~90% of dashboards. The example queries below are
+written with `job="tarot-backend"`, but under the **central stack** ArcanaAI is
+scraped by the shared `projects` job (or pushed via the agent), so its series
+carry `project="arcana-ai"` and `component="backend"` instead. **Swap
+`job="tarot-backend"` → `project="arcana-ai"`** in every query below (add
+`component="backend"` to disambiguate if needed).
 
 ```promql
 # Per-second rate of a counter over the last 5 minutes
@@ -824,9 +532,9 @@ built-in — don't redefine them.
 
 There are two ways to do alerts and they coexist:
 
-- **Prometheus alert rules** — defined as YAML in
-  `monitoring/prometheus/rules/`. Already populated
-  (`tarot_alerts.yml`). Use these for stable, codified production
+- **Prometheus alert rules** — defined as YAML in the central repo's
+  `prometheus/rules/`. ArcanaAI's rules (`tarot_alerts.yml`) move there
+  alongside the shared ones. Use these for stable, codified production
   alerts.
 - **Grafana-managed alerts** — defined in the Grafana UI under
   `Alerting → Alert rules`. Use these while learning and for alerts
@@ -874,7 +582,7 @@ you'll add nested policies that route on labels like
 | Memory pressure | `container_memory_usage_bytes{name="tarot-backend"} / container_spec_memory_limit_bytes{name="tarot-backend"} > 0.85` | 5m | warning |
 | Low disk | `node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.1` | 5m | critical |
 
-These mirror `monitoring/prometheus/rules/tarot_alerts.yml` — compare
+These mirror the central repo's `prometheus/rules/tarot_alerts.yml` — compare
 your rules to that YAML once you're done to see how they translate.
 
 ---
@@ -948,10 +656,10 @@ These need a few lines of backend code first. Listed in order of value.
 - **`clamp_min(x, 1e-9)` in denominators** — protects against
   divide-by-zero when there's no traffic.
 - **Save dashboards as JSON to git.** Once you're happy with a
-  dashboard, `Dashboard settings → JSON Model → Copy`, paste into
-  `monitoring/grafana/dashboards/<name>.json`, commit. Provisioning
-  will load it on the next Grafana restart. This is the workflow that
-  makes dashboards reproducible.
+  dashboard, `Dashboard settings → JSON Model → Copy`, paste into the
+  central repo's `grafana/dashboards/arcana-ai/<name>.json`, commit.
+  Provisioning will load it on the next Grafana restart. This is the
+  workflow that makes dashboards reproducible.
 - **One dashboard per audience, not per metric.** Resist the urge to
   build "the dashboard with everything". You'll never open it.
 - **Time range matters.** A `rate(...[5m])` panel viewed over a 24h
@@ -965,9 +673,10 @@ These need a few lines of backend code first. Listed in order of value.
 
 ## Suggested learning order
 
-1. Follow [Section 4](#4-setup-grafana-from-scratch-for-grafananguyenvanloccom) end-to-end. Confirm all
-   targets are `UP` in Prometheus and the provisioned dashboards show
-   data.
+1. Stand up the central stack (its repo's `README.md`), then follow
+   [Section 4](#4-connect-arcanaai-to-the-central-monitoring-stack) to connect
+   ArcanaAI. Confirm its target is `UP` in Prometheus and the provisioned
+   dashboards show data.
 2. In Grafana `Explore`, run the queries from [section 5](#5-promql-primer-with-this-projects-metrics)
    one by one. Don't continue until each returns data.
 3. Build **Dashboard 1 (Golden signals)** from scratch. Don't copy the
