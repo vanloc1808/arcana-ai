@@ -37,6 +37,8 @@ class Settings(BaseSettings):
         OPENAI_MODEL (str): OpenAI model name.
         OPENAI_TEMPERATURE (float): OpenAI model temperature.
         OPENAI_MAX_TOKENS (int): Max tokens for OpenAI responses.
+        OPENAI_INPUT_COST_USD_PER_1M_TOKENS (float): Optional input token price for cost metrics.
+        OPENAI_OUTPUT_COST_USD_PER_1M_TOKENS (float): Optional output token price for cost metrics.
         MAIL_USERNAME (str): Email username.
         MAIL_PASSWORD (str): Email password.
         MAIL_FROM (str): Email sender address.
@@ -115,6 +117,8 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     OPENAI_TEMPERATURE: float = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
     OPENAI_MAX_TOKENS: int = int(os.getenv("OPENAI_MAX_TOKENS", "800"))
+    OPENAI_INPUT_COST_USD_PER_1M_TOKENS: float = float(os.getenv("OPENAI_INPUT_COST_USD_PER_1M_TOKENS", "0"))
+    OPENAI_OUTPUT_COST_USD_PER_1M_TOKENS: float = float(os.getenv("OPENAI_OUTPUT_COST_USD_PER_1M_TOKENS", "0"))
 
     # Web Push (VAPID) Settings — leave blank to disable web push
     WEBPUSH_PUBLIC_KEY: str = os.getenv("WEBPUSH_PUBLIC_KEY", "")

@@ -28,6 +28,12 @@ from utils.error_handlers import (
     ResourceNotFoundError,
     logger,
 )
+from utils.metrics import (
+    record_chat_conversation,
+    record_chat_message,
+    record_openai_request,
+    set_active_chat_conversations,
+)
 from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -39,6 +45,46 @@ CARD_DRAW_ANIMATION_SECONDS = 5
 
 # Initialize TarotReader
 reader = TarotReader()
+
+
+def _openai_token_usage(response) -> tuple[int, int]:
+    usage = getattr(response, "usage_metadata", {}) or {}
+    metadata = getattr(response, "response_metadata", {}) or {}
+    token_usage = metadata.get("token_usage", {}) or {}
+    prompt_tokens = int(usage.get("input_tokens") or token_usage.get("prompt_tokens") or 0)
+    completion_tokens = int(usage.get("output_tokens") or token_usage.get("completion_tokens") or 0)
+    return prompt_tokens, completion_tokens
+
+
+def _estimate_openai_cost_usd(prompt_tokens: int, completion_tokens: int) -> float:
+    input_cost = prompt_tokens * settings.OPENAI_INPUT_COST_USD_PER_1M_TOKENS / 1_000_000
+    output_cost = completion_tokens * settings.OPENAI_OUTPUT_COST_USD_PER_1M_TOKENS / 1_000_000
+    return input_cost + output_cost
+
+
+def _record_openai_success(response, start_time: float, operation: str = "chat_message") -> None:
+    prompt_tokens, completion_tokens = _openai_token_usage(response)
+    record_openai_request(
+        env=settings.FASTAPI_ENV,
+        model=settings.OPENAI_MODEL,
+        operation=operation,
+        status="success",
+        duration=time.perf_counter() - start_time,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        cost_usd=_estimate_openai_cost_usd(prompt_tokens, completion_tokens),
+    )
+
+
+def _record_openai_error(exc: Exception, start_time: float, operation: str = "chat_message") -> None:
+    record_openai_request(
+        env=settings.FASTAPI_ENV,
+        model=settings.OPENAI_MODEL,
+        operation=operation,
+        status="error",
+        duration=time.perf_counter() - start_time,
+        error_type=type(exc).__name__,
+    )
 
 
 def load_system_prompt() -> str:
@@ -398,6 +444,9 @@ def create_chat_session(
         db.add(db_chat)
         db.commit()
         db.refresh(db_chat)
+        active_count = db.query(ChatSession).count()
+        record_chat_conversation(settings.FASTAPI_ENV, source="api", status="created")
+        set_active_chat_conversations(settings.FASTAPI_ENV, active_count)
 
         logger.logger.info(
             "Chat session created",
@@ -412,6 +461,7 @@ def create_chat_session(
         raise
     except Exception as e:
         db.rollback()
+        record_chat_conversation(settings.FASTAPI_ENV, source="api", status="error")
         logger.logger.error(
             "Error creating chat session",
             extra={"error": str(e), "user_id": current_user.id, "title": chat.title},
@@ -662,6 +712,9 @@ def delete_chat_session(
 
         db.delete(session)
         db.commit()
+        active_count = db.query(ChatSession).count()
+        record_chat_conversation(settings.FASTAPI_ENV, source="api", status="deleted")
+        set_active_chat_conversations(settings.FASTAPI_ENV, active_count)
 
         logger.logger.info(
             "Chat session deleted",
@@ -674,6 +727,7 @@ def delete_chat_session(
         raise
     except Exception as e:
         db.rollback()
+        record_chat_conversation(settings.FASTAPI_ENV, source="api", status="error")
         logger.logger.error(
             "Error deleting chat session",
             extra={
@@ -904,8 +958,10 @@ async def create_message(
         try:
             db.commit()
             db.refresh(user_message)
+            record_chat_message(settings.FASTAPI_ENV, role="user", status="success")
         except Exception as db_exc:
             db.rollback()
+            record_chat_message(settings.FASTAPI_ENV, role="user", status="error")
             logger.logger.error(
                 "Error saving user message before streaming",
                 extra={
@@ -983,7 +1039,14 @@ async def create_message(
                     f"Invoking LLM with {len(messages_for_llm)} messages and {len(available_tools)} tools available"
                 )
 
-                llm_response = llm.bind_tools(available_tools).invoke(messages_for_llm)
+                openai_start_time = time.perf_counter()
+                try:
+                    llm_response = llm.bind_tools(available_tools).invoke(messages_for_llm)
+                except Exception as exc:
+                    _record_openai_error(exc, openai_start_time)
+                    raise
+                else:
+                    _record_openai_success(llm_response, openai_start_time)
 
                 if llm_response.tool_calls:
                     logger.logger.info(
@@ -1003,7 +1066,14 @@ async def create_message(
                         yield f"data: {json.dumps({'type': 'session_renamed', 'title': renamed_title})}\n\n"
 
                     if not tool_call:
-                        llm_response = llm.bind_tools([DRAW_CARDS_TOOL]).invoke(messages_for_llm)
+                        openai_start_time = time.perf_counter()
+                        try:
+                            llm_response = llm.bind_tools([DRAW_CARDS_TOOL]).invoke(messages_for_llm)
+                        except Exception as exc:
+                            _record_openai_error(exc, openai_start_time)
+                            raise
+                        else:
+                            _record_openai_success(llm_response, openai_start_time)
                         if llm_response.tool_calls:
                             tool_call, renamed_title = handle_llm_tool_calls(
                                 llm_response.tool_calls,
@@ -1110,6 +1180,7 @@ async def create_message(
 
                             db.commit()
                             db.refresh(ai_message)
+                            record_chat_message(settings.FASTAPI_ENV, role="assistant", status="success")
 
                             ai_message_response_pydantic = MessageResponse.from_orm(ai_message)
                             # Pydantic V2 style for a dict ready for json.dumps
@@ -1150,6 +1221,7 @@ async def create_message(
                                 db.add(error_message)
                                 db.commit()
                                 db.refresh(error_message)
+                                record_chat_message(settings.FASTAPI_ENV, role="assistant", status="error")
 
                                 error_message_response = MessageResponse.from_orm(error_message)
                                 message_dict_error = error_message_response.model_dump(mode="json")
@@ -1167,10 +1239,23 @@ async def create_message(
 
                 else:
                     response_content = ""
-                    async for chunk in llm.astream(messages_for_llm):
-                        if chunk.content:
-                            response_content += chunk.content  # Accumulate content for saving
-                            yield f"data: {json.dumps({'type': 'content_chunk', 'content': chunk.content})}\n\n"
+                    openai_start_time = time.perf_counter()
+                    try:
+                        async for chunk in llm.astream(messages_for_llm):
+                            if chunk.content:
+                                response_content += chunk.content  # Accumulate content for saving
+                                yield f"data: {json.dumps({'type': 'content_chunk', 'content': chunk.content})}\n\n"
+                    except Exception as exc:
+                        _record_openai_error(exc, openai_start_time)
+                        raise
+                    else:
+                        record_openai_request(
+                            env=settings.FASTAPI_ENV,
+                            model=settings.OPENAI_MODEL,
+                            operation="chat_message",
+                            status="success",
+                            duration=time.perf_counter() - openai_start_time,
+                        )
 
                     # Save the complete AI response if no tools were called
                     if response_content:  # Ensure there's content to save
@@ -1195,6 +1280,7 @@ async def create_message(
                         db.add(ai_message)
                         db.commit()
                         db.refresh(ai_message)
+                        record_chat_message(settings.FASTAPI_ENV, role="assistant", status="success")
 
                         no_tool_ai_message_response = MessageResponse.from_orm(ai_message)
                         # Pydantic V2 style for a dict ready for json.dumps
@@ -1222,6 +1308,7 @@ async def create_message(
                         db.add(empty_ai_message)
                         db.commit()
                         db.refresh(empty_ai_message)
+                        record_chat_message(settings.FASTAPI_ENV, role="assistant", status="error")
                         empty_message_response = MessageResponse.from_orm(empty_ai_message)
                         message_dict_empty = empty_message_response.model_dump(mode="json")
                         event_payload_empty = {
@@ -1240,6 +1327,7 @@ async def create_message(
                 )
 
             except Exception as e_stream:
+                record_chat_message(settings.FASTAPI_ENV, role="assistant", status="error")
                 logger.logger.error(f"Error during streaming response: {e_stream}", exc_info=True)
                 raise HTTPException(
                     status_code=500, detail=f"An unexpected error occurred during response generation: {str(e_stream)}"

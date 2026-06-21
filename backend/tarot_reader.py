@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import random
+import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
@@ -10,6 +11,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from sqlalchemy.orm import Session
+
+from config import settings
+from utils.metrics import record_openai_request
 
 # Configure logging
 logging.basicConfig(
@@ -153,7 +157,7 @@ class TarotReader:
             shuffled.extend(left)
             shuffled.extend(right)
             deck = shuffled
-            logger.info(f"Completed shuffle {i+1}/{num_shuffles}")
+            logger.info(f"Completed shuffle {i + 1}/{num_shuffles}")
 
         # Draw cards
         logger.info("Drawing cards...")
@@ -188,8 +192,8 @@ class TarotReader:
             drawn.append(card_copy)
             logger.info(
                 (
-                    f"Drew card {i+1}: {card_copy['name']} ({card_copy['orientation']}) in position "
-                    f"'{card_copy.get('position', f'Card {i+1}')}'"
+                    f"Drew card {i + 1}: {card_copy['name']} ({card_copy['orientation']}) in position "
+                    f"'{card_copy.get('position', f'Card {i + 1}')}'"
                 ),
             )
 
@@ -230,11 +234,33 @@ class TarotReader:
         logger.info("Generating reading with language model...")
         prompt = ChatPromptTemplate.from_template(template)
         chain = prompt | self.llm | self.output_parser
+        start_time = time.perf_counter()
+        model = getattr(self.llm, "model_name", settings.OPENAI_MODEL)
+        operation = "tarot_interpretation"
 
         # Generate the reading in streaming mode
-        async for chunk in chain.astream({"concern": concern, "cards": cards_text}):
-            yield chunk
-            await asyncio.sleep(0)  # Allow other tasks to run
+        try:
+            async for chunk in chain.astream({"concern": concern, "cards": cards_text}):
+                yield chunk
+                await asyncio.sleep(0)  # Allow other tasks to run
+        except Exception as exc:
+            record_openai_request(
+                env=settings.FASTAPI_ENV,
+                model=model,
+                operation=operation,
+                status="error",
+                duration=time.perf_counter() - start_time,
+                error_type=type(exc).__name__,
+            )
+            raise
+        else:
+            record_openai_request(
+                env=settings.FASTAPI_ENV,
+                model=model,
+                operation=operation,
+                status="success",
+                duration=time.perf_counter() - start_time,
+            )
 
         logger.info("Reading generation completed")
 
@@ -274,16 +300,39 @@ class TarotReader:
 
         prompt = ChatPromptTemplate.from_template(template)
         chain = prompt | self.llm | self.output_parser
-        async for chunk in chain.astream(
-            {
-                "person_a": person_a,
-                "person_b": person_b,
-                "focus_line": focus_line,
-                "cards": cards_text,
-            }
-        ):
-            yield chunk
-            await asyncio.sleep(0)
+        start_time = time.perf_counter()
+        model = getattr(self.llm, "model_name", settings.OPENAI_MODEL)
+        operation = "compatibility_interpretation"
+
+        try:
+            async for chunk in chain.astream(
+                {
+                    "person_a": person_a,
+                    "person_b": person_b,
+                    "focus_line": focus_line,
+                    "cards": cards_text,
+                }
+            ):
+                yield chunk
+                await asyncio.sleep(0)
+        except Exception as exc:
+            record_openai_request(
+                env=settings.FASTAPI_ENV,
+                model=model,
+                operation=operation,
+                status="error",
+                duration=time.perf_counter() - start_time,
+                error_type=type(exc).__name__,
+            )
+            raise
+        else:
+            record_openai_request(
+                env=settings.FASTAPI_ENV,
+                model=model,
+                operation=operation,
+                status="success",
+                duration=time.perf_counter() - start_time,
+            )
 
     async def create_compatibility_reading(
         self,
@@ -329,14 +378,36 @@ class TarotReader:
 
         prompt = ChatPromptTemplate.from_template(template)
         chain = prompt | self.llm | self.output_parser
-        result = await chain.ainvoke(
-            {
-                "person_a": person_a,
-                "person_b": person_b,
-                "focus_line": focus_line,
-                "cards": cards_text,
-            }
-        )
+        start_time = time.perf_counter()
+        model = getattr(self.llm, "model_name", settings.OPENAI_MODEL)
+        operation = "compatibility_interpretation"
+        try:
+            result = await chain.ainvoke(
+                {
+                    "person_a": person_a,
+                    "person_b": person_b,
+                    "focus_line": focus_line,
+                    "cards": cards_text,
+                }
+            )
+        except Exception as exc:
+            record_openai_request(
+                env=settings.FASTAPI_ENV,
+                model=model,
+                operation=operation,
+                status="error",
+                duration=time.perf_counter() - start_time,
+                error_type=type(exc).__name__,
+            )
+            raise
+        else:
+            record_openai_request(
+                env=settings.FASTAPI_ENV,
+                model=model,
+                operation=operation,
+                status="success",
+                duration=time.perf_counter() - start_time,
+            )
         logger.info("Compatibility reading generation completed")
         return result
 
