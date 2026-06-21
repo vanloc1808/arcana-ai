@@ -10,6 +10,7 @@ from jose import jwt
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from config import settings
+from utils.metrics import record_application_error
 from utils.telegram_alerts import is_telegram_configured, send_500_error_alert, send_user_error_alert
 
 
@@ -144,6 +145,30 @@ async def maybe_send_vip_error_alert(request: Request, status_code: int, error: 
         chat_id=settings.TELEGRAM_CHAT_ID,
         client_host=request.client.host if request.client else None,
         request_payload=request_payload,
+    )
+
+
+def _route_handler_label(request: Request) -> str:
+    scope = getattr(request, "scope", {}) or {}
+    route = scope.get("route") if isinstance(scope, dict) else None
+    route_path = getattr(route, "path", None)
+    if isinstance(route_path, str):
+        return route_path
+
+    url = getattr(request, "url", None)
+    url_path = getattr(url, "path", None)
+    if isinstance(url_path, str):
+        return url_path
+    if isinstance(url, str):
+        return url
+    return "unknown"
+
+
+def _record_application_error(request: Request, exc: Exception, error_type: str | None = None) -> None:
+    record_application_error(
+        env=settings.FASTAPI_ENV,
+        error_type=error_type or type(exc).__name__,
+        handler=_route_handler_label(request),
     )
 
 
@@ -349,6 +374,7 @@ async def tarot_exception_handler(request: Request, exc: TarotAPIException):
         )
 
     await maybe_send_vip_error_alert(request, exc.status_code, exc)
+    _record_application_error(request, exc, type(exc).__name__)
 
     return JSONResponse(
         status_code=exc.status_code,
@@ -359,6 +385,7 @@ async def tarot_exception_handler(request: Request, exc: TarotAPIException):
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     logger.log_request(request, error=exc)
     await maybe_send_vip_error_alert(request, status.HTTP_422_UNPROCESSABLE_ENTITY, exc)
+    _record_application_error(request, exc, "RequestValidationError")
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
@@ -388,6 +415,7 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
         )
 
     await maybe_send_vip_error_alert(request, status.HTTP_500_INTERNAL_SERVER_ERROR, exc)
+    _record_application_error(request, exc, "SQLAlchemyError")
 
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -415,6 +443,7 @@ async def general_exception_handler(request: Request, exc: Exception):
         )
 
     await maybe_send_vip_error_alert(request, status.HTTP_500_INTERNAL_SERVER_ERROR, exc)
+    _record_application_error(request, exc)
 
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -426,6 +455,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 async def integrity_error_handler(request: Request, exc: IntegrityError):
     logger.log_request(request, error=exc)
     await maybe_send_vip_error_alert(request, status.HTTP_409_CONFLICT, exc)
+    _record_application_error(request, exc, "IntegrityError")
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"error": "Database integrity error", "details": str(exc)},
@@ -435,6 +465,7 @@ async def integrity_error_handler(request: Request, exc: IntegrityError):
 async def operational_error_handler(request: Request, exc: OperationalError):
     logger.log_request(request, error=exc)
     await maybe_send_vip_error_alert(request, status.HTTP_503_SERVICE_UNAVAILABLE, exc)
+    _record_application_error(request, exc, "OperationalError")
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         content={"error": "Database operational error", "details": str(exc)},
