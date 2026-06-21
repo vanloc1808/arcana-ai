@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+import time
 from datetime import datetime, timedelta
 
 from celery import current_task
@@ -11,9 +12,19 @@ from celery_app import celery_app
 from config import settings
 from database import SessionLocal
 from models import Base, PasswordResetToken, User
+from utils.metrics import record_email_send
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+
+def _record_email_send(email_type: str, status: str, start_time: float) -> None:
+    record_email_send(
+        env=settings.FASTAPI_ENV,
+        email_type=email_type,
+        status=status,
+        duration=time.perf_counter() - start_time,
+    )
 
 """
 # Attempt to reuse the TestingSessionLocal defined in the unit tests' conftest, if available.
@@ -53,6 +64,7 @@ def send_password_reset_email_task(self, email: str, token: str, user_id: int | 
     Returns:
         dict: Task result with status and details
     """
+    email_type = "password_reset"
     try:
         # Create database session
         db = SessionLocal()
@@ -145,7 +157,14 @@ def send_password_reset_email_task(self, email: str, token: str, user_id: int | 
             # message.subtype = "html"
 
             # Send email
-            _send_email_sync(message)
+            start_time = time.perf_counter()
+            try:
+                _send_email_sync(message)
+            except Exception:
+                _record_email_send(email_type, "error", start_time)
+                raise
+            else:
+                _record_email_send(email_type, "success", start_time)
 
             logger.info(
                 "Password reset email sent successfully",
@@ -184,6 +203,7 @@ def send_welcome_email_task(self, email: str, username: str):
     Returns:
         dict: Task result with status and details
     """
+    email_type = "welcome"
     try:
         subject = "Welcome to ArcanaAI!"
         html_body = f"""
@@ -213,7 +233,14 @@ def send_welcome_email_task(self, email: str, username: str):
         )
 
         # Send email
-        _send_email_sync(message)
+        start_time = time.perf_counter()
+        try:
+            _send_email_sync(message)
+        except Exception:
+            _record_email_send(email_type, "error", start_time)
+            raise
+        else:
+            _record_email_send(email_type, "success", start_time)
 
         logger.info(
             "Welcome email sent successfully",
@@ -252,6 +279,7 @@ def send_reminder_email_task(self, email: str, username: str, reminder_type: str
     Returns:
         dict: Task result with status and details
     """
+    email_type = "reading_reminder"
     try:
         # Customize message based on reminder type and days since reading
         if reminder_type == "daily":
@@ -294,7 +322,14 @@ def send_reminder_email_task(self, email: str, username: str, reminder_type: str
         )
 
         # Send email
-        _send_email_sync(message)
+        start_time = time.perf_counter()
+        try:
+            _send_email_sync(message)
+        except Exception:
+            _record_email_send(email_type, "error", start_time)
+            raise
+        else:
+            _record_email_send(email_type, "success", start_time)
 
         logger.info(
             "Reminder email sent successfully",
@@ -346,6 +381,7 @@ def send_system_notification_email_task(
     Returns:
         dict: Task result with status and details
     """
+    email_type = "system_notification"
     try:
         successful_sends = []
         failed_sends = []
@@ -359,7 +395,14 @@ def send_system_notification_email_task(
                     subtype=MessageType.html,
                 )
 
-                _send_email_sync(message)
+                start_time = time.perf_counter()
+                try:
+                    _send_email_sync(message)
+                except Exception:
+                    _record_email_send(email_type, "error", start_time)
+                    raise
+                else:
+                    _record_email_send(email_type, "success", start_time)
                 successful_sends.append(email)
 
             except Exception as e:
@@ -415,6 +458,7 @@ def send_bulk_notification_email_task(
     Returns:
         dict: Task result with status and details
     """
+    email_type = "bulk_notification"
     try:
         successful_sends = []
         failed_sends = []
@@ -428,7 +472,14 @@ def send_bulk_notification_email_task(
                     subtype=MessageType.html,
                 )
 
-                _send_email_sync(message)
+                start_time = time.perf_counter()
+                try:
+                    _send_email_sync(message)
+                except Exception:
+                    _record_email_send(email_type, "error", start_time)
+                    raise
+                else:
+                    _record_email_send(email_type, "success", start_time)
                 successful_sends.append(email)
 
             except Exception as e:
