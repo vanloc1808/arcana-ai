@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import get_db
 from models import Card, DailyCardPull, Spread, User
 from routers.auth import get_current_user, get_optional_current_user
@@ -28,6 +29,7 @@ from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
 from utils.error_handlers import TarotAPIException, ValidationError, logger
+from utils.metrics import record_tarot_reading
 from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/tarot", tags=["tarot"])
@@ -48,11 +50,7 @@ async def get_featured_cards(
     favorite deck; otherwise the default deck is used.
     """
     deck_id = (current_user.favorite_deck_id if current_user else None) or DEFAULT_DECK_ID
-    major_arcana = (
-        db.query(Card)
-        .filter(Card.suit == "Major Arcana", Card.deck_id == deck_id)
-        .all()
-    )
+    major_arcana = db.query(Card).filter(Card.suit == "Major Arcana", Card.deck_id == deck_id).all()
     if not major_arcana:
         major_arcana = db.query(Card).filter(Card.suit == "Major Arcana").all()
     if not major_arcana:
@@ -90,12 +88,7 @@ async def get_card_of_the_day(
         .all()
     )
     if not major_arcana:
-        major_arcana = (
-            db.query(Card)
-            .filter(Card.suit == "Major Arcana")
-            .order_by(Card.id.asc())
-            .all()
-        )
+        major_arcana = db.query(Card).filter(Card.suit == "Major Arcana").order_by(Card.id.asc()).all()
     if not major_arcana:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -212,6 +205,8 @@ async def get_reading(
         The meanings are contextually generated based on the user's concern.
     """
     start_time = time.time()
+    reading_type = f"{request_data.num_cards}_card"
+    reading_status = "error"
 
     try:
         # Check and consume turns before generating reading
@@ -226,6 +221,7 @@ async def get_reading(
                 extra={"user_id": current_user.id},
             )
         elif not turn_result.success:
+            reading_status = "insufficient_turns"
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail={
@@ -241,6 +237,7 @@ async def get_reading(
         if request_data.spread_id:
             spread = db.query(Spread).filter(Spread.id == request_data.spread_id).first()
             if not spread:
+                reading_status = "validation_error"
                 raise ValidationError(
                     message="Spread not found",
                     details={"spread_id": request_data.spread_id},
@@ -248,9 +245,11 @@ async def get_reading(
             # Use spread's card count, but allow override if num_cards is explicitly provided
             if request_data.num_cards == 3:  # Default value, use spread's count
                 request_data.num_cards = spread.num_cards
+                reading_type = f"{request_data.num_cards}_card"
 
         # Validate number of cards
         if request_data.num_cards < 1 or request_data.num_cards > 10:
+            reading_status = "validation_error"
             raise ValidationError(
                 message="Invalid number of cards",
                 details={"num_cards": "Must be between 1 and 10"},
@@ -298,6 +297,7 @@ async def get_reading(
                 "deck_id": current_user.favorite_deck_id,
             },
         )
+        reading_status = "success"
         return response_cards
 
     except ValidationError:
@@ -308,6 +308,13 @@ async def get_reading(
             extra={"user_id": current_user.id, "error": str(e)},
         )
         raise TarotAPIException(message="Error generating reading", details={"error": str(e)})
+    finally:
+        record_tarot_reading(
+            env=settings.FASTAPI_ENV,
+            reading_type=reading_type,
+            status=reading_status,
+            duration=time.time() - start_time,
+        )
 
 
 COMPATIBILITY_SPREAD_NAME = "Relationship Cross"
@@ -339,24 +346,27 @@ async def get_compatibility_reading(
     provided names. Consumes one turn (same as a standard reading).
     """
     start_time = time.time()
-
-    spread = db.query(Spread).filter(Spread.name == COMPATIBILITY_SPREAD_NAME).first()
-    if not spread:
-        raise TarotAPIException(
-            message="Compatibility spread is not configured",
-            details={"spread_name": COMPATIBILITY_SPREAD_NAME},
-        )
+    reading_type = "compatibility"
+    reading_status = "error"
 
     try:
+        spread = db.query(Spread).filter(Spread.name == COMPATIBILITY_SPREAD_NAME).first()
+        if not spread:
+            reading_status = "not_found"
+            raise TarotAPIException(
+                message="Compatibility spread is not configured",
+                details={"spread_name": COMPATIBILITY_SPREAD_NAME},
+            )
         subscription_service = SubscriptionService()
         turn_result = subscription_service.consume_user_turn(db, current_user, usage_context="reading")
 
         if not turn_result.success and current_user.is_specialized_premium:
             logger.logger.warning(
-                "Turn consumption failed but user is specialized premium – proceeding",
+                "Turn consumption failed but user is specialized premium - proceeding",
                 extra={"user_id": current_user.id},
             )
         elif not turn_result.success:
+            reading_status = "insufficient_turns"
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail={
@@ -408,6 +418,7 @@ async def get_compatibility_reading(
                 "duration": duration,
             },
         )
+        reading_status = "success"
 
         return CompatibilityReadingResponse(
             person_a=request_data.person_a,
@@ -427,8 +438,13 @@ async def get_compatibility_reading(
             "Error generating compatibility reading",
             extra={"user_id": current_user.id, "error": str(e)},
         )
-        raise TarotAPIException(
-            message="Error generating compatibility reading", details={"error": str(e)}
+        raise TarotAPIException(message="Error generating compatibility reading", details={"error": str(e)})
+    finally:
+        record_tarot_reading(
+            env=settings.FASTAPI_ENV,
+            reading_type=reading_type,
+            status=reading_status,
+            duration=time.time() - start_time,
         )
 
 
@@ -464,9 +480,7 @@ async def interpret_compatibility_reading(
             "Error interpreting compatibility reading",
             extra={"user_id": current_user.id, "error": str(e)},
         )
-        raise TarotAPIException(
-            message="Error interpreting compatibility reading", details={"error": str(e)}
-        )
+        raise TarotAPIException(message="Error interpreting compatibility reading", details={"error": str(e)})
 
 
 @router.post("/compatibility/interpret/stream")
@@ -570,9 +584,7 @@ async def get_library_cards(
     if suit:
         query = query.filter(Card.suit.ilike(f"%{suit}%"))
     if search:
-        query = query.filter(
-            or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%"))
-        )
+        query = query.filter(or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%")))
 
     cards = query.order_by(Card.suit, Card.numerology.asc().nullslast(), Card.id).all()
 
@@ -582,9 +594,7 @@ async def get_library_cards(
         if suit:
             query = query.filter(Card.suit.ilike(f"%{suit}%"))
         if search:
-            query = query.filter(
-                or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%"))
-            )
+            query = query.filter(or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%")))
         cards = query.order_by(Card.suit, Card.numerology.asc().nullslast(), Card.id).all()
 
     return cards

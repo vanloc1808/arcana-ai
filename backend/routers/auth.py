@@ -35,6 +35,7 @@ from utils.error_handlers import (
     ValidationError,
     logger,
 )
+from utils.metrics import record_auth_attempt
 from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -305,6 +306,11 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
         # Check if username exists
         db_user = db.query(User).filter(User.username == user.username).first()
         if db_user:
+            record_auth_attempt(
+                settings.FASTAPI_ENV,
+                action="register",
+                status="validation_error",
+            )
             raise ValidationError(
                 message="Username already registered",
                 details={"username": user.username},
@@ -313,6 +319,11 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
         # Check if email exists
         db_user = db.query(User).filter(User.email == user.email).first()
         if db_user:
+            record_auth_attempt(
+                settings.FASTAPI_ENV,
+                action="register",
+                status="validation_error",
+            )
             raise ValidationError(message="Email already registered", details={"email": user.email})
 
         # Create new user
@@ -326,10 +337,20 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
             "User registered successfully",
             extra={"user_id": db_user.id, "username": db_user.username},
         )
+        record_auth_attempt(
+            settings.FASTAPI_ENV,
+            action="register",
+            status="success",
+        )
         return db_user
     except ValidationError:
         raise
     except Exception as e:
+        record_auth_attempt(
+            settings.FASTAPI_ENV,
+            action="register",
+            status="error",
+        )
         logger.logger.error("Error registering user", extra={"error": str(e), "username": user.username})
         raise TarotAPIException(message="Error registering user", details={"error": str(e)})
 
@@ -366,6 +387,11 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 
         user = db.query(User).filter(or_(User.username == form_data.username, User.email == form_data.username)).first()
         if not user:
+            record_auth_attempt(
+                settings.FASTAPI_ENV,
+                action="login",
+                status="rejected",
+            )
             logger.logger.warning(
                 "Login failed: User not found",
                 extra={"username_or_email": form_data.username},
@@ -376,6 +402,11 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             )
 
         if not user.verify_password(form_data.password):
+            record_auth_attempt(
+                settings.FASTAPI_ENV,
+                action="login",
+                status="rejected",
+            )
             logger.logger.warning(
                 "Login failed: Invalid password",
                 extra={"username_or_email": form_data.username},
@@ -389,6 +420,11 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             access_token = create_access_token(data={"sub": user.username})
             refresh_token = create_refresh_token(data={"sub": user.username})
         except Exception as token_error:
+            record_auth_attempt(
+                settings.FASTAPI_ENV,
+                action="login",
+                status="error",
+            )
             logger.logger.error(
                 "Error creating tokens",
                 extra={"error": str(token_error), "username_or_email": form_data.username},
@@ -399,10 +435,20 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             "User logged in successfully",
             extra={"user_id": user.id, "username": user.username},
         )
+        record_auth_attempt(
+            settings.FASTAPI_ENV,
+            action="login",
+            status="success",
+        )
         return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
     except AuthenticationError:
         raise
     except Exception as e:
+        record_auth_attempt(
+            settings.FASTAPI_ENV,
+            action="login",
+            status="error",
+        )
         logger.logger.error(
             "Error during login",
             extra={
@@ -445,25 +491,39 @@ async def refresh_token(request: Request, refresh_token_data: RefreshToken, db: 
 
         # Check if it's a refresh token
         if payload.get("type") != "refresh":
+            record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="rejected")
             raise AuthenticationError(message="Invalid token type")
 
         username: str = payload.get("sub")
         if username is None:
+            record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="rejected")
             raise AuthenticationError(message="Invalid token payload")
 
         # Verify user exists
         user = db.query(User).filter(User.username == username).first()
         if user is None:
+            record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="rejected")
             raise AuthenticationError(message="User not found")
 
         # Generate new tokens
         access_token = create_access_token(data={"sub": user.username})
         refresh_token = create_refresh_token(data={"sub": user.username})
 
+        record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="success")
         return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
     except JWTError as e:
+        record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="rejected")
         logger.logger.error("JWT decode error", extra={"error": str(e)})
         raise AuthenticationError(message="Invalid refresh token", details={"error": str(e)})
+    except AuthenticationError:
+        raise
+    except TarotAPIException:
+        record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="error")
+        raise
+    except Exception as e:
+        record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="error")
+        logger.logger.error("Error refreshing token", extra={"error": str(e)})
+        raise TarotAPIException(message="Error refreshing token", details={"error": str(e)})
 
 
 @router.post("/forgot-password")
@@ -512,8 +572,10 @@ async def forgot_password(request: Request, request_data: ForgotPasswordRequest,
         if user:
             # Queue the email task (always send to user's email)
             EmailTaskManager.send_password_reset_email_async(user.email, token, user.id)
+        record_auth_attempt(settings.FASTAPI_ENV, action="forgot_password", status="success")
         return {"message": "If an account exists with this email or username, a password reset token has been sent."}
     except Exception as e:
+        record_auth_attempt(settings.FASTAPI_ENV, action="forgot_password", status="error")
         logger.logger.error(
             "Error in forgot password process",
             extra={"error": str(e), "email_or_username": request_data.email_or_username},
@@ -573,6 +635,7 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
         )
 
         if not reset_token:
+            record_auth_attempt(settings.FASTAPI_ENV, action="reset_password", status="validation_error")
             raise ValidationError(
                 message="Invalid or expired reset token",
                 details={"token": request_data.token},
@@ -588,10 +651,12 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
         db.commit()
 
         logger.logger.info("Password reset successful", extra={"user_id": user.id})
+        record_auth_attempt(settings.FASTAPI_ENV, action="reset_password", status="success")
         return {"message": "Password has been reset successfully"}
     except ValidationError:
         raise
     except Exception as e:
+        record_auth_attempt(settings.FASTAPI_ENV, action="reset_password", status="error")
         logger.logger.error("Error resetting password", extra={"error": str(e), "token": request_data.token})
         raise TarotAPIException(message="Error resetting password", details={"error": str(e)})
 
