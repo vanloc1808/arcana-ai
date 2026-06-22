@@ -14,13 +14,40 @@ from schemas import (
     SharedReadingResponse,
     SharedReadingStatsResponse,
 )
+from schemas_errors import ErrorResponse
 from utils.error_handlers import ResourceNotFoundError, TarotAPIException, ValidationError, logger
+from utils.openapi_responses import error_responses
 from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/sharing", tags=["sharing"])
 
+# Shared-reading lookups return this 404 when the reading is missing.
+_READING_NOT_FOUND = {
+    404: {
+        "description": "The shared reading does not exist.",
+        "example": {"error": "Shared reading not found", "details": {"uuid": "8f14e45f-ceea-467a-9f7c-2b3d4e5f6a7b"}},
+    }
+}
 
-@router.post("/create", response_model=dict)
+
+@router.post(
+    "/create",
+    response_model=dict,
+    responses=error_responses(
+        422,
+        429,
+        overrides={
+            422: {
+                "model": ErrorResponse,
+                "description": "The reading has no cards, or the request body is invalid.",
+                "example": {
+                    "error": "At least one card is required",
+                    "details": {"cards": "Cannot create empty reading"},
+                },
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["auth"])
 async def create_shared_reading(
     request: Request,
@@ -109,7 +136,11 @@ async def create_shared_reading(
         raise TarotAPIException(message="Error creating shared reading", details={"error": str(e)})
 
 
-@router.get("/{uuid}", response_model=SharedReadingResponse)
+@router.get(
+    "/{uuid}",
+    response_model=SharedReadingResponse,
+    responses=error_responses(404, overrides=_READING_NOT_FOUND),
+)
 async def get_shared_reading(uuid: str, db: Session = Depends(get_db)):
     """
     Get Shared Reading
@@ -221,7 +252,24 @@ async def get_user_shared_readings(
         raise TarotAPIException(message="Error retrieving shared readings", details={"error": str(e)})
 
 
-@router.delete("/{uuid}")
+@router.delete(
+    "/{uuid}",
+    responses=error_responses(
+        404,
+        422,
+        overrides={
+            **_READING_NOT_FOUND,
+            422: {
+                "model": ErrorResponse,
+                "description": "You can only delete your own shared readings.",
+                "example": {
+                    "error": "You can only delete your own shared readings",
+                    "details": {"uuid": "8f14e45f-ceea-467a-9f7c-2b3d4e5f6a7b"},
+                },
+            },
+        },
+    ),
+)
 async def delete_shared_reading(
     uuid: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -321,7 +369,24 @@ async def get_user_sharing_stats(current_user: User = Depends(get_current_user),
         raise TarotAPIException(message="Error retrieving sharing statistics", details={"error": str(e)})
 
 
-@router.post("/{uuid}/toggle-privacy")
+@router.post(
+    "/{uuid}/toggle-privacy",
+    responses=error_responses(
+        404,
+        422,
+        overrides={
+            **_READING_NOT_FOUND,
+            422: {
+                "model": ErrorResponse,
+                "description": "You can only modify your own shared readings.",
+                "example": {
+                    "error": "You can only modify your own shared readings",
+                    "details": {"uuid": "8f14e45f-ceea-467a-9f7c-2b3d4e5f6a7b"},
+                },
+            },
+        },
+    ),
+)
 async def toggle_reading_privacy(
     uuid: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):

@@ -19,6 +19,7 @@ from schemas import (
     MessageRequest,
     MessageResponse,
 )
+from schemas_errors import DetailResponse, ErrorResponse
 from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
@@ -28,7 +29,24 @@ from utils.error_handlers import (
     ResourceNotFoundError,
     logger,
 )
+from utils.openapi_responses import error_responses
 from utils.rate_limiter import RATE_LIMITS, limiter
+
+# Reusable response sets for the chat router. Every endpoint here is authenticated
+# (401 added globally) and rate limited, and wraps its body in a handler that
+# surfaces unexpected failures as a 400 "Chat session error".
+_SESSION_NOT_FOUND = {
+    404: {
+        "description": "The chat session does not exist or does not belong to the user.",
+        "example": {"error": "Chat session not found", "details": {"session_id": 42}},
+    }
+}
+_CHAT_400 = {
+    400: {
+        "description": "The chat operation could not be completed.",
+        "example": {"error": "Chat session error", "details": {"error": "Unexpected failure"}},
+    }
+}
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -342,7 +360,11 @@ def execute_draw_cards_tool(
         return {"success": False, "error": f"Failed to draw cards: {str(e)}"}
 
 
-@router.post("/sessions/", response_model=ChatSessionResponse)
+@router.post(
+    "/sessions/",
+    response_model=ChatSessionResponse,
+    responses=error_responses(400, 429, overrides=_CHAT_400),
+)
 @limiter.limit(RATE_LIMITS["chat"])
 def create_chat_session(
     request: Request,
@@ -419,7 +441,11 @@ def create_chat_session(
         raise ChatSessionError(message="Error creating chat session", details={"error": str(e)})
 
 
-@router.get("/sessions/", response_model=list[ChatSessionResponse])
+@router.get(
+    "/sessions/",
+    response_model=list[ChatSessionResponse],
+    responses=error_responses(400, 429, overrides=_CHAT_400),
+)
 @limiter.limit(RATE_LIMITS["default"])
 def get_chat_sessions(
     request: Request,
@@ -503,7 +529,11 @@ def get_chat_sessions(
         raise ChatSessionError(message="Error retrieving chat sessions", details={"error": str(e)})
 
 
-@router.get("/sessions/{session_id}/messages/", response_model=list[MessageResponse])
+@router.get(
+    "/sessions/{session_id}/messages/",
+    response_model=list[MessageResponse],
+    responses=error_responses(404, 429, 400, overrides={**_SESSION_NOT_FOUND, **_CHAT_400}),
+)
 @limiter.limit(RATE_LIMITS["default"])
 def get_chat_messages(
     request: Request,
@@ -609,7 +639,10 @@ def get_chat_messages(
         raise ChatSessionError(message="Error retrieving chat messages", details={"error": str(e)})
 
 
-@router.delete("/sessions/{session_id}")
+@router.delete(
+    "/sessions/{session_id}",
+    responses=error_responses(404, 429, 400, overrides={**_SESSION_NOT_FOUND, **_CHAT_400}),
+)
 @limiter.limit(RATE_LIMITS["default"])
 def delete_chat_session(
     request: Request,
@@ -685,7 +718,11 @@ def delete_chat_session(
         raise ChatSessionError(message="Error deleting chat session", details={"error": str(e)})
 
 
-@router.patch("/sessions/{session_id}", response_model=ChatSessionResponse)
+@router.patch(
+    "/sessions/{session_id}",
+    response_model=ChatSessionResponse,
+    responses=error_responses(404, 429, 400, overrides={**_SESSION_NOT_FOUND, **_CHAT_400}),
+)
 @limiter.limit(RATE_LIMITS["default"])
 def update_chat_session(
     request: Request,
@@ -809,7 +846,37 @@ def handle_llm_tool_calls(
     return draw_tool_call, renamed_title
 
 
-@router.post("/sessions/{session_id}/messages/")
+@router.post(
+    "/sessions/{session_id}/messages/",
+    responses=error_responses(
+        404,
+        422,
+        429,
+        400,
+        overrides={
+            404: {
+                "model": ErrorResponse,
+                "description": "The chat session does not exist or vanished during streaming.",
+                "examples": {
+                    "not_found": {
+                        "summary": "Session not found",
+                        "value": {"error": "Chat session not found", "details": {"session_id": 42}},
+                    },
+                    "not_found_streaming": {
+                        "summary": "Session lost mid-stream",
+                        "value": {"detail": "Chat session not found. Please refresh and try again."},
+                    },
+                },
+            },
+            422: {
+                "model": DetailResponse,
+                "description": "The message content is empty, or the request body is invalid.",
+                "example": {"detail": "Message content cannot be empty."},
+            },
+            **_CHAT_400,
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["chat"])
 async def create_message(
     request: Request,
@@ -1275,7 +1342,11 @@ async def create_message(
         raise ChatSessionError(message="Error processing message", details={"error": str(e)})
 
 
-@router.get("/search", response_model=list[ChatSessionResponse])
+@router.get(
+    "/search",
+    response_model=list[ChatSessionResponse],
+    responses=error_responses(400, 429, overrides=_CHAT_400),
+)
 @limiter.limit(RATE_LIMITS["default"])
 def search_chat_sessions(
     request: Request,

@@ -24,11 +24,24 @@ from schemas import (
     SpreadListResponse,
     SpreadResponse,
 )
+from schemas_errors import DetailResponse, ErrorResponse
 from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
 from utils.error_handlers import TarotAPIException, ValidationError, logger
+from utils.openapi_responses import DETAIL, error_responses
 from utils.rate_limiter import RATE_LIMITS, limiter
+
+# Shared 402 example: the payment-required handler returns the remaining-turn
+# breakdown as the ``detail`` object rather than a plain string.
+_NO_TURNS_EXAMPLE = {
+    "detail": {
+        "message": "No turns available",
+        "remaining_free_turns": 0,
+        "remaining_paid_turns": 0,
+        "total_remaining_turns": 0,
+    }
+}
 
 router = APIRouter(prefix="/tarot", tags=["tarot"])
 
@@ -36,7 +49,11 @@ router = APIRouter(prefix="/tarot", tags=["tarot"])
 DEFAULT_DECK_ID = 1
 
 
-@router.get("/featured-cards", response_model=list[FeaturedCardResponse])
+@router.get(
+    "/featured-cards",
+    response_model=list[FeaturedCardResponse],
+    openapi_extra={"x-optional-auth": True},
+)
 async def get_featured_cards(
     count: int = 3,
     db: Session = Depends(get_db),
@@ -48,11 +65,7 @@ async def get_featured_cards(
     favorite deck; otherwise the default deck is used.
     """
     deck_id = (current_user.favorite_deck_id if current_user else None) or DEFAULT_DECK_ID
-    major_arcana = (
-        db.query(Card)
-        .filter(Card.suit == "Major Arcana", Card.deck_id == deck_id)
-        .all()
-    )
+    major_arcana = db.query(Card).filter(Card.suit == "Major Arcana", Card.deck_id == deck_id).all()
     if not major_arcana:
         major_arcana = db.query(Card).filter(Card.suit == "Major Arcana").all()
     if not major_arcana:
@@ -70,7 +83,21 @@ async def get_featured_cards(
     ]
 
 
-@router.get("/card-of-the-day", response_model=CardOfTheDayResponse)
+@router.get(
+    "/card-of-the-day",
+    response_model=CardOfTheDayResponse,
+    openapi_extra={"x-optional-auth": True},
+    responses=error_responses(
+        404,
+        style=DETAIL,
+        overrides={
+            404: {
+                "description": "The deck has no Major Arcana cards to draw from.",
+                "example": {"detail": "No Major Arcana cards available"},
+            }
+        },
+    ),
+)
 async def get_card_of_the_day(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_current_user),
@@ -90,12 +117,7 @@ async def get_card_of_the_day(
         .all()
     )
     if not major_arcana:
-        major_arcana = (
-            db.query(Card)
-            .filter(Card.suit == "Major Arcana")
-            .order_by(Card.id.asc())
-            .all()
-        )
+        major_arcana = db.query(Card).filter(Card.suit == "Major Arcana").order_by(Card.id.asc()).all()
     if not major_arcana:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -140,7 +162,39 @@ async def get_card_of_the_day(
     )
 
 
-@router.post("/reading", response_model=list[CardResponse])
+@router.post(
+    "/reading",
+    response_model=list[CardResponse],
+    responses=error_responses(
+        402,
+        422,
+        429,
+        overrides={
+            402: {
+                "model": DetailResponse,
+                "description": "The user has no reading turns remaining.",
+                "example": _NO_TURNS_EXAMPLE,
+            },
+            422: {
+                "model": ErrorResponse,
+                "description": "The spread does not exist, or the requested card count/parameters are invalid.",
+                "examples": {
+                    "spread_not_found": {
+                        "summary": "Spread not found",
+                        "value": {"error": "Spread not found", "details": {"spread_id": 999}},
+                    },
+                    "invalid_num_cards": {
+                        "summary": "Invalid number of cards",
+                        "value": {
+                            "error": "Invalid number of cards",
+                            "details": {"num_cards": "Must be between 1 and 10"},
+                        },
+                    },
+                },
+            },
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["tarot"])
 async def get_reading(
     request: Request,
@@ -323,7 +377,21 @@ def _personalize_position(position_name: str, person_a_name: str, person_b_name:
     return position_name
 
 
-@router.post("/compatibility", response_model=CompatibilityReadingResponse)
+@router.post(
+    "/compatibility",
+    response_model=CompatibilityReadingResponse,
+    responses=error_responses(
+        402,
+        429,
+        overrides={
+            402: {
+                "model": DetailResponse,
+                "description": "The user has no reading turns remaining.",
+                "example": _NO_TURNS_EXAMPLE,
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["tarot"])
 async def get_compatibility_reading(
     request: Request,
@@ -427,12 +495,24 @@ async def get_compatibility_reading(
             "Error generating compatibility reading",
             extra={"user_id": current_user.id, "error": str(e)},
         )
-        raise TarotAPIException(
-            message="Error generating compatibility reading", details={"error": str(e)}
-        )
+        raise TarotAPIException(message="Error generating compatibility reading", details={"error": str(e)})
 
 
-@router.post("/compatibility/interpret", response_model=CompatibilityInterpretResponse)
+@router.post(
+    "/compatibility/interpret",
+    response_model=CompatibilityInterpretResponse,
+    responses=error_responses(
+        422,
+        429,
+        overrides={
+            422: {
+                "model": ErrorResponse,
+                "description": "No cards were provided for interpretation, or the request body is invalid.",
+                "example": {"error": "No cards provided for interpretation", "details": {}},
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["tarot"])
 async def interpret_compatibility_reading(
     request: Request,
@@ -464,12 +544,23 @@ async def interpret_compatibility_reading(
             "Error interpreting compatibility reading",
             extra={"user_id": current_user.id, "error": str(e)},
         )
-        raise TarotAPIException(
-            message="Error interpreting compatibility reading", details={"error": str(e)}
-        )
+        raise TarotAPIException(message="Error interpreting compatibility reading", details={"error": str(e)})
 
 
-@router.post("/compatibility/interpret/stream")
+@router.post(
+    "/compatibility/interpret/stream",
+    responses=error_responses(
+        422,
+        429,
+        overrides={
+            422: {
+                "model": ErrorResponse,
+                "description": "No cards were provided for interpretation, or the request body is invalid.",
+                "example": {"error": "No cards provided for interpretation", "details": {}},
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["tarot"])
 async def stream_compatibility_interpretation(
     request: Request,
@@ -525,7 +616,32 @@ async def get_spreads(db: Session = Depends(get_db)):
     return spreads
 
 
-@router.get("/spreads/{spread_id}", response_model=SpreadResponse)
+@router.get(
+    "/spreads/{spread_id}",
+    response_model=SpreadResponse,
+    responses=error_responses(
+        422,
+        overrides={
+            422: {
+                "model": ErrorResponse,
+                "description": "The spread does not exist, or the path parameter is invalid.",
+                "examples": {
+                    "spread_not_found": {
+                        "summary": "Spread not found",
+                        "value": {"error": "Spread not found", "details": {"spread_id": 999}},
+                    },
+                    "invalid_path": {
+                        "summary": "Invalid path parameter",
+                        "value": {
+                            "error": "Validation error",
+                            "details": [{"loc": ["path", "spread_id"], "msg": "value is not a valid integer"}],
+                        },
+                    },
+                },
+            }
+        },
+    ),
+)
 async def get_spread(spread_id: int, db: Session = Depends(get_db)):
     """
     Get Specific Tarot Spread
@@ -570,9 +686,7 @@ async def get_library_cards(
     if suit:
         query = query.filter(Card.suit.ilike(f"%{suit}%"))
     if search:
-        query = query.filter(
-            or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%"))
-        )
+        query = query.filter(or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%")))
 
     cards = query.order_by(Card.suit, Card.numerology.asc().nullslast(), Card.id).all()
 
@@ -582,9 +696,7 @@ async def get_library_cards(
         if suit:
             query = query.filter(Card.suit.ilike(f"%{suit}%"))
         if search:
-            query = query.filter(
-                or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%"))
-            )
+            query = query.filter(or_(Card.name.ilike(f"%{search}%"), Card.rank.ilike(f"%{search}%")))
         cards = query.order_by(Card.suit, Card.numerology.asc().nullslast(), Card.id).all()
 
     return cards
