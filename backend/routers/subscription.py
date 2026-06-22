@@ -1,35 +1,54 @@
 import json
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
 from datetime import datetime, timedelta
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import desc
+from sqlalchemy.orm import Session
+
+from config import settings
 from database import get_db
-from models import User, SubscriptionEvent, PaymentTransaction, TurnUsageHistory, SubscriptionPlan, CheckoutSession
+from models import PaymentTransaction, SubscriptionEvent, SubscriptionPlan, TurnUsageHistory, User
 from routers.auth import get_current_user
 from schemas import (
     CheckoutRequest,
     CheckoutResponse,
     EthereumPaymentRequest,
     EthereumPaymentResponse,
+    PaymentTransactionResponse,
+    SubscriptionEventResponse,
+    SubscriptionHistoryResponse,
+    SubscriptionPlanResponse,
     SubscriptionResponse,
     TurnsResponse,
-    SubscriptionEventResponse,
-    PaymentTransactionResponse,
     TurnUsageHistoryResponse,
-    SubscriptionPlanResponse,
-    SubscriptionHistoryResponse,
 )
 from services.ethereum_service import EthereumService
 from services.subscription_service import SubscriptionService
+from utils.metrics import record_payment_event
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["subscription"])
 subscription_service = SubscriptionService()
 ethereum_service = EthereumService()
+
+
+def _extract_lemon_squeezy_amount_usd(event_data: dict) -> float:
+    attributes = event_data.get("data", {}).get("attributes", {})
+    total_cents = attributes.get("total") or 0
+    try:
+        return float(total_cents) / 100
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _product_amount_usd(product_variant: str) -> float:
+    try:
+        price = subscription_service.get_product_info(product_variant).get("price", "")
+        return float(price.replace("$", "").strip())
+    except (AttributeError, TypeError, ValueError):
+        return 0.0
 
 
 @router.get("/user/turns", response_model=TurnsResponse)
@@ -70,12 +89,30 @@ async def create_checkout_session(
     try:
         logger.info(f"Creating checkout session for user {current_user.id} with product variant: {request.product_variant}")
         checkout_url = await subscription_service.create_checkout_url(current_user, request.product_variant, db)
+        record_payment_event(
+            settings.FASTAPI_ENV,
+            provider="lemon_squeezy",
+            event_type="checkout_created",
+            status="created",
+        )
         logger.info(f"Successfully created checkout session for user {current_user.id}")
         return CheckoutResponse(checkout_url=checkout_url)
     except ValueError as e:
+        record_payment_event(
+            settings.FASTAPI_ENV,
+            provider="lemon_squeezy",
+            event_type="checkout_created",
+            status="validation_error",
+        )
         logger.warning(f"Invalid product variant for user {current_user.id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
+        record_payment_event(
+            settings.FASTAPI_ENV,
+            provider="lemon_squeezy",
+            event_type="checkout_created",
+            status="error",
+        )
         logger.error(f"Failed to create checkout session for user {current_user.id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -86,6 +123,7 @@ async def create_checkout_session(
 @router.post("/webhooks/lemon-squeezy")
 async def handle_lemon_squeezy_webhook(request: Request, db: Session = Depends(get_db)):
     """Handle webhook events from Lemon Squeezy."""
+    event_name = "webhook_received"
     try:
         # Get the raw payload
         payload = await request.body()
@@ -93,23 +131,38 @@ async def handle_lemon_squeezy_webhook(request: Request, db: Session = Depends(g
         # Get the signature from headers
         signature = request.headers.get("x-signature")
         if not signature:
+            record_payment_event(settings.FASTAPI_ENV, "lemon_squeezy", event_name, "signature_error")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing signature")
 
         # Verify the webhook signature
         if not subscription_service.verify_webhook_signature(payload, signature):
+            record_payment_event(settings.FASTAPI_ENV, "lemon_squeezy", event_name, "signature_error")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
 
         # Parse the JSON payload
         event_data = json.loads(payload)
+        event_name = event_data.get("meta", {}).get("event_name", "unknown")
+        record_payment_event(settings.FASTAPI_ENV, "lemon_squeezy", event_name, "received")
 
         # Process the webhook event
         subscription_service.process_webhook_event(db, event_data)
+        record_payment_event(
+            settings.FASTAPI_ENV,
+            provider="lemon_squeezy",
+            event_type=event_name,
+            status="paid" if event_name == "order_created" else "success",
+            amount_usd=_extract_lemon_squeezy_amount_usd(event_data),
+        )
 
         return {"status": "success"}
 
     except json.JSONDecodeError:
+        record_payment_event(settings.FASTAPI_ENV, "lemon_squeezy", event_name, "invalid_json")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload")
+    except HTTPException:
+        raise
     except Exception:
+        record_payment_event(settings.FASTAPI_ENV, "lemon_squeezy", event_name, "error")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to process webhook")
 
 
@@ -143,6 +196,7 @@ async def process_ethereum_payment(
     try:
         # Check if Ethereum service is available
         if not ethereum_service.is_connected():
+            record_payment_event(settings.FASTAPI_ENV, "ethereum", "ethereum_payment", "service_unavailable")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Ethereum verification service is unavailable"
             )
@@ -160,10 +214,18 @@ async def process_ethereum_payment(
         )
 
         if not result["success"]:
+            record_payment_event(settings.FASTAPI_ENV, "ethereum", "ethereum_payment", "verification_failed")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=result.get("message", "Payment verification failed")
             )
 
+        record_payment_event(
+            settings.FASTAPI_ENV,
+            provider="ethereum",
+            event_type="ethereum_payment",
+            status="paid",
+            amount_usd=_product_amount_usd(request.product_variant),
+        )
         return EthereumPaymentResponse(
             success=result["success"],
             transaction_verified=result["transaction_verified"],
@@ -175,6 +237,7 @@ async def process_ethereum_payment(
     except HTTPException:
         raise
     except Exception as e:
+        record_payment_event(settings.FASTAPI_ENV, "ethereum", "ethereum_payment", "error")
         logger.error(f"Error processing Ethereum payment: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to process Ethereum payment"
@@ -278,7 +341,7 @@ async def get_subscription_plans(db: Session = Depends(get_db)):
     try:
         plans = (
             db.query(SubscriptionPlan)
-            .filter(SubscriptionPlan.is_active == True)
+            .filter(SubscriptionPlan.is_active.is_(True))
             .order_by(SubscriptionPlan.sort_order, SubscriptionPlan.turns_included)
             .all()
         )
@@ -337,7 +400,7 @@ async def get_user_subscription_history(
         # Get subscription plans
         plans = (
             db.query(SubscriptionPlan)
-            .filter(SubscriptionPlan.is_active == True)
+            .filter(SubscriptionPlan.is_active.is_(True))
             .order_by(SubscriptionPlan.sort_order, SubscriptionPlan.turns_included)
             .all()
         )

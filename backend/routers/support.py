@@ -1,7 +1,6 @@
 import traceback
 import uuid
 from pathlib import Path
-from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -77,7 +76,7 @@ def validate_file(file: UploadFile) -> None:
         )
 
 
-async def upload_file_to_slack(file: UploadFile, ticket_id: str, channel: str) -> Optional[dict]:
+async def upload_file_to_slack(file: UploadFile, ticket_id: str, channel: str) -> dict | None:
     """Upload file to Slack using the new external upload API.
 
     The old files.upload method has been deprecated by Slack. This function uses
@@ -221,7 +220,7 @@ async def upload_file_to_slack(file: UploadFile, ticket_id: str, channel: str) -
 
 async def send_to_slack(
     ticket_id: str, user: User, title: str, description: str, uploaded_files: list[dict] = None
-) -> Optional[str]:
+) -> str | None:
     """Send support ticket to Slack via webhook.
 
     Args:

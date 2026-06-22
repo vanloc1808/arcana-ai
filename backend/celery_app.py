@@ -1,10 +1,15 @@
 import os
 import sys
+import time
 from pathlib import Path
 
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import task_failure, task_postrun, task_prerun, task_retry
 from dotenv import load_dotenv
+
+from config import settings
+from utils.metrics import record_celery_failure, record_celery_task
 
 # Load environment variables
 load_dotenv()
@@ -59,5 +64,62 @@ celery_app.conf.update(
         },
     },
 )
+
+
+def _queue_name(task=None, request=None) -> str:
+    task_request = getattr(task, "request", None) or request
+    delivery_info = getattr(task_request, "delivery_info", {}) or {}
+    return delivery_info.get("routing_key") or delivery_info.get("exchange") or "unknown"
+
+
+def _task_name(sender) -> str:
+    return getattr(sender, "name", "unknown")
+
+
+@task_prerun.connect
+def track_task_start(sender=None, task_id=None, task=None, **kwargs):
+    if task is not None:
+        task.request._arcana_task_start_time = time.perf_counter()
+    record_celery_task(
+        env=settings.FASTAPI_ENV,
+        queue=_queue_name(task),
+        task_name=_task_name(sender),
+        status="started",
+    )
+
+
+@task_postrun.connect
+def track_task_done(sender=None, task_id=None, task=None, state=None, **kwargs):
+    started = getattr(getattr(task, "request", None), "_arcana_task_start_time", None)
+    duration = time.perf_counter() - started if started else None
+    task_status = "success" if state == "SUCCESS" else str(state or "unknown").lower()
+    record_celery_task(
+        env=settings.FASTAPI_ENV,
+        queue=_queue_name(task),
+        task_name=_task_name(sender),
+        status=task_status,
+        duration=duration,
+    )
+
+
+@task_failure.connect
+def track_task_failure(sender=None, task_id=None, exception=None, task=None, **kwargs):
+    record_celery_failure(
+        env=settings.FASTAPI_ENV,
+        queue=_queue_name(task or sender),
+        task_name=_task_name(sender),
+        error_type=type(exception).__name__ if exception else "unknown",
+    )
+
+
+@task_retry.connect
+def track_task_retry(sender=None, request=None, reason=None, **kwargs):
+    record_celery_task(
+        env=settings.FASTAPI_ENV,
+        queue=_queue_name(request=request),
+        task_name=_task_name(sender),
+        status="retry",
+    )
+
 
 # Explicitly import tasks to ensure they're registered

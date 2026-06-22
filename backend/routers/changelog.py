@@ -13,9 +13,7 @@ Author: ArcanaAI Development Team
 Version: 1.0.0
 """
 
-import os
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
@@ -46,7 +44,7 @@ async def get_changelog():
                 detail="Changelog file not found"
             )
 
-        with open(CHANGELOG_PATH, 'r', encoding='utf-8') as file:
+        with open(CHANGELOG_PATH, encoding='utf-8') as file:
             content = file.read()
 
         return content
@@ -77,7 +75,7 @@ async def get_latest_version():
                 detail="Changelog file not found"
             )
 
-        with open(CHANGELOG_PATH, 'r', encoding='utf-8') as file:
+        with open(CHANGELOG_PATH, encoding='utf-8') as file:
             content = file.read()
 
         # Parse the changelog to find the latest version
@@ -161,7 +159,7 @@ async def get_all_versions():
                 detail="Changelog file not found"
             )
 
-        with open(CHANGELOG_PATH, 'r', encoding='utf-8') as file:
+        with open(CHANGELOG_PATH, encoding='utf-8') as file:
             content = file.read()
 
         lines = content.split('\n')
@@ -238,7 +236,7 @@ async def get_version_info(version: str):
                 detail="Changelog file not found"
             )
 
-        with open(CHANGELOG_PATH, 'r', encoding='utf-8') as file:
+        with open(CHANGELOG_PATH, encoding='utf-8') as file:
             content = file.read()
 
         # Parse the changelog to find the specific version

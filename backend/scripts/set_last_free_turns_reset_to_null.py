@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 # Set minimal environment variables to prevent validation errors
 os.environ.setdefault("MAIL_FROM", "test@example.com")

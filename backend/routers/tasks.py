@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
 from models import User
-from routers.auth import get_admin_user, get_current_user
+from routers.auth import get_admin_user
 from utils.celery_utils import (
     email_task_manager,
     notification_task_manager,

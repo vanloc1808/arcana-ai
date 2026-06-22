@@ -46,6 +46,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from config import settings
 from utils.error_handlers import logger
+from utils.metrics import record_db_query
 
 # Load environment variables
 load_dotenv(Path(".env"))
@@ -89,15 +90,21 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+def _db_operation(statement: str | None) -> str:
+    """Return a bounded SQL operation label."""
+    operation = (statement or "").strip().split(maxsplit=1)[0].lower()
+    return operation if operation in {"select", "insert", "update", "delete"} else "other"
+
+
 # Add SQL query logging
 @event.listens_for(engine, "before_cursor_execute")
 def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-    conn.info.setdefault("query_start_time", []).append(time.time())
+    conn.info.setdefault("query_start_time", []).append(time.perf_counter())
 
 
 @event.listens_for(engine, "after_cursor_execute")
 def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-    total = time.time() - conn.info["query_start_time"].pop(-1)
+    total = time.perf_counter() - conn.info["query_start_time"].pop(-1)
     logger.logger.debug(
         "Database query executed",
         extra={
@@ -105,6 +112,27 @@ def after_cursor_execute(conn, cursor, statement, parameters, context, executema
             "parameters": str(parameters),
             "execution_time_ms": round(total * 1000, 2),
         },
+    )
+    record_db_query(
+        env=settings.FASTAPI_ENV,
+        operation=_db_operation(statement),
+        table="unknown",
+        status="success",
+        duration=total,
+    )
+
+
+@event.listens_for(engine, "handle_error")
+def handle_db_error(exception_context):
+    starts = exception_context.connection.info.get("query_start_time", []) if exception_context.connection else []
+    started = starts.pop(-1) if starts else None
+    total = time.perf_counter() - started if started else 0.0
+    record_db_query(
+        env=settings.FASTAPI_ENV,
+        operation=_db_operation(exception_context.statement),
+        table="unknown",
+        status="error",
+        duration=total,
     )
 
 

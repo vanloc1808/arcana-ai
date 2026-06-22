@@ -7,9 +7,10 @@ from pathlib import Path
 # Add backend to path
 sys.path.append(str(Path(__file__).parent))
 
-from database import engine, Base
-from models import CheckoutSession
 import logging
+
+from database import engine
+from models import CheckoutSession
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

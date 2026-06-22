@@ -65,6 +65,7 @@ from utils.error_handlers import (
     tarot_exception_handler,
     validation_exception_handler,
 )
+from utils.metrics import setup_metrics
 from utils.middleware import RequestLoggingMiddleware
 from utils.rate_limiter import limiter, rate_limit_exceeded_handler
 
@@ -100,6 +101,8 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 # Add custom middleware
 # Request logging middleware must be added before CORS middleware
 app.add_middleware(RequestLoggingMiddleware)
+
+setup_metrics(app, env=settings.FASTAPI_ENV)
 
 
 @app.middleware("http")

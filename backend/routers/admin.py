@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy import asc, desc, func, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Card, ChatSession, Deck, Message, SharedReading, Spread, User
-from routers.auth import get_admin_user, get_current_user
+from routers.auth import get_admin_user
 from schemas import (
     AdminCardCreate,
     AdminCardResponse,
@@ -23,8 +23,8 @@ from schemas import (
     AdminSpreadCreate,
     AdminSpreadResponse,
     AdminSpreadUpdate,
-    AdminUserResponse,
     AdminUserPasswordResetRequest,
+    AdminUserResponse,
     AdminUserUpdate,
 )
 from utils.avatar_utils import avatar_manager

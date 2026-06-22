@@ -2,7 +2,6 @@ import os
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from fastapi import HTTPException, UploadFile
 from PIL import Image, ImageOps
@@ -13,7 +12,7 @@ from utils.error_handlers import logger
 class AvatarManager:
     """Manages avatar file uploads, storage, and processing."""
 
-    def __init__(self, upload_dir: Optional[str] = None):
+    def __init__(self, upload_dir: str | None = None):
         """Initialize the avatar manager.
 
         Args:
@@ -192,7 +191,7 @@ class AvatarManager:
         except Exception:
             return False
 
-    def get_avatar_path(self, filename: str) -> Optional[Path]:
+    def get_avatar_path(self, filename: str) -> Path | None:
         """Get the full path to an avatar file.
 
         Args:
@@ -212,7 +211,7 @@ class AvatarManager:
             raise HTTPException(status_code=400, detail="Invalid filename")
         return file_path if file_path.exists() else None
 
-    def get_avatar_url(self, filename: str, base_url: str = "") -> Optional[str]:
+    def get_avatar_url(self, filename: str, base_url: str = "") -> str | None:
         """Get the URL to access an avatar file.
 
         Args:
@@ -317,11 +316,11 @@ class NoOpAvatarManager:
         """Delete avatar (no-op, always returns True)."""
         return True
 
-    def get_avatar_path(self, filename: str) -> Optional[Path]:
+    def get_avatar_path(self, filename: str) -> Path | None:
         """Get avatar path (always returns None in local mode)."""
         return None
 
-    def get_avatar_url(self, filename: str, base_url: str = "") -> Optional[str]:
+    def get_avatar_url(self, filename: str, base_url: str = "") -> str | None:
         """Get avatar URL (returns placeholder URL)."""
         if not filename:
             return None
