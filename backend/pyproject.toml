@@ -90,6 +90,7 @@ dependencies = [
     "yarl>=1.24.2",
     "pytest-asyncio>=1.4.0",
     "web3>=7.12.0",
+    "scalar-fastapi>=1.8.2",
 ]
 
 [tool.ruff]
