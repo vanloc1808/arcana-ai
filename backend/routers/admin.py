@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy import asc, desc, func, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Card, ChatSession, Deck, Message, SharedReading, Spread, User
-from routers.auth import get_admin_user, get_current_user
+from routers.auth import get_admin_user
 from schemas import (
     AdminCardCreate,
     AdminCardResponse,
@@ -23,14 +23,20 @@ from schemas import (
     AdminSpreadCreate,
     AdminSpreadResponse,
     AdminSpreadUpdate,
-    AdminUserResponse,
     AdminUserPasswordResetRequest,
+    AdminUserResponse,
     AdminUserUpdate,
 )
 from utils.avatar_utils import avatar_manager
+from utils.openapi_responses import DETAIL, error_responses
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 security = HTTPBearer()
+
+
+def _not_found(message: str) -> dict:
+    """Build a detail-style 404 ``responses=`` mapping with the given message."""
+    return error_responses(404, style=DETAIL, overrides={404: {"description": message, "example": {"detail": message}}})
 
 
 def build_admin_user_response(user: User, base_url: str = "") -> AdminUserResponse:
@@ -64,9 +70,12 @@ def build_admin_user_response(user: User, base_url: str = "") -> AdminUserRespon
         shared_readings_count=len(user.shared_readings),
     )
 
+
 # Dashboard
 @router.get("/dashboard", response_model=AdminDashboardStats)
-async def get_dashboard_stats(request: Request, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
+async def get_dashboard_stats(
+    request: Request, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)
+):
     """Get admin dashboard statistics"""
 
     # Get counts
@@ -113,7 +122,7 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db), a
         total_spreads=total_spreads,
         total_shared_readings=total_shared_readings,
         total_views=total_views,
-        recent_users=[build_admin_user_response(user, str(request.base_url).rstrip('/')) for user in recent_users],
+        recent_users=[build_admin_user_response(user, str(request.base_url).rstrip("/")) for user in recent_users],
         recent_chat_sessions=[
             AdminChatSessionResponse(
                 id=session.id,
@@ -149,7 +158,10 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db), a
 # Search functionality
 @router.post("/search")
 async def admin_search(
-    search_request: AdminSearchRequest, request: Request, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)
+    search_request: AdminSearchRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),
 ):
     """Search across different models"""
 
@@ -164,7 +176,7 @@ async def admin_search(
             .all()
         )
 
-        return [build_admin_user_response(user, str(request.base_url).rstrip('/')) for user in results]
+        return [build_admin_user_response(user, str(request.base_url).rstrip("/")) for user in results]
 
     elif search_request.model_type == "chat_sessions":
         results = (
@@ -336,20 +348,22 @@ async def list_users(
         )
     users = users_query.offset(skip).limit(limit).all()
 
-    return [build_admin_user_response(user, str(request.base_url).rstrip('/')) for user in users]
+    return [build_admin_user_response(user, str(request.base_url).rstrip("/")) for user in users]
 
 
-@router.get("/users/{user_id}", response_model=AdminUserResponse)
-async def get_user(user_id: int, request: Request, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
+@router.get("/users/{user_id}", response_model=AdminUserResponse, responses=_not_found("User not found"))
+async def get_user(
+    user_id: int, request: Request, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)
+):
     """Get a specific user by ID"""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return build_admin_user_response(user, str(request.base_url).rstrip('/'))
+    return build_admin_user_response(user, str(request.base_url).rstrip("/"))
 
 
-@router.put("/users/{user_id}", response_model=AdminUserResponse)
+@router.put("/users/{user_id}", response_model=AdminUserResponse, responses=_not_found("User not found"))
 async def update_user(
     user_id: int,
     user_update: AdminUserUpdate,
@@ -369,10 +383,10 @@ async def update_user(
     db.commit()
     db.refresh(user)
 
-    return build_admin_user_response(user, str(request.base_url).rstrip('/'))
+    return build_admin_user_response(user, str(request.base_url).rstrip("/"))
 
 
-@router.delete("/users/{user_id}")
+@router.delete("/users/{user_id}", responses=_not_found("User not found"))
 async def delete_user(user_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Soft-delete a user by deactivating the account."""
     user = db.query(User).filter(User.id == user_id).first()
@@ -386,7 +400,7 @@ async def delete_user(user_id: int, db: Session = Depends(get_db), admin_user: U
     return {"message": "User deleted successfully"}
 
 
-@router.post("/users/{user_id}/reset-password")
+@router.post("/users/{user_id}/reset-password", responses=_not_found("User not found"))
 async def reset_user_password(
     user_id: int,
     payload: AdminUserPasswordResetRequest,
@@ -447,7 +461,11 @@ async def list_chat_sessions(
     ]
 
 
-@router.get("/chat-sessions/{session_id}", response_model=AdminChatSessionResponse)
+@router.get(
+    "/chat-sessions/{session_id}",
+    response_model=AdminChatSessionResponse,
+    responses=_not_found("Chat session not found"),
+)
 async def get_chat_session(session_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Get a specific chat session by ID"""
     session = db.query(ChatSession).join(User).filter(ChatSession.id == session_id).first()
@@ -464,7 +482,7 @@ async def get_chat_session(session_id: int, db: Session = Depends(get_db), admin
     )
 
 
-@router.delete("/chat-sessions/{session_id}")
+@router.delete("/chat-sessions/{session_id}", responses=_not_found("Chat session not found"))
 async def delete_chat_session(
     session_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)
 ):
@@ -505,7 +523,7 @@ async def list_messages(
     ]
 
 
-@router.get("/messages/{message_id}", response_model=AdminMessageResponse)
+@router.get("/messages/{message_id}", response_model=AdminMessageResponse, responses=_not_found("Message not found"))
 async def get_message(message_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Get a specific message by ID"""
     message = db.query(Message).join(ChatSession).join(User).filter(Message.id == message_id).first()
@@ -524,7 +542,7 @@ async def get_message(message_id: int, db: Session = Depends(get_db), admin_user
     )
 
 
-@router.delete("/messages/{message_id}")
+@router.delete("/messages/{message_id}", responses=_not_found("Message not found"))
 async def delete_message(message_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Delete a message"""
     message = db.query(Message).filter(Message.id == message_id).first()
@@ -569,7 +587,7 @@ async def list_cards(
     ]
 
 
-@router.get("/cards/{card_id}", response_model=AdminCardResponse)
+@router.get("/cards/{card_id}", response_model=AdminCardResponse, responses=_not_found("Card not found"))
 async def get_card(card_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Get a specific card by ID"""
     card = db.query(Card).outerjoin(Deck).filter(Card.id == card_id).first()
@@ -622,7 +640,7 @@ async def create_card(
     )
 
 
-@router.put("/cards/{card_id}", response_model=AdminCardResponse)
+@router.put("/cards/{card_id}", response_model=AdminCardResponse, responses=_not_found("Card not found"))
 async def update_card(
     card_id: int,
     card_update: AdminCardUpdate,
@@ -659,7 +677,7 @@ async def update_card(
     )
 
 
-@router.delete("/cards/{card_id}")
+@router.delete("/cards/{card_id}", responses=_not_found("Card not found"))
 async def delete_card(card_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Delete a card"""
     card = db.query(Card).filter(Card.id == card_id).first()
@@ -695,7 +713,7 @@ async def list_decks(
     ]
 
 
-@router.get("/decks/{deck_id}", response_model=AdminDeckResponse)
+@router.get("/decks/{deck_id}", response_model=AdminDeckResponse, responses=_not_found("Deck not found"))
 async def get_deck(deck_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Get a specific deck by ID"""
     deck = db.query(Deck).filter(Deck.id == deck_id).first()
@@ -726,7 +744,7 @@ async def create_deck(
     )
 
 
-@router.put("/decks/{deck_id}", response_model=AdminDeckResponse)
+@router.put("/decks/{deck_id}", response_model=AdminDeckResponse, responses=_not_found("Deck not found"))
 async def update_deck(
     deck_id: int,
     deck_update: AdminDeckUpdate,
@@ -754,7 +772,7 @@ async def update_deck(
     )
 
 
-@router.delete("/decks/{deck_id}")
+@router.delete("/decks/{deck_id}", responses=_not_found("Deck not found"))
 async def delete_deck(deck_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Delete a deck"""
     deck = db.query(Deck).filter(Deck.id == deck_id).first()
@@ -791,7 +809,7 @@ async def list_spreads(
     ]
 
 
-@router.get("/spreads/{spread_id}", response_model=AdminSpreadResponse)
+@router.get("/spreads/{spread_id}", response_model=AdminSpreadResponse, responses=_not_found("Spread not found"))
 async def get_spread(spread_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Get a specific spread by ID"""
     spread = db.query(Spread).filter(Spread.id == spread_id).first()
@@ -829,7 +847,7 @@ async def create_spread(
     )
 
 
-@router.put("/spreads/{spread_id}", response_model=AdminSpreadResponse)
+@router.put("/spreads/{spread_id}", response_model=AdminSpreadResponse, responses=_not_found("Spread not found"))
 async def update_spread(
     spread_id: int,
     spread_update: AdminSpreadUpdate,
@@ -861,7 +879,7 @@ async def update_spread(
     )
 
 
-@router.delete("/spreads/{spread_id}")
+@router.delete("/spreads/{spread_id}", responses=_not_found("Spread not found"))
 async def delete_spread(spread_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)):
     """Delete a spread"""
     spread = db.query(Spread).filter(Spread.id == spread_id).first()
@@ -905,7 +923,11 @@ async def list_shared_readings(
     ]
 
 
-@router.get("/shared-readings/{reading_id}", response_model=AdminSharedReadingResponse)
+@router.get(
+    "/shared-readings/{reading_id}",
+    response_model=AdminSharedReadingResponse,
+    responses=_not_found("Shared reading not found"),
+)
 async def get_shared_reading(
     reading_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)
 ):
@@ -931,7 +953,7 @@ async def get_shared_reading(
     )
 
 
-@router.delete("/shared-readings/{reading_id}")
+@router.delete("/shared-readings/{reading_id}", responses=_not_found("Shared reading not found"))
 async def delete_shared_reading(
     reading_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_admin_user)
 ):

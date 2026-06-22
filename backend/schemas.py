@@ -199,6 +199,8 @@ class ChatSessionCreate(BaseModel):
 
     title: str = "New Chat"
 
+    model_config = {"json_schema_extra": {"examples": [{"title": "Career guidance session"}]}}
+
     @field_validator("title")
     def validate_title(cls, v):
         """Validate the chat session title.
@@ -248,6 +250,12 @@ class MessageRequest(BaseModel):
     """
 
     content: str
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"content": "What does my career path look like for the next six months?"}]
+        }
+    }
 
     @field_validator("content")
     def validate_content(cls, v):
@@ -338,6 +346,12 @@ class UserCreate(UserBase):
     """
 
     password: str
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"username": "john_doe", "email": "john@example.com", "password": "secure_password123"}]
+        }
+    }
 
     @field_validator("username")
     def validate_username(cls, v):
@@ -579,6 +593,12 @@ class ReadingRequest(BaseModel):
     concern: str
     num_cards: int | None = 3
     spread_id: int | None = None
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"concern": "What should I focus on in my career right now?", "num_cards": 3, "spread_id": 1}]
+        }
+    }
 
     @field_validator("concern")
     def validate_concern(cls, v):
@@ -1262,6 +1282,8 @@ class CheckoutRequest(BaseModel):
     """
 
     product_variant: str
+
+    model_config = {"json_schema_extra": {"examples": [{"product_variant": "10_turns"}]}}
 
     @field_validator("product_variant")
     def validate_product_variant(cls, v):

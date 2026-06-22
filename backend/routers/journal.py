@@ -46,9 +46,15 @@ from schemas import (
     ReminderResponse,
 )
 from services.streak_service import record_activity as record_streak_activity
+from utils.openapi_responses import DETAIL, error_responses
 from utils.rate_limiter import limiter
 
 router = APIRouter(prefix="/api/journal", tags=["journal"])
+
+
+def _not_found(message: str) -> dict:
+    """Build a detail-style 404 ``responses=`` mapping with the given message."""
+    return error_responses(404, style=DETAIL, overrides={404: {"description": message, "example": {"detail": message}}})
 
 
 # Utility function for HTML sanitization
@@ -287,6 +293,7 @@ async def get_user_tags(
         if isinstance(tags_value, str):
             try:
                 import json
+
                 tags_value = json.loads(tags_value)
             except (json.JSONDecodeError, TypeError):
                 continue
@@ -295,10 +302,7 @@ async def get_user_tags(
         for tag in tags_value:
             if isinstance(tag, str) and tag.strip():
                 counts[tag] = counts.get(tag, 0) + 1
-    return [
-        {"tag": tag, "count": count}
-        for tag, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
-    ]
+    return [{"tag": tag, "count": count} for tag, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))]
 
 
 @router.get("/spreads-used")
@@ -323,6 +327,7 @@ async def get_spreads_used(
         if isinstance(snapshot_dict, str):
             try:
                 import json
+
                 snapshot_dict = json.loads(snapshot_dict)
             except (json.JSONDecodeError, TypeError):
                 snapshot_dict = None
@@ -334,7 +339,7 @@ async def get_spreads_used(
     return sorted(spreads)
 
 
-@router.get("/entries/{entry_id}", response_model=JournalEntryResponse)
+@router.get("/entries/{entry_id}", response_model=JournalEntryResponse, responses=_not_found("Journal entry not found"))
 @limiter.limit("60/minute")
 async def get_journal_entry(
     request: Request, entry_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -366,7 +371,7 @@ async def get_journal_entry(
     return entry
 
 
-@router.put("/entries/{entry_id}", response_model=JournalEntryResponse)
+@router.put("/entries/{entry_id}", response_model=JournalEntryResponse, responses=_not_found("Journal entry not found"))
 @limiter.limit("10/minute")
 async def update_journal_entry(
     request: Request,
@@ -420,7 +425,9 @@ async def update_journal_entry(
         )
 
 
-@router.delete("/entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT, responses=_not_found("Journal entry not found")
+)
 @limiter.limit("5/minute")
 async def delete_journal_entry(
     request: Request, entry_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -467,7 +474,7 @@ async def delete_journal_entry(
 # --- Personal Card Meanings Endpoints ---
 
 
-@router.post("/card-meanings", response_model=PersonalCardMeaningResponse)
+@router.post("/card-meanings", response_model=PersonalCardMeaningResponse, responses=_not_found("Card not found"))
 @limiter.limit("5/minute")
 async def create_or_update_card_meaning(
     request: Request,
@@ -564,7 +571,11 @@ async def get_card_meanings(
     return meanings
 
 
-@router.get("/card-meanings/{card_id}", response_model=PersonalCardMeaningResponse)
+@router.get(
+    "/card-meanings/{card_id}",
+    response_model=PersonalCardMeaningResponse,
+    responses=_not_found("Personal card meaning not found"),
+)
 @limiter.limit("60/minute")
 async def get_card_meaning(
     request: Request, card_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -600,7 +611,11 @@ async def get_card_meaning(
     return meaning
 
 
-@router.put("/card-meanings/{card_id}", response_model=PersonalCardMeaningResponse)
+@router.put(
+    "/card-meanings/{card_id}",
+    response_model=PersonalCardMeaningResponse,
+    responses=_not_found("Personal card meaning not found"),
+)
 @limiter.limit("5/minute")
 async def update_card_meaning(
     request: Request,
@@ -643,7 +658,11 @@ async def update_card_meaning(
     return meaning
 
 
-@router.delete("/card-meanings/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/card-meanings/{card_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=_not_found("Personal card meaning not found"),
+)
 @limiter.limit("5/minute")
 async def delete_card_meaning(
     request: Request, card_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -1010,7 +1029,12 @@ async def get_reminders(
     return reminders
 
 
-@router.post("/reminders", response_model=ReminderResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/reminders",
+    response_model=ReminderResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses=_not_found("Journal entry not found"),
+)
 @limiter.limit("5/minute")
 async def create_reminder(
     request: Request,
@@ -1054,7 +1078,7 @@ async def create_reminder(
     return db_reminder
 
 
-@router.put("/reminders/{reminder_id}")
+@router.put("/reminders/{reminder_id}", responses=_not_found("Reminder not found"))
 @limiter.limit("10/minute")
 async def update_reminder(
     request: Request,
@@ -1094,7 +1118,9 @@ async def update_reminder(
     return {"message": "Reminder updated successfully", "is_completed": reminder.is_completed, "id": reminder.id}
 
 
-@router.delete("/reminders/{reminder_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/reminders/{reminder_id}", status_code=status.HTTP_204_NO_CONTENT, responses=_not_found("Reminder not found")
+)
 @limiter.limit("5/minute")
 async def delete_reminder(
     request: Request, reminder_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
