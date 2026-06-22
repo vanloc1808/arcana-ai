@@ -376,7 +376,7 @@ The backend includes a comprehensive GitHub Actions workflow:
 
 ## 📚 Documentation
 
-- **API Documentation**: Available at `/docs` when running the server
+- **API Documentation** (local environment only): Swagger UI at `/docs`, ReDoc at `/redoc`, and a [Scalar](https://scalar.com/) API reference at `/scalar`
 - **Migration Guide**: See `migrations/` directory
 - **Configuration**: See `config.py` and `.env.example`
 - **Testing**: See `tests/` directory
