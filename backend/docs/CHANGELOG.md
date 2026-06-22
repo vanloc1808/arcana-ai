@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.21] - 2026-06-22
+
+### Added
+- Every API endpoint now documents all of the status codes it can return (e.g. `400`, `401`, `402`, `403`, `404`, `409`, `413`, `422`, `429`, `500`, `503`) together with example request payloads and response bodies, instead of only `200`/`422`. The richer documentation is reflected across the Swagger UI (`/docs`), ReDoc (`/redoc`), and Scalar (`/scalar`) references, which all render from the same `/openapi.json` schema.
+- Added `backend/scripts/check_openapi_coverage.py` to report each endpoint's documented status codes and flag any endpoint still documenting only the defaults.
+
+### Changed
+- The `422` validation error response in the OpenAPI schema now matches the API's actual envelope (`{"error": "Validation error", "details": [{"loc", "msg"}]}`) instead of FastAPI's default `HTTPValidationError` shape.
+
 ## [0.0.20] - 2026-06-22
 
 ### Added

@@ -37,7 +37,6 @@ from scalar_fastapi import get_scalar_api_reference
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
-from config import settings
 from database import Base, engine
 from routers import (
     admin,
@@ -66,6 +65,7 @@ from utils.error_handlers import (
     validation_exception_handler,
 )
 from utils.middleware import RequestLoggingMiddleware
+from utils.openapi_responses import setup_openapi
 from utils.rate_limiter import limiter, rate_limit_exceeded_handler
 
 # Create database tables on startup
@@ -175,6 +175,12 @@ app.include_router(streaks.router)  # Daily streaks and achievements
 app.include_router(stats.router)  # Aggregated dashboard statistics
 app.include_router(web_push.router)  # Web Push (VAPID) subscriptions and delivery
 app.include_router(utilities.router)  # Shared utility endpoints
+
+# Augment the generated OpenAPI schema with the error responses every endpoint can
+# return (401/403/500 and the real 422 envelope). Must run after routers are added
+# so that per-route ``responses=`` declarations take precedence. Feeds /docs,
+# /redoc and /scalar, which all render from /openapi.json.
+setup_openapi(app)
 
 
 @app.get("/")

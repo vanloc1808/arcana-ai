@@ -25,6 +25,7 @@ from schemas import (
     UserResponse,
     UserUpdate,
 )
+from schemas_errors import ErrorResponse
 from utils.avatar_utils import avatar_manager
 from utils.celery_utils import EmailTaskManager
 from utils.error_handlers import (
@@ -35,6 +36,7 @@ from utils.error_handlers import (
     ValidationError,
     logger,
 )
+from utils.openapi_responses import DETAIL, error_responses
 from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -265,7 +267,37 @@ async def send_reset_email(email: str, token: str, db: Session):
         raise ServiceUnavailableError(message="Error sending reset email", details={"error": str(e)})
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    responses=error_responses(
+        429,
+        422,
+        overrides={
+            422: {
+                "model": ErrorResponse,
+                "description": "Validation failed, or the username/email is already registered.",
+                "examples": {
+                    "duplicate_username": {
+                        "summary": "Username already registered",
+                        "value": {"error": "Username already registered", "details": {"username": "john_doe"}},
+                    },
+                    "duplicate_email": {
+                        "summary": "Email already registered",
+                        "value": {"error": "Email already registered", "details": {"email": "john@example.com"}},
+                    },
+                    "malformed_body": {
+                        "summary": "Malformed request body",
+                        "value": {
+                            "error": "Validation error",
+                            "details": [{"loc": ["body", "email"], "msg": "value is not a valid email address"}],
+                        },
+                    },
+                },
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["auth"])
 def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     """
@@ -334,7 +366,19 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
         raise TarotAPIException(message="Error registering user", details={"error": str(e)})
 
 
-@router.post("/token")
+@router.post(
+    "/token",
+    responses=error_responses(
+        401,
+        429,
+        overrides={
+            401: {
+                "description": "Invalid username/email or password.",
+                "example": {"error": "Invalid credentials", "details": {"error": "Incorrect username or password"}},
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["auth"])
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
@@ -415,7 +459,19 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         raise TarotAPIException(message="Error during login", details={"error": str(e)})
 
 
-@router.post("/refresh")
+@router.post(
+    "/refresh",
+    responses=error_responses(
+        401,
+        429,
+        overrides={
+            401: {
+                "description": "The refresh token is missing, invalid, expired, or not a refresh token.",
+                "example": {"error": "Invalid refresh token", "details": {"error": "Signature has expired"}},
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["auth"])
 async def refresh_token(request: Request, refresh_token_data: RefreshToken, db: Session = Depends(get_db)):
     """
@@ -466,7 +522,7 @@ async def refresh_token(request: Request, refresh_token_data: RefreshToken, db: 
         raise AuthenticationError(message="Invalid refresh token", details={"error": str(e)})
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", responses=error_responses(429))
 @limiter.limit(RATE_LIMITS["auth"])
 async def forgot_password(request: Request, request_data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """
@@ -521,7 +577,34 @@ async def forgot_password(request: Request, request_data: ForgotPasswordRequest,
         raise TarotAPIException(message="Error processing password reset request", details={"error": str(e)})
 
 
-@router.post("/reset-password")
+@router.post(
+    "/reset-password",
+    responses=error_responses(
+        429,
+        422,
+        overrides={
+            422: {
+                "model": ErrorResponse,
+                "description": "The reset token is invalid/expired, or the new password failed validation.",
+                "examples": {
+                    "invalid_token": {
+                        "summary": "Invalid or expired token",
+                        "value": {"error": "Invalid or expired reset token", "details": {"token": "abc123"}},
+                    },
+                    "weak_password": {
+                        "summary": "Password failed validation",
+                        "value": {
+                            "error": "Validation error",
+                            "details": [
+                                {"loc": ["body", "new_password"], "msg": "Password must be at least 8 characters"}
+                            ],
+                        },
+                    },
+                },
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["auth"])
 async def reset_password(request: Request, request_data: ResetPasswordRequest, db: Session = Depends(get_db)):
     """
@@ -596,7 +679,7 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
         raise TarotAPIException(message="Error resetting password", details={"error": str(e)})
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserResponse, responses=error_responses(429, 503))
 @limiter.limit(RATE_LIMITS["default"])
 async def get_current_user_profile(
     request: Request,
@@ -662,7 +745,33 @@ async def get_current_user_profile(
         raise ServiceUnavailableError(message="Error getting user profile", details={"error": str(e)})
 
 
-@router.put("/me", response_model=UserResponse)
+@router.put(
+    "/me",
+    response_model=UserResponse,
+    responses=error_responses(
+        429,
+        422,
+        overrides={
+            422: {
+                "model": ErrorResponse,
+                "description": "A field failed validation, or the chosen favorite deck does not exist.",
+                "examples": {
+                    "invalid_deck": {
+                        "summary": "Favorite deck not found",
+                        "value": {"error": "Invalid deck ID", "details": {"favorite_deck_id": 999}},
+                    },
+                    "invalid_field": {
+                        "summary": "Field failed validation",
+                        "value": {
+                            "error": "Validation error",
+                            "details": [{"loc": ["body", "timezone"], "msg": "Invalid timezone."}],
+                        },
+                    },
+                },
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["default"])
 async def update_current_user_profile(
     request: Request,
@@ -732,7 +841,7 @@ async def update_current_user_profile(
         raise TarotAPIException(message="Error updating user profile", details={"error": str(e)})
 
 
-@router.get("/decks", response_model=list[DeckResponse])
+@router.get("/decks", response_model=list[DeckResponse], responses=error_responses(429))
 @limiter.limit(RATE_LIMITS["default"])
 async def get_available_decks(request: Request, db: Session = Depends(get_db)):
     """
@@ -751,7 +860,26 @@ async def get_available_decks(request: Request, db: Session = Depends(get_db)):
     return decks
 
 
-@router.post("/avatar/upload")
+@router.post(
+    "/avatar/upload",
+    responses=error_responses(
+        400,
+        413,
+        429,
+        503,
+        style=DETAIL,
+        overrides={
+            400: {
+                "description": "The uploaded file is not a valid image or could not be processed.",
+                "example": {"detail": "Invalid image file"},
+            },
+            503: {
+                "description": "Avatar uploads are disabled in this environment.",
+                "example": {"detail": "Avatar functionality disabled in local environment"},
+            },
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["upload"])
 async def upload_avatar(
     request: Request,
@@ -851,7 +979,15 @@ async def upload_avatar(
         raise HTTPException(status_code=500, detail=f"Error uploading avatar: {str(e)}")
 
 
-@router.delete("/avatar")
+@router.delete(
+    "/avatar",
+    responses=error_responses(
+        404,
+        429,
+        style=DETAIL,
+        overrides={404: {"description": "The user has no avatar to delete.", "example": {"detail": "No avatar found"}}},
+    ),
+)
 @limiter.limit(RATE_LIMITS["default"])
 async def delete_avatar(
     request: Request,
@@ -906,7 +1042,19 @@ async def delete_avatar(
         raise HTTPException(status_code=500, detail="Error deleting avatar")
 
 
-@router.get("/avatars/{filename}")
+@router.get(
+    "/avatars/{filename}",
+    responses=error_responses(
+        404,
+        style=DETAIL,
+        overrides={
+            404: {
+                "description": "The avatar does not exist, or avatars are disabled in this environment.",
+                "example": {"detail": "Avatar not found"},
+            }
+        },
+    ),
+)
 async def get_avatar(filename: str):
     """
     Get Avatar Image

@@ -24,3 +24,12 @@ When pushing a substantive change to an existing PR, update the PR title and des
 ## Roadmap tracking
 
 When shipping a feature from `plans/feature-recommendations.md`, mark it as done in the same commit: flip the row's status in the priority matrix from `☐` to `✅` and append `✅ Shipped` to the feature's section heading. Keeps the doc honest about what's actually done.
+
+## API documentation
+
+When you add, delete, or update an API endpoint, update its OpenAPI documentation in the same change so `/openapi.json` stays accurate. That schema is generated from the route definitions and is what powers `/docs` (Swagger UI), `/redoc` (ReDoc), and `/scalar` (Scalar), so "update `openapi.json`" means update the source it is built from:
+
+- Declare every non-2xx status code the endpoint can return via `responses=` on the route decorator, using the `error_responses(...)` helper in `backend/utils/openapi_responses.py`. The universal codes are injected automatically by `setup_openapi()` in `backend/app.py` (`500` everywhere, `401` on secured routes, `403` on `/admin` routes, and the real `422` envelope), so only declare the endpoint-specific codes (e.g. `400`/`402`/`404`/`409`/`413`/`429`/`503`).
+- Provide request and response body examples — via `json_schema_extra={"examples": [...]}` on the Pydantic models in `backend/schemas.py`, or per-response examples passed through `error_responses(..., overrides=...)`.
+- Match the real response envelope: `{"error", "details"}` for `TarotAPIException` subclasses (`style="app"`, the default) and `{"detail"}` for `HTTPException` (`style="detail"`).
+- Verify with `uv run python backend/scripts/check_openapi_coverage.py`; no endpoint should be left documenting only `200`/`422`.
