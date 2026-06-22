@@ -32,6 +32,8 @@ Version: 1.0.0
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from scalar_fastapi import get_scalar_api_reference
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
@@ -71,17 +73,25 @@ from utils.rate_limiter import limiter, rate_limit_exceeded_handler
 # This ensures all tables are created before the application starts
 Base.metadata.create_all(bind=engine)
 
-# Initialize FastAPI application with metadata
-# https://stackoverflow.com/questions/73677919/how-to-disable-swagger-ui-documentation-in-fastapi-for-production-server
 app = FastAPI(
     title="ArcanaAI API",
     description="An AI-powered tarot reading service with subscription management, "
     "chat functionality, and comprehensive tarot card interpretations",
     version="1.0.0",
-    docs_url="/docs" if settings.FASTAPI_ENV == "local" else None,
-    redoc_url="/redoc" if settings.FASTAPI_ENV == "local" else None,
-    openapi_url="/openapi.json" if settings.FASTAPI_ENV == "local" else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
+
+
+@app.get("/scalar", include_in_schema=False)
+async def scalar_docs() -> HTMLResponse:
+    """Render the Scalar API reference from the generated OpenAPI schema."""
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url or "/openapi.json",
+        title=app.title,
+    )
+
 
 # Configure rate limiting
 # Add the limiter to the app state and register exception handler
@@ -176,20 +186,22 @@ async def root():
     API Root Endpoint
 
     Welcome endpoint that provides basic information about the ArcanaAI API
-    and links to interactive documentation.
+    and links to the interactive documentation.
 
     Returns:
         dict: API welcome information
             - message (str): Welcome message
             - docs_url (str): URL to Swagger UI documentation
             - redoc_url (str): URL to ReDoc documentation
+            - scalar_url (str): URL to Scalar API reference
 
     Example Response:
         ```json
         {
             "message": "Welcome to the ArcanaAI API",
             "docs_url": "/docs",
-            "redoc_url": "/redoc"
+            "redoc_url": "/redoc",
+            "scalar_url": "/scalar"
         }
         ```
 
@@ -200,4 +212,5 @@ async def root():
         "message": "Welcome to the ArcanaAI API",
         "docs_url": "/docs",
         "redoc_url": "/redoc",
+        "scalar_url": "/scalar",
     }

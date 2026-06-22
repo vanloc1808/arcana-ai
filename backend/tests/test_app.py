@@ -13,6 +13,7 @@ def test_read_root(client):
     assert data["message"] == "Welcome to the ArcanaAI API"
     assert data["docs_url"] == "/docs"
     assert data["redoc_url"] == "/redoc"
+    assert data["scalar_url"] == "/scalar"
 
 
 def test_health_check(client):
@@ -25,7 +26,7 @@ def test_health_check(client):
 
 
 def test_docs_available(client):
-    """Test that API documentation is accessible"""
+    """Test that the Swagger UI documentation is accessible"""
     response = client.get("/docs")
     assert response.status_code == status.HTTP_200_OK
 
@@ -34,6 +35,18 @@ def test_redoc_available(client):
     """Test that ReDoc documentation is accessible"""
     response = client.get("/redoc")
     assert response.status_code == status.HTTP_200_OK
+
+
+def test_scalar_available(client):
+    """Test that the Scalar API reference is served at /scalar"""
+    response = client.get("/scalar")
+    assert response.status_code == status.HTTP_200_OK
+    assert "text/html" in response.headers["content-type"]
+    body = response.text.lower()
+    # Scalar renders an HTML shell that loads the Scalar reference bundle and
+    # points it at the generated OpenAPI schema.
+    assert "@scalar/api-reference" in body
+    assert "/openapi.json" in body
 
 
 def test_openapi_schema_available(client):
