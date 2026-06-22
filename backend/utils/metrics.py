@@ -5,6 +5,8 @@ from fastapi import FastAPI, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from starlette.responses import Response as StarletteResponse
 
+from config import settings
+
 PROJECT = "arcana-ai"
 COMPONENT = "backend"
 COMMON_LABELS = ["project", "component", "env"]
@@ -142,9 +144,16 @@ email_send_duration_seconds = Histogram(
 
 
 def _handler_name(request: Request) -> str:
-    """Return the name of the route handler for the given request."""
+    """Return the templated route path for the request.
+
+    Unmatched requests (e.g. 404s from scanners hitting random URLs) have no
+    route in scope. Returning a constant for those keeps the ``handler`` label
+    low-cardinality instead of minting one time series per raw URL path.
+    """
     route = request.scope.get("route")
-    return getattr(route, "path", request.url.path)
+    if route is None:
+        return "__unmatched__"
+    return getattr(route, "path", "__unmatched__")
 
 
 def setup_metrics(app: FastAPI, env: str) -> None:
@@ -196,6 +205,21 @@ def setup_metrics(app: FastAPI, env: str) -> None:
 def base_labels(env: str) -> dict[str, str]:
     """Return a dictionary of base labels for Prometheus metrics."""
     return {"project": PROJECT, "component": COMPONENT, "env": env}
+
+
+def estimate_openai_cost_usd(prompt_tokens: int, completion_tokens: int) -> float:
+    """Estimate OpenAI request cost in USD from token counts.
+
+    Uses the configured per-1M-token input/output rates
+    (``OPENAI_INPUT_COST_USD_PER_1M_TOKENS`` /
+    ``OPENAI_OUTPUT_COST_USD_PER_1M_TOKENS``). Returns ``0.0`` when those rates
+    are unset, leaving ``arcana_openai_cost_usd_total`` at zero rather than
+    recording a guess. Shared by every code path that reports OpenAI usage so
+    cost accounting stays consistent.
+    """
+    input_cost = prompt_tokens * settings.OPENAI_INPUT_COST_USD_PER_1M_TOKENS / 1_000_000
+    output_cost = completion_tokens * settings.OPENAI_OUTPUT_COST_USD_PER_1M_TOKENS / 1_000_000
+    return input_cost + output_cost
 
 
 def record_tarot_reading(

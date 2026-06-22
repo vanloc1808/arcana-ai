@@ -7,13 +7,14 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from dotenv import load_dotenv
+from langchain_core.callbacks import UsageMetadataCallbackHandler
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from sqlalchemy.orm import Session
 
 from config import settings
-from utils.metrics import record_openai_request
+from utils.metrics import estimate_openai_cost_usd, record_openai_request
 
 # Configure logging
 logging.basicConfig(
@@ -27,6 +28,22 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 
+def _usage_from_callback(cb: UsageMetadataCallbackHandler) -> tuple[int, int]:
+    """Sum (prompt_tokens, completion_tokens) collected by a usage callback.
+
+    ``UsageMetadataCallbackHandler.usage_metadata`` is keyed by model name and
+    only populated when the provider reports usage (real ChatOpenAI calls with
+    ``stream_usage=True``). It stays empty under the test mocks, so this returns
+    ``(0, 0)`` and the token/cost counters are simply not incremented.
+    """
+    prompt_tokens = 0
+    completion_tokens = 0
+    for usage in (cb.usage_metadata or {}).values():
+        prompt_tokens += int(usage.get("input_tokens", 0) or 0)
+        completion_tokens += int(usage.get("output_tokens", 0) or 0)
+    return prompt_tokens, completion_tokens
+
+
 class TarotReader:
     def __init__(self, db: Session = None, deck_id: int = 1):
         logger.info("Initializing TarotReader...")
@@ -34,6 +51,7 @@ class TarotReader:
             temperature=0.7,
             model="gpt-4.1-mini",
             streaming=True,
+            stream_usage=True,  # Emit token usage on the final stream chunk for cost metrics
             max_tokens=800,  # This will ensure responses are under 1000 words
         )
         self.image_urls = self._load_image_urls()
@@ -237,10 +255,14 @@ class TarotReader:
         start_time = time.perf_counter()
         model = getattr(self.llm, "model_name", settings.OPENAI_MODEL)
         operation = "tarot_interpretation"
+        usage_cb = UsageMetadataCallbackHandler()
 
         # Generate the reading in streaming mode
         try:
-            async for chunk in chain.astream({"concern": concern, "cards": cards_text}):
+            async for chunk in chain.astream(
+                {"concern": concern, "cards": cards_text},
+                config={"callbacks": [usage_cb]},
+            ):
                 yield chunk
                 await asyncio.sleep(0)  # Allow other tasks to run
         except Exception as exc:
@@ -254,12 +276,16 @@ class TarotReader:
             )
             raise
         else:
+            prompt_tokens, completion_tokens = _usage_from_callback(usage_cb)
             record_openai_request(
                 env=settings.FASTAPI_ENV,
                 model=model,
                 operation=operation,
                 status="success",
                 duration=time.perf_counter() - start_time,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost_usd=estimate_openai_cost_usd(prompt_tokens, completion_tokens),
             )
 
         logger.info("Reading generation completed")
@@ -303,6 +329,7 @@ class TarotReader:
         start_time = time.perf_counter()
         model = getattr(self.llm, "model_name", settings.OPENAI_MODEL)
         operation = "compatibility_interpretation"
+        usage_cb = UsageMetadataCallbackHandler()
 
         try:
             async for chunk in chain.astream(
@@ -311,7 +338,8 @@ class TarotReader:
                     "person_b": person_b,
                     "focus_line": focus_line,
                     "cards": cards_text,
-                }
+                },
+                config={"callbacks": [usage_cb]},
             ):
                 yield chunk
                 await asyncio.sleep(0)
@@ -326,12 +354,16 @@ class TarotReader:
             )
             raise
         else:
+            prompt_tokens, completion_tokens = _usage_from_callback(usage_cb)
             record_openai_request(
                 env=settings.FASTAPI_ENV,
                 model=model,
                 operation=operation,
                 status="success",
                 duration=time.perf_counter() - start_time,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost_usd=estimate_openai_cost_usd(prompt_tokens, completion_tokens),
             )
 
     async def create_compatibility_reading(
@@ -381,6 +413,7 @@ class TarotReader:
         start_time = time.perf_counter()
         model = getattr(self.llm, "model_name", settings.OPENAI_MODEL)
         operation = "compatibility_interpretation"
+        usage_cb = UsageMetadataCallbackHandler()
         try:
             result = await chain.ainvoke(
                 {
@@ -388,7 +421,8 @@ class TarotReader:
                     "person_b": person_b,
                     "focus_line": focus_line,
                     "cards": cards_text,
-                }
+                },
+                config={"callbacks": [usage_cb]},
             )
         except Exception as exc:
             record_openai_request(
@@ -401,12 +435,16 @@ class TarotReader:
             )
             raise
         else:
+            prompt_tokens, completion_tokens = _usage_from_callback(usage_cb)
             record_openai_request(
                 env=settings.FASTAPI_ENV,
                 model=model,
                 operation=operation,
                 status="success",
                 duration=time.perf_counter() - start_time,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost_usd=estimate_openai_cost_usd(prompt_tokens, completion_tokens),
             )
         logger.info("Compatibility reading generation completed")
         return result
