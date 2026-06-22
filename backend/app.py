@@ -72,38 +72,24 @@ from utils.rate_limiter import limiter, rate_limit_exceeded_handler
 # This ensures all tables are created before the application starts
 Base.metadata.create_all(bind=engine)
 
-# Initialize FastAPI application with metadata.
-#
-# Interactive documentation is exposed through three UIs that all read from the
-# same generated OpenAPI schema: the built-in Swagger UI ("/docs"), ReDoc
-# ("/redoc"), and Scalar ("/scalar", registered below). All of them — along with
-# the raw schema — are only enabled in the local environment so internal API
-# details are not published in production.
-# https://stackoverflow.com/questions/73677919/how-to-disable-swagger-ui-documentation-in-fastapi-for-production-server
 app = FastAPI(
     title="ArcanaAI API",
     description="An AI-powered tarot reading service with subscription management, "
     "chat functionality, and comprehensive tarot card interpretations",
     version="1.0.0",
-    docs_url="/docs" if settings.FASTAPI_ENV == "local" else None,
-    redoc_url="/redoc" if settings.FASTAPI_ENV == "local" else None,
-    openapi_url="/openapi.json" if settings.FASTAPI_ENV == "local" else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 
-# Serve an additional interactive API reference with Scalar (https://scalar.com/)
-# at "/scalar", alongside the built-in Swagger UI and ReDoc. Registered only in the
-# local environment to mirror the OpenAPI schema gating above and keep the docs
-# private in production.
-if settings.FASTAPI_ENV == "local":
-
-    @app.get("/scalar", include_in_schema=False)
-    async def scalar_docs() -> HTMLResponse:
-        """Render the Scalar API reference from the generated OpenAPI schema."""
-        return get_scalar_api_reference(
-            openapi_url=app.openapi_url or "/openapi.json",
-            title=app.title,
-        )
+@app.get("/scalar", include_in_schema=False)
+async def scalar_docs() -> HTMLResponse:
+    """Render the Scalar API reference from the generated OpenAPI schema."""
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url or "/openapi.json",
+        title=app.title,
+    )
 
 
 # Configure rate limiting
