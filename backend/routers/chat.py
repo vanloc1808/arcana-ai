@@ -29,6 +29,7 @@ from utils.error_handlers import (
     logger,
 )
 from utils.metrics import (
+    estimate_openai_cost_usd,
     record_chat_conversation,
     record_chat_message,
     record_openai_request,
@@ -56,12 +57,6 @@ def _openai_token_usage(response) -> tuple[int, int]:
     return prompt_tokens, completion_tokens
 
 
-def _estimate_openai_cost_usd(prompt_tokens: int, completion_tokens: int) -> float:
-    input_cost = prompt_tokens * settings.OPENAI_INPUT_COST_USD_PER_1M_TOKENS / 1_000_000
-    output_cost = completion_tokens * settings.OPENAI_OUTPUT_COST_USD_PER_1M_TOKENS / 1_000_000
-    return input_cost + output_cost
-
-
 def _record_openai_success(response, start_time: float, operation: str = "chat_message") -> None:
     prompt_tokens, completion_tokens = _openai_token_usage(response)
     record_openai_request(
@@ -72,7 +67,7 @@ def _record_openai_success(response, start_time: float, operation: str = "chat_m
         duration=time.perf_counter() - start_time,
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
-        cost_usd=_estimate_openai_cost_usd(prompt_tokens, completion_tokens),
+        cost_usd=estimate_openai_cost_usd(prompt_tokens, completion_tokens),
     )
 
 
