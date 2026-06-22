@@ -1,7 +1,6 @@
 import traceback
 import uuid
 from pathlib import Path
-from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -13,6 +12,7 @@ from models import User
 from routers.auth import RATE_LIMITS, get_current_user, limiter
 from schemas import SupportTicketResponse
 from utils.error_handlers import logger
+from utils.openapi_responses import DETAIL, error_responses
 
 # Initialize support router with prefix and tags
 router = APIRouter(prefix="/support", tags=["support"])
@@ -77,7 +77,7 @@ def validate_file(file: UploadFile) -> None:
         )
 
 
-async def upload_file_to_slack(file: UploadFile, ticket_id: str, channel: str) -> Optional[dict]:
+async def upload_file_to_slack(file: UploadFile, ticket_id: str, channel: str) -> dict | None:
     """Upload file to Slack using the new external upload API.
 
     The old files.upload method has been deprecated by Slack. This function uses
@@ -106,7 +106,7 @@ async def upload_file_to_slack(file: UploadFile, ticket_id: str, channel: str) -
         if len(file_content) > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,
-                detail=f"File '{file.filename}' is too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB",
+                detail=f"File '{file.filename}' is too large. Maximum size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
             )
 
         file_size = len(file_content)
@@ -221,7 +221,7 @@ async def upload_file_to_slack(file: UploadFile, ticket_id: str, channel: str) -
 
 async def send_to_slack(
     ticket_id: str, user: User, title: str, description: str, uploaded_files: list[dict] = None
-) -> Optional[str]:
+) -> str | None:
     """Send support ticket to Slack via webhook.
 
     Args:
@@ -303,7 +303,32 @@ async def send_to_slack(
         return None
 
 
-@router.post("/", response_model=SupportTicketResponse)
+@router.post(
+    "/",
+    response_model=SupportTicketResponse,
+    responses=error_responses(
+        400,
+        429,
+        style=DETAIL,
+        overrides={
+            400: {
+                "description": "The ticket fields are missing/too long, or an attachment is invalid.",
+                "examples": {
+                    "empty_title": {"summary": "Title is empty", "value": {"detail": "Title cannot be empty"}},
+                    "title_too_long": {
+                        "summary": "Title too long",
+                        "value": {"detail": "Title must be 200 characters or less"},
+                    },
+                    "too_many_files": {
+                        "summary": "Too many attachments",
+                        "value": {"detail": "Too many files. Maximum allowed: 5"},
+                    },
+                    "no_file": {"summary": "Empty attachment", "value": {"detail": "No file selected"}},
+                },
+            }
+        },
+    ),
+)
 @limiter.limit(RATE_LIMITS["upload"])  # Use upload rate limit (more restrictive)
 async def create_support_ticket(
     request: Request,

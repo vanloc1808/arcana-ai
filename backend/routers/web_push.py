@@ -19,12 +19,21 @@ from schemas import (
     WebPushUnsubscribeRequest,
 )
 from services.web_push_service import is_configured, send_to_user
+from utils.openapi_responses import DETAIL, error_responses
 from utils.rate_limiter import limiter
 
 router = APIRouter(prefix="/api/web-push", tags=["web-push"])
 
+# Returned by the delivery endpoints when VAPID keys are not configured.
+_WEB_PUSH_NOT_CONFIGURED = {
+    503: {
+        "description": "Web push notifications are not configured on this server.",
+        "example": {"detail": "Web push notifications are not configured on this server."},
+    }
+}
 
-@router.get("/vapid-public-key", response_model=WebPushPublicKeyResponse)
+
+@router.get("/vapid-public-key", response_model=WebPushPublicKeyResponse, responses=error_responses(429))
 @limiter.limit("60/minute")
 async def get_vapid_public_key(request: Request):
     """Public VAPID key the browser needs to subscribe.
@@ -38,7 +47,11 @@ async def get_vapid_public_key(request: Request):
     )
 
 
-@router.post("/subscribe", response_model=WebPushSubscribeResponse)
+@router.post(
+    "/subscribe",
+    response_model=WebPushSubscribeResponse,
+    responses=error_responses(429, 503, style=DETAIL, overrides=_WEB_PUSH_NOT_CONFIGURED),
+)
 @limiter.limit("20/minute")
 async def subscribe(
     request: Request,
@@ -84,7 +97,7 @@ async def subscribe(
     return WebPushSubscribeResponse(id=sub.id, endpoint=sub.endpoint)
 
 
-@router.post("/unsubscribe", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/unsubscribe", status_code=status.HTTP_204_NO_CONTENT, responses=error_responses(429))
 @limiter.limit("20/minute")
 async def unsubscribe(
     request: Request,
@@ -108,7 +121,11 @@ async def unsubscribe(
     return None
 
 
-@router.post("/test", response_model=WebPushTestResponse)
+@router.post(
+    "/test",
+    response_model=WebPushTestResponse,
+    responses=error_responses(429, 503, style=DETAIL, overrides=_WEB_PUSH_NOT_CONFIGURED),
+)
 @limiter.limit("3/minute")
 async def send_test_notification(
     request: Request,

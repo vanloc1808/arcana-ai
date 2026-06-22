@@ -13,20 +13,32 @@ Author: ArcanaAI Development Team
 Version: 1.0.0
 """
 
-import os
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 
+from utils.openapi_responses import DETAIL, error_responses
+
 router = APIRouter(prefix="/changelog", tags=["changelog"])
+
+# The changelog endpoints return a 404 when the changelog source is unavailable.
+_CHANGELOG_404 = {
+    404: {
+        "description": "The changelog file or version is not available.",
+        "example": {"detail": "Changelog file not found"},
+    }
+}
 
 # Path to the changelog file
 CHANGELOG_PATH = Path(__file__).parent.parent / "docs" / "CHANGELOG.md"
 
 
-@router.get("/", response_class=PlainTextResponse)
+@router.get(
+    "/",
+    response_class=PlainTextResponse,
+    responses=error_responses(404, style=DETAIL, overrides=_CHANGELOG_404),
+)
 async def get_changelog():
     """
     Get the full changelog content
@@ -41,23 +53,17 @@ async def get_changelog():
     """
     try:
         if not CHANGELOG_PATH.exists():
-            raise HTTPException(
-                status_code=404,
-                detail="Changelog file not found"
-            )
+            raise HTTPException(status_code=404, detail="Changelog file not found")
 
-        with open(CHANGELOG_PATH, 'r', encoding='utf-8') as file:
+        with CHANGELOG_PATH.open(encoding="utf-8") as file:
             content = file.read()
 
         return content
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error reading changelog: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error reading changelog: {str(e)}")
 
 
-@router.get("/latest")
+@router.get("/latest", responses=error_responses(404, style=DETAIL, overrides=_CHANGELOG_404))
 async def get_latest_version():
     """
     Get the latest version information from the changelog
@@ -72,16 +78,13 @@ async def get_latest_version():
     """
     try:
         if not CHANGELOG_PATH.exists():
-            raise HTTPException(
-                status_code=404,
-                detail="Changelog file not found"
-            )
+            raise HTTPException(status_code=404, detail="Changelog file not found")
 
-        with open(CHANGELOG_PATH, 'r', encoding='utf-8') as file:
+        with CHANGELOG_PATH.open(encoding="utf-8") as file:
             content = file.read()
 
         # Parse the changelog to find the latest version
-        lines = content.split('\n')
+        lines = content.split("\n")
         latest_version = None
         latest_date = None
         latest_changes = {}
@@ -93,13 +96,13 @@ async def get_latest_version():
             line = line.strip()
 
             # Check for version headers
-            if line.startswith('## [') and '] - ' in line:
+            if line.startswith("## [") and "] - " in line:
                 # If we already found a version, this is the latest one
                 if latest_version is None:
                     # Extract version and date
-                    version_start = line.find('[') + 1
-                    version_end = line.find(']')
-                    date_start = line.find(' - ') + 3
+                    version_start = line.find("[") + 1
+                    version_end = line.find("]")
+                    date_start = line.find(" - ") + 3
 
                     if version_start > 0 and version_end > version_start and date_start > 2:
                         latest_version = line[version_start:version_end]
@@ -112,36 +115,26 @@ async def get_latest_version():
                     break
 
             # Parse sections within the version block
-            elif in_version_block and line.startswith('### '):
+            elif in_version_block and line.startswith("### "):
                 current_section = line[4:].lower()  # Remove '### ' and convert to lowercase
                 latest_changes[current_section] = []
 
             # Parse content within sections
-            elif in_version_block and current_section and line.startswith('- ') and line != '- N/A':
+            elif in_version_block and current_section and line.startswith("- ") and line != "- N/A":
                 change_item = line[2:]  # Remove '- ' prefix
                 if change_item.strip():  # Only add non-empty items
                     latest_changes[current_section].append(change_item)
 
         if latest_version is None:
-            raise HTTPException(
-                status_code=404,
-                detail="No version information found in changelog"
-            )
+            raise HTTPException(status_code=404, detail="No version information found in changelog")
 
-        return {
-            "version": latest_version,
-            "date": latest_date,
-            "changes": latest_changes
-        }
+        return {"version": latest_version, "date": latest_date, "changes": latest_changes}
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error parsing changelog: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error parsing changelog: {str(e)}")
 
 
-@router.get("/all")
+@router.get("/all", responses=error_responses(404, style=DETAIL, overrides=_CHANGELOG_404))
 async def get_all_versions():
     """
     Get all version information from the changelog
@@ -156,15 +149,12 @@ async def get_all_versions():
     """
     try:
         if not CHANGELOG_PATH.exists():
-            raise HTTPException(
-                status_code=404,
-                detail="Changelog file not found"
-            )
+            raise HTTPException(status_code=404, detail="Changelog file not found")
 
-        with open(CHANGELOG_PATH, 'r', encoding='utf-8') as file:
+        with CHANGELOG_PATH.open(encoding="utf-8") as file:
             content = file.read()
 
-        lines = content.split('\n')
+        lines = content.split("\n")
         all_versions = []
         current_version = None
         current_date = None
@@ -174,17 +164,13 @@ async def get_all_versions():
         for line in lines:
             line = line.strip()
 
-            if line.startswith('## [') and '] - ' in line:
+            if line.startswith("## [") and "] - " in line:
                 if current_version is not None:
-                    all_versions.append({
-                        "version": current_version,
-                        "date": current_date,
-                        "changes": current_changes
-                    })
+                    all_versions.append({"version": current_version, "date": current_date, "changes": current_changes})
 
-                version_start = line.find('[') + 1
-                version_end = line.find(']')
-                date_start = line.find(' - ') + 3
+                version_start = line.find("[") + 1
+                version_end = line.find("]")
+                date_start = line.find(" - ") + 3
 
                 if version_start > 0 and version_end > version_start and date_start > 2:
                     current_version = line[version_start:version_end]
@@ -192,32 +178,37 @@ async def get_all_versions():
                     current_changes = {}
                     current_section = None
 
-            elif current_version is not None and line.startswith('### '):
+            elif current_version is not None and line.startswith("### "):
                 current_section = line[4:].lower()
                 current_changes[current_section] = []
 
-            elif current_version is not None and current_section and line.startswith('- ') and line != '- N/A':
+            elif current_version is not None and current_section and line.startswith("- ") and line != "- N/A":
                 change_item = line[2:]
                 if change_item.strip():
                     current_changes[current_section].append(change_item)
 
         if current_version is not None:
-            all_versions.append({
-                "version": current_version,
-                "date": current_date,
-                "changes": current_changes
-            })
+            all_versions.append({"version": current_version, "date": current_date, "changes": current_changes})
 
         return all_versions
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error parsing changelog: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error parsing changelog: {str(e)}")
 
 
-@router.get("/version/{version}")
+@router.get(
+    "/version/{version}",
+    responses=error_responses(
+        404,
+        style=DETAIL,
+        overrides={
+            404: {
+                "description": "No changelog entry exists for the requested version.",
+                "example": {"detail": "Version 9.9.9 not found"},
+            }
+        },
+    ),
+)
 async def get_version_info(version: str):
     """
     Get information for a specific version from the changelog
@@ -233,16 +224,13 @@ async def get_version_info(version: str):
     """
     try:
         if not CHANGELOG_PATH.exists():
-            raise HTTPException(
-                status_code=404,
-                detail="Changelog file not found"
-            )
+            raise HTTPException(status_code=404, detail="Changelog file not found")
 
-        with open(CHANGELOG_PATH, 'r', encoding='utf-8') as file:
+        with CHANGELOG_PATH.open(encoding="utf-8") as file:
             content = file.read()
 
         # Parse the changelog to find the specific version
-        lines = content.split('\n')
+        lines = content.split("\n")
         target_version = None
         target_date = None
         target_changes = {}
@@ -254,10 +242,10 @@ async def get_version_info(version: str):
             line = line.strip()
 
             # Check for version headers
-            if line.startswith('## [') and '] - ' in line:
+            if line.startswith("## [") and "] - " in line:
                 # Extract version from the line
-                version_start = line.find('[') + 1
-                version_end = line.find(']')
+                version_start = line.find("[") + 1
+                version_end = line.find("]")
 
                 if version_start > 0 and version_end > version_start:
                     current_version = line[version_start:version_end]
@@ -265,7 +253,7 @@ async def get_version_info(version: str):
                     if current_version == version:
                         # Found our target version
                         target_version = current_version
-                        date_start = line.find(' - ') + 3
+                        date_start = line.find(" - ") + 3
                         target_date = line[date_start:] if date_start > 2 else None
                         in_target_version_block = True
                         target_changes = {}
@@ -275,30 +263,20 @@ async def get_version_info(version: str):
                         break
 
             # Parse sections within the target version block
-            elif in_target_version_block and line.startswith('### '):
+            elif in_target_version_block and line.startswith("### "):
                 current_section = line[4:].lower()  # Remove '### ' and convert to lowercase
                 target_changes[current_section] = []
 
             # Parse content within sections
-            elif in_target_version_block and current_section and line.startswith('- ') and line != '- N/A':
+            elif in_target_version_block and current_section and line.startswith("- ") and line != "- N/A":
                 change_item = line[2:]  # Remove '- ' prefix
                 if change_item.strip():  # Only add non-empty items
                     target_changes[current_section].append(change_item)
 
         if target_version is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Version {version} not found in changelog"
-            )
+            raise HTTPException(status_code=404, detail=f"Version {version} not found in changelog")
 
-        return {
-            "version": target_version,
-            "date": target_date,
-            "changes": target_changes
-        }
+        return {"version": target_version, "date": target_date, "changes": target_changes}
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error parsing changelog: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error parsing changelog: {str(e)}")

@@ -14,12 +14,13 @@ from models import User
 from routers.auth import get_current_user
 from schemas import UserDashboardStats
 from services.streak_service import get_dashboard_stats
+from utils.openapi_responses import error_responses
 from utils.rate_limiter import limiter
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
 
-@router.get("/me", response_model=UserDashboardStats)
+@router.get("/me", response_model=UserDashboardStats, responses=error_responses(429))
 @limiter.limit("60/minute")
 async def get_my_dashboard_stats(
     request: Request,
