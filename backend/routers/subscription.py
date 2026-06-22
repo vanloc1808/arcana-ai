@@ -1,29 +1,31 @@
 import json
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
 from datetime import datetime, timedelta
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import desc
+from sqlalchemy.orm import Session
+
 from database import get_db
-from models import User, SubscriptionEvent, PaymentTransaction, TurnUsageHistory, SubscriptionPlan, CheckoutSession
+from models import PaymentTransaction, SubscriptionEvent, SubscriptionPlan, TurnUsageHistory, User
 from routers.auth import get_current_user
 from schemas import (
     CheckoutRequest,
     CheckoutResponse,
     EthereumPaymentRequest,
     EthereumPaymentResponse,
+    PaymentTransactionResponse,
+    SubscriptionEventResponse,
+    SubscriptionHistoryResponse,
+    SubscriptionPlanResponse,
     SubscriptionResponse,
     TurnsResponse,
-    SubscriptionEventResponse,
-    PaymentTransactionResponse,
     TurnUsageHistoryResponse,
-    SubscriptionPlanResponse,
-    SubscriptionHistoryResponse,
 )
+from schemas_errors import DetailResponse
 from services.ethereum_service import EthereumService
 from services.subscription_service import SubscriptionService
+from utils.openapi_responses import DETAIL, error_responses
 
 logger = logging.getLogger(__name__)
 
@@ -62,13 +64,25 @@ async def get_user_subscription(current_user: User = Depends(get_current_user)):
     )
 
 
-@router.post("/subscription/checkout", response_model=CheckoutResponse)
+@router.post(
+    "/subscription/checkout",
+    response_model=CheckoutResponse,
+    responses=error_responses(
+        400,
+        style=DETAIL,
+        overrides={
+            400: {"description": "The checkout request is invalid.", "example": {"detail": "Invalid variant_id"}}
+        },
+    ),
+)
 async def create_checkout_session(
     request: CheckoutRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Create a checkout session for purchasing turns."""
     try:
-        logger.info(f"Creating checkout session for user {current_user.id} with product variant: {request.product_variant}")
+        logger.info(
+            f"Creating checkout session for user {current_user.id} with product variant: {request.product_variant}"
+        )
         checkout_url = await subscription_service.create_checkout_url(current_user, request.product_variant, db)
         logger.info(f"Successfully created checkout session for user {current_user.id}")
         return CheckoutResponse(checkout_url=checkout_url)
@@ -78,12 +92,32 @@ async def create_checkout_session(
     except Exception as e:
         logger.error(f"Failed to create checkout session for user {current_user.id}: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create checkout session: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create checkout session: {str(e)}"
         )
 
 
-@router.post("/webhooks/lemon-squeezy")
+@router.post(
+    "/webhooks/lemon-squeezy",
+    responses=error_responses(
+        400,
+        401,
+        style=DETAIL,
+        overrides={
+            400: {
+                "description": "The webhook signature header is missing or the payload is not valid JSON.",
+                "examples": {
+                    "missing_signature": {"summary": "Missing signature", "value": {"detail": "Missing signature"}},
+                    "invalid_payload": {"summary": "Invalid JSON payload", "value": {"detail": "Invalid JSON payload"}},
+                },
+            },
+            401: {
+                "model": DetailResponse,
+                "description": "The webhook signature does not match.",
+                "example": {"detail": "Invalid signature"},
+            },
+        },
+    ),
+)
 async def handle_lemon_squeezy_webhook(request: Request, db: Session = Depends(get_db)):
     """Handle webhook events from Lemon Squeezy."""
     try:
@@ -124,10 +158,22 @@ async def get_available_products():
     }
 
 
-@router.post("/user/consume-turn")
+@router.post(
+    "/user/consume-turn",
+    responses=error_responses(
+        400,
+        style=DETAIL,
+        overrides={
+            400: {
+                "description": "The user has no reading turns available.",
+                "example": {"detail": "No turns available"},
+            }
+        },
+    ),
+)
 async def consume_turn(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Consume a turn for the current user."""
-    result = subscription_service.consume_user_turn(db, current_user, usage_context='subscription')
+    result = subscription_service.consume_user_turn(db, current_user, usage_context="subscription")
 
     if not result.success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No turns available")
@@ -135,7 +181,25 @@ async def consume_turn(current_user: User = Depends(get_current_user), db: Sessi
     return result
 
 
-@router.post("/subscription/ethereum-payment", response_model=EthereumPaymentResponse)
+@router.post(
+    "/subscription/ethereum-payment",
+    response_model=EthereumPaymentResponse,
+    responses=error_responses(
+        400,
+        503,
+        style=DETAIL,
+        overrides={
+            400: {
+                "description": "On-chain payment verification failed.",
+                "example": {"detail": "Payment verification failed"},
+            },
+            503: {
+                "description": "The Ethereum verification service is unavailable.",
+                "example": {"detail": "Ethereum verification service is unavailable"},
+            },
+        },
+    ),
+)
 async def process_ethereum_payment(
     request: EthereumPaymentRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -344,13 +408,13 @@ async def get_user_subscription_history(
 
         # Calculate summary statistics
         total_spent = sum(
-            float(transaction.amount) for transaction in transactions
+            float(transaction.amount)
+            for transaction in transactions
             if transaction.status == "completed" and transaction.currency == "USD"
         )
 
         total_turns_purchased = sum(
-            transaction.turns_purchased for transaction in transactions
-            if transaction.status == "completed"
+            transaction.turns_purchased for transaction in transactions if transaction.status == "completed"
         )
 
         total_turns_used = len(usage_history)
@@ -376,7 +440,9 @@ async def get_user_subscription_history(
 
         return SubscriptionHistoryResponse(
             subscription_events=[SubscriptionEventResponse.model_validate(event) for event in events],
-            payment_transactions=[PaymentTransactionResponse.model_validate(transaction) for transaction in transactions],
+            payment_transactions=[
+                PaymentTransactionResponse.model_validate(transaction) for transaction in transactions
+            ],
             turn_usage_history=[TurnUsageHistoryResponse.model_validate(usage) for usage in usage_history],
             subscription_plans=[SubscriptionPlanResponse.model_validate(plan) for plan in plans],
             summary=summary,

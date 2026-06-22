@@ -9,12 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
 from models import User
-from routers.auth import get_admin_user, get_current_user
+from routers.auth import get_admin_user
 from utils.celery_utils import (
     email_task_manager,
     notification_task_manager,
     task_manager,
 )
+from utils.openapi_responses import DETAIL, error_responses
 
 logger = logging.getLogger(__name__)
 
@@ -188,7 +189,20 @@ async def send_welcome_email(email: EmailStr, username: str, current_user: User 
         )
 
 
-@router.post("/notifications/reminder", response_model=TaskCreateResponse)
+@router.post(
+    "/notifications/reminder",
+    response_model=TaskCreateResponse,
+    responses=error_responses(
+        400,
+        style=DETAIL,
+        overrides={
+            400: {
+                "description": "The reminder_type is not one of the allowed values.",
+                "example": {"detail": "reminder_type must be one of: daily, weekly, monthly"},
+            }
+        },
+    ),
+)
 async def send_reading_reminder(
     user_id: int, reminder_type: str = "daily", current_user: User = Depends(get_admin_user)
 ):
@@ -266,11 +280,24 @@ async def reset_monthly_free_turns(
     return {
         "message": "Monthly free turns reset task started",
         "task_id": task_id,
-        "note": "This task will reset free turns for all users who need a reset based on their last reset date"
+        "note": "This task will reset free turns for all users who need a reset based on their last reset date",
     }
 
 
-@router.post("/maintenance/cleanup", response_model=TaskCreateResponse)
+@router.post(
+    "/maintenance/cleanup",
+    response_model=TaskCreateResponse,
+    responses=error_responses(
+        400,
+        style=DETAIL,
+        overrides={
+            400: {
+                "description": "The days_old parameter is less than 1.",
+                "example": {"detail": "days_old must be at least 1"},
+            }
+        },
+    ),
+)
 async def cleanup_old_tasks(days_old: int = 30, current_user: User = Depends(get_admin_user)):
     """
     Cleanup old tasks asynchronously.

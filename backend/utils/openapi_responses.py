@@ -240,7 +240,54 @@ def _ensure_error_components(schema: dict[str, Any]) -> None:
         components.setdefault(model.__name__, model_schema)
 
 
-def _augment_operation(path: str, operation: dict[str, Any]) -> None:
+def _route_requires_admin(route: Any) -> bool:
+    """Return True if a route depends on the ``get_admin_user`` dependency.
+
+    Detected by callable name (rather than identity) to avoid importing the auth
+    module here, which would create a circular import.
+    """
+    dependant = getattr(route, "dependant", None)
+    if dependant is None:
+        return False
+    stack = list(getattr(dependant, "dependencies", []))
+    while stack:
+        dep = stack.pop()
+        call = getattr(dep, "call", None)
+        if call is not None and getattr(call, "__name__", "") == "get_admin_user":
+            return True
+        stack.extend(getattr(dep, "dependencies", []))
+    return False
+
+
+def _iter_api_routes(routes: Any) -> Any:
+    """Yield every ``APIRoute`` reachable from ``routes``.
+
+    Recent FastAPI versions keep included routers as ``_IncludedRouter`` wrappers in
+    ``app.routes`` rather than flattening their routes, so descend into each
+    wrapper's ``original_router`` to reach the real endpoints.
+    """
+    from fastapi.routing import APIRoute
+
+    for route in routes:
+        if isinstance(route, APIRoute):
+            yield route
+        nested = getattr(route, "original_router", route)
+        sub = getattr(nested, "routes", None)
+        if sub and sub is not routes:
+            yield from _iter_api_routes(sub)
+
+
+def _admin_operations(app: FastAPI) -> set[tuple[str, str]]:
+    """Return the ``(method, path)`` pairs whose route is gated behind admin auth."""
+    admin_ops: set[tuple[str, str]] = set()
+    for route in _iter_api_routes(app.routes):
+        if _route_requires_admin(route):
+            for method in route.methods or []:
+                admin_ops.add((method.lower(), route.path))
+    return admin_ops
+
+
+def _augment_operation(path: str, method: str, operation: dict[str, Any], admin_ops: set[tuple[str, str]]) -> None:
     """Add the universal error responses to a single operation, never overwriting."""
     responses = operation.setdefault("responses", {})
 
@@ -267,8 +314,8 @@ def _augment_operation(path: str, operation: dict[str, Any]) -> None:
             ),
         )
 
-    # Admin-only operations can fail authorization.
-    if path.startswith("/admin"):
+    # Admin-gated operations (any router) can fail authorization.
+    if (method, path) in admin_ops:
         responses.setdefault("403", _ref_entry(DetailResponse, "Admin access required.", _FORBIDDEN_EXAMPLE))
 
 
@@ -297,10 +344,11 @@ def setup_openapi(app: FastAPI) -> None:
         )
 
         _ensure_error_components(schema)
+        admin_ops = _admin_operations(app)
         for path, path_item in schema.get("paths", {}).items():
             for method, operation in path_item.items():
                 if method.lower() in _HTTP_METHODS and isinstance(operation, dict):
-                    _augment_operation(path, operation)
+                    _augment_operation(path, method.lower(), operation, admin_ops)
 
         app.openapi_schema = schema
         return schema
