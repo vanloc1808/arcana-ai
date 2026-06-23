@@ -292,7 +292,7 @@ ArcanaAI no longer runs or owns a Prometheus/Grafana stack in this repository. T
 
 - **Health Checks**: API health endpoints such as `GET /health` remain available.
 - **Logging**: Backend structured logging remains available for operational diagnostics.
-- **Application Metrics**: The previous `/metrics` instrumentation has been removed. Reimplement Prometheus metrics when needed and connect them to the central stack using [docs/grafana-monitoring-guide.md](docs/grafana-monitoring-guide.md).
+- **Application Metrics**: The FastAPI backend exposes Prometheus metrics at `tarot-backend:8000/metrics`, while Celery worker/beat metrics are exposed separately at `:8001` for the central monitoring stack. See [docs/grafana-monitoring-guide.md](docs/grafana-monitoring-guide.md).
 
 ## 🤝 Contributing
 

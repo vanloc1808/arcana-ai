@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.21] - 2026-06-23
+
+### Added
+- Celery workers and beat now expose a dedicated Prometheus metrics endpoint on port `8001`, aggregating prefork task/email counters with `prometheus_client` multiprocess mode for central monitoring scrapes.
+
+### Changed
+- Monitoring documentation now lists separate scrape targets for the FastAPI backend (`tarot-backend:8000/metrics`) and Celery services (`tarot-celery-worker:8001/metrics`, `tarot-celery-beat:8001/metrics`).
+
 ## [0.0.20] - 2026-06-22
 
 ### Added

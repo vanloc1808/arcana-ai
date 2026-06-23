@@ -5,11 +5,24 @@ from pathlib import Path
 
 from celery import Celery
 from celery.schedules import crontab
-from celery.signals import task_failure, task_postrun, task_prerun, task_retry
+from celery.signals import (
+    beat_init,
+    task_failure,
+    task_postrun,
+    task_prerun,
+    task_retry,
+    worker_init,
+    worker_process_shutdown,
+)
 from dotenv import load_dotenv
 
 from config import settings
-from utils.metrics import record_celery_failure, record_celery_task
+from utils.metrics import (
+    mark_worker_process_dead,
+    record_celery_failure,
+    record_celery_task,
+    start_worker_metrics_server,
+)
 
 # Load environment variables
 load_dotenv()
@@ -120,6 +133,24 @@ def track_task_retry(sender=None, request=None, reason=None, **kwargs):
         task_name=_task_name(sender),
         status="retry",
     )
+
+
+@worker_init.connect
+def start_metrics_server(**kwargs):
+    """Expose this worker's aggregated Prometheus metrics for scraping."""
+    start_worker_metrics_server()
+
+
+@beat_init.connect
+def start_beat_metrics_server(**kwargs):
+    """Expose celery-beat's metrics endpoint (mainly for ``up`` liveness)."""
+    start_worker_metrics_server()
+
+
+@worker_process_shutdown.connect
+def cleanup_worker_metrics(pid=None, **kwargs):
+    """Drop this prefork child's multiprocess metric files on shutdown."""
+    mark_worker_process_dead(pid=pid)
 
 
 # Explicitly import tasks to ensure they're registered

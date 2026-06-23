@@ -338,8 +338,8 @@ The backend includes a comprehensive GitHub Actions workflow:
 - `GET /health/detailed` - Detailed system health
 
 ### Metrics
-- The backend currently exposes health endpoints and logs only.
-- Prometheus `/metrics` instrumentation has been removed and should be reimplemented intentionally when application metrics are needed again.
+- FastAPI exposes Prometheus metrics at `GET /metrics` on `tarot-backend:8000`.
+- Celery worker and beat expose process-local Prometheus metrics on port `8001`; scrape `tarot-celery-worker:8001/metrics` and `tarot-celery-beat:8001/metrics` from the central monitoring stack.
 - The central Prometheus/Grafana deployment is owned by the standalone `central-monitoring` repo, not this backend.
 - **Logging**: Structured logging with different levels
 
