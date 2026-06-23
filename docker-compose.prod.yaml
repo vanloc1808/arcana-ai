@@ -48,6 +48,15 @@ services:
     container_name: tarot-celery-worker
     env_file:
       - ./backend/.env
+    # Enable prometheus_client multiprocess mode so task/email counters emitted
+    # in prefork children are aggregated and served on :8001 for Prometheus to
+    # scrape (see start_worker_metrics_server). Must NOT be set on the backend
+    # web service, which uses the default single-process registry.
+    environment:
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus-multiproc
+      - CELERY_METRICS_PORT=8001
+    expose:
+      - "8001"
     volumes:
       - ./user-avatars:/avatar
     depends_on:
@@ -55,7 +64,8 @@ services:
       - backend
     restart: always
     command: >
-      bash -c "source .venv/bin/activate &&
+      bash -c "mkdir -p /tmp/prometheus-multiproc && rm -rf /tmp/prometheus-multiproc/* &&
+               source .venv/bin/activate &&
                /app/wait-for-it.sh tarot-redis:6379 --timeout=60 --strict -- echo 'Redis is up' &&
                cd /app &&
                PYTHONPATH=/app celery -A celery_app worker --loglevel=info --queues=email,notifications,celery"
@@ -67,6 +77,11 @@ services:
     container_name: tarot-celery-beat
     env_file:
       - ./backend/.env
+    environment:
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus-multiproc
+      - CELERY_METRICS_PORT=8001
+    expose:
+      - "8001"
     volumes:
       - ./user-avatars:/avatar
       - celery_beat_data:/app/celerybeat-schedule
@@ -75,7 +90,8 @@ services:
       - backend
     restart: always
     command: >
-      bash -c "source .venv/bin/activate &&
+      bash -c "mkdir -p /tmp/prometheus-multiproc && rm -rf /tmp/prometheus-multiproc/* &&
+              source .venv/bin/activate &&
               /app/wait-for-it.sh tarot-redis:6379 --timeout=60 --strict -- echo 'Redis is up' &&
               cd /app &&
               PYTHONPATH=/app celery -A celery_app beat --loglevel=info --schedule=/app/celerybeat-schedule"

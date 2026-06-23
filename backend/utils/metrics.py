@@ -1,15 +1,31 @@
+import logging
+import os
 import time
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+    multiprocess,
+    start_http_server,
+)
 from starlette.responses import Response as StarletteResponse
 
 from config import settings
 
+logger = logging.getLogger(__name__)
+
 PROJECT = "arcana-ai"
 COMPONENT = "backend"
+CELERY_COMPONENT = "celery"
 COMMON_LABELS = ["project", "component", "env"]
+_worker_metrics_server_started = False
 
 http_requests_total = Counter(
     "arcana_http_requests_total",
@@ -202,9 +218,66 @@ def setup_metrics(app: FastAPI, env: str) -> None:
         )
 
 
-def base_labels(env: str) -> dict[str, str]:
+def start_worker_metrics_server(default_port: int = 8001) -> bool:
+    """Expose Celery worker/beat Prometheus metrics over HTTP for scraping.
+
+    Celery runs tasks in prefork child processes, so the counters incremented by
+    the task signal handlers in ``celery_app`` live in each child's own memory,
+    separate from the worker's main process. prometheus_client's *multiprocess*
+    mode (toggled by the ``PROMETHEUS_MULTIPROC_DIR`` env var) makes every
+    process write its samples into a shared directory; a ``MultiProcessCollector``
+    aggregates them at scrape time. We start one HTTP server in the main process
+    serving that aggregated registry so Prometheus can pull ``arcana_celery_*``
+    and ``arcana_email_*`` metrics that are otherwise emitted in a process no
+    one scrapes.
+
+    Returns ``False`` (no-op) when ``PROMETHEUS_MULTIPROC_DIR`` is unset, leaving
+    the single-process web app on its default in-process registry and existing
+    ``/metrics`` endpoint untouched.
+    """
+    global _worker_metrics_server_started
+
+    if _worker_metrics_server_started:
+        return True
+
+    multiproc_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
+    if not multiproc_dir:
+        return False
+
+    try:
+        port = int(os.environ.get("CELERY_METRICS_PORT", str(default_port)))
+        Path(multiproc_dir).mkdir(parents=True, exist_ok=True)
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+        start_http_server(port, registry=registry)
+    except Exception:  # pragma: no cover - metrics must never crash the worker
+        logger.exception("Failed to start Celery metrics server on port %s", port)
+        return False
+
+    logger.info("Celery Prometheus metrics server listening on :%s", port)
+    _worker_metrics_server_started = True
+    return True
+
+
+def mark_worker_process_dead(pid: int | None = None) -> None:
+    """Release the current process's multiprocess metric files on shutdown.
+
+    Called from the ``worker_process_shutdown`` signal so a recycled prefork
+    child (see ``worker_max_tasks_per_child``) doesn't leak gauge files. Counter
+    and histogram samples are retained and still aggregated, preserving totals.
+    """
+    if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+        return
+    process_id = pid or os.getpid()
+    try:
+        multiprocess.mark_process_dead(process_id)
+    except Exception:  # pragma: no cover - shutdown is best-effort
+        logger.exception("Failed to release multiprocess metrics for process %s", process_id)
+
+
+def base_labels(env: str, component: str = COMPONENT) -> dict[str, str]:
     """Return a dictionary of base labels for Prometheus metrics."""
-    return {"project": PROJECT, "component": COMPONENT, "env": env}
+    return {"project": PROJECT, "component": component, "env": env}
 
 
 def estimate_openai_cost_usd(prompt_tokens: int, completion_tokens: int) -> float:
@@ -372,7 +445,7 @@ def record_celery_task(
     duration: float | None = None,
 ) -> None:
     """Record a Celery task state and optional runtime."""
-    labels = base_labels(env)
+    labels = base_labels(env, component=CELERY_COMPONENT)
     celery_tasks_total.labels(
         **labels,
         queue=queue,
@@ -395,7 +468,7 @@ def record_celery_failure(
 ) -> None:
     """Record a Celery task failure with a normalized error type."""
     celery_task_failures_total.labels(
-        **base_labels(env),
+        **base_labels(env, component=CELERY_COMPONENT),
         queue=queue,
         task_name=task_name,
         error_type=error_type,
@@ -432,7 +505,7 @@ def record_email_send(
     duration: float,
 ) -> None:
     """Record an email send attempt and duration."""
-    labels = base_labels(env)
+    labels = base_labels(env, component=CELERY_COMPONENT)
     email_send_total.labels(
         **labels,
         email_type=email_type,

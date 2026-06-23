@@ -2,23 +2,24 @@
 
 ArcanaAI no longer owns or runs Prometheus, Grafana, alert rules, or dashboard provisioning from this repository. The central monitoring stack is deployed from the standalone `central-monitoring` repo.
 
-This guide is for reimplementing ArcanaAI application metrics and wiring them into that central stack. The cleanup that introduced this guide removed `GET /metrics`; after you re-add `setup_metrics(app, env=settings.FASTAPI_ENV)`, continue with the domain metrics below.
+This guide documents the ArcanaAI application metrics exposed by the backend and Celery services, and how to wire those producer endpoints into the central stack.
 
 ## 1. Architecture
 
 ArcanaAI is only a metrics producer. Prometheus and Grafana live elsewhere:
 
 ```text
-ArcanaAI backend              central-monitoring repo
-tarot-backend:8000     ->     Prometheus     ->     Grafana
-GET /metrics                  scrape/push           dashboards
+ArcanaAI services                   central-monitoring repo
+tarot-backend:8000/metrics    ->    Prometheus     ->     Grafana
+tarot-celery-worker:8001/metrics
+tarot-celery-beat:8001/metrics
 ```
 
-Current intended labels for ArcanaAI backend series:
+Current intended labels for ArcanaAI series:
 
 ```promql
 project="arcana-ai"
-component="backend"
+component=~"backend|celery"
 env="production"
 ```
 
@@ -28,9 +29,9 @@ Do not add Prometheus, Grafana, node-exporter, cAdvisor, or dashboard provisioni
 
 Use pull mode when ArcanaAI and `central-monitoring` run on the same VPS and share the Docker `localnet` network.
 
-1. After metrics are reimplemented, ArcanaAI exposes an internal `GET /metrics` endpoint from `tarot-backend:8000`.
-2. The central Prometheus scrape config, in `central-monitoring`, targets `tarot-backend:8000`.
-3. The target config attaches labels such as `project="arcana-ai"` and `component="backend"`.
+1. ArcanaAI exposes internal Prometheus endpoints from `tarot-backend:8000`, `tarot-celery-worker:8001`, and `tarot-celery-beat:8001`.
+2. The central Prometheus scrape config, in `central-monitoring`, targets those service names over the shared Docker network.
+3. The application metrics include labels such as `project="arcana-ai"`, `component="backend"`, and `component="celery"`.
 4. No public ArcanaAI metrics endpoint is required.
 
 Use push mode only when ArcanaAI runs on a different host from central Prometheus.
@@ -43,7 +44,7 @@ For the current same-VPS setup, prefer pull mode over push mode.
 
 ## 3. What `/metrics` Should Expose
 
-When you reimplement metrics, expose only Prometheus text format at:
+Expose only Prometheus text format at each metrics endpoint:
 
 ```http
 GET /metrics
@@ -52,15 +53,15 @@ GET /metrics
 The endpoint should include:
 
 - Process/runtime metrics from `prometheus_client`, if useful.
-- HTTP request counters and latency histograms.
+- Backend HTTP request counters and latency histograms from `tarot-backend:8000/metrics`.
 - Tarot reading counters and latency histograms.
 - Auth success/failure counters.
 - Database query counters and latency histograms.
 - OpenAI request, token, cost, latency, and error counters.
 - Chat message and conversation counters/gauges.
 - Application error counters.
-- Celery task counters and duration histograms.
-- Payment and email counters.
+- Celery task counters and duration histograms from `tarot-celery-worker:8001/metrics`.
+- Payment counters and email counters; email counters are emitted by Celery tasks and scraped from Celery metrics.
 
 Do not expose user identifiers, emails, request IDs, raw prompts, card question text, payment IDs, or any other sensitive/high-cardinality data as metric labels.
 
@@ -1542,7 +1543,7 @@ When ArcanaAI runs on the same VPS as `central-monitoring`, use one ingestion pa
 
 Recommended same-VPS setup:
 
-- After `/metrics` is reimplemented, central Prometheus pulls `tarot-backend:8000/metrics` over Docker `localnet`.
+- Central Prometheus pulls `tarot-backend:8000/metrics`, `tarot-celery-worker:8001/metrics`, and `tarot-celery-beat:8001/metrics` over Docker `localnet`.
 - No local remote-write agent is running for ArcanaAI.
 - No public `/metrics` endpoint is exposed through Traefik/Nginx.
 
@@ -1555,14 +1556,13 @@ Duplicate ingestion creates double counts for counters such as `arcana_tarot_rea
 
 ## 15. Reimplementation Checklist
 
-1. Add `prometheus-client` to `backend/pyproject.toml` with `uv add prometheus-client`.
-2. Create a small `backend/utils/metrics.py` module with counters, histograms, and `/metrics` exposure.
-3. Register `setup_metrics(app, env=settings.FASTAPI_ENV)` in `backend/app.py`.
-4. Add the metric definitions from Section 5.
-5. Add domain metric calls using the snippets in Section 7.
-6. Keep labels low-cardinality and privacy-safe.
-7. Run backend tests and a local smoke check of `GET /metrics`.
-8. Update `central-monitoring` scrape or agent config outside this repo.
-9. Verify in Grafana Explore using `project="arcana-ai"` and `component="backend"`.
-10. Build dashboards in Grafana.
-11. Export finished dashboards as JSON into `central-monitoring`.
+1. Keep `prometheus-client` in `backend/pyproject.toml`.
+2. Keep backend metrics in `backend/utils/metrics.py` and register `setup_metrics(app, env=settings.FASTAPI_ENV)` in `backend/app.py`.
+3. Keep Celery metrics server startup in `backend/celery_app.py`; Celery services must set `PROMETHEUS_MULTIPROC_DIR` and expose `CELERY_METRICS_PORT`.
+4. Add domain metric calls using the snippets in Section 7.
+5. Keep labels low-cardinality and privacy-safe.
+6. Run backend tests and local smoke checks of backend and Celery `GET /metrics`.
+7. Update `central-monitoring` scrape or agent config outside this repo for all ArcanaAI targets.
+8. Verify in Grafana Explore using `project="arcana-ai"` and `component=~"backend|celery"`.
+9. Build dashboards in Grafana.
+10. Export finished dashboards as JSON into `central-monitoring`.
