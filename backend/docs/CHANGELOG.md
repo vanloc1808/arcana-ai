@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Celery workers and beat now expose a dedicated Prometheus metrics endpoint on port `8001`, aggregating prefork task/email counters with `prometheus_client` multiprocess mode for central monitoring scrapes.
+- Added a separate local-only synthetic traffic cron container that generates health dashboard data four times per day and sends two OpenAI-backed chat message requests every hour using credentials from an ignored local environment file.
 
 ### Changed
 - Backend logging now uses Loguru with a shared configuration while preserving structured request metadata in log records.

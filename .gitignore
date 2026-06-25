@@ -10,3 +10,7 @@ docs/ISSUE_SCANNING.md
 plans/*.md
 backend/tarot.db
 .claude
+synthetic-traffic/.env
+synthetic-traffic/.env.*
+!synthetic-traffic/.env.example
+synthetic-traffic/__pycache__
