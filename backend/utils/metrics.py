@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 from collections.abc import Awaitable, Callable
@@ -18,8 +17,7 @@ from prometheus_client import (
 from starlette.responses import Response as StarletteResponse
 
 from config import settings
-
-logger = logging.getLogger(__name__)
+from utils.logging import logger
 
 PROJECT = "arcana-ai"
 COMPONENT = "backend"
@@ -251,10 +249,10 @@ def start_worker_metrics_server(default_port: int = 8001) -> bool:
         multiprocess.MultiProcessCollector(registry)
         start_http_server(port, registry=registry)
     except Exception:  # pragma: no cover - metrics must never crash the worker
-        logger.exception("Failed to start Celery metrics server on port %s", port)
+        logger.exception("Failed to start Celery metrics server on port {}", port)
         return False
 
-    logger.info("Celery Prometheus metrics server listening on :%s", port)
+    logger.info("Celery Prometheus metrics server listening on :{}", port)
     _worker_metrics_server_started = True
     return True
 
@@ -272,7 +270,7 @@ def mark_worker_process_dead(pid: int | None = None) -> None:
     try:
         multiprocess.mark_process_dead(process_id)
     except Exception:  # pragma: no cover - shutdown is best-effort
-        logger.exception("Failed to release multiprocess metrics for process %s", process_id)
+        logger.exception("Failed to release multiprocess metrics for process {}", process_id)
 
 
 def base_labels(env: str, component: str = COMPONENT) -> dict[str, str]:

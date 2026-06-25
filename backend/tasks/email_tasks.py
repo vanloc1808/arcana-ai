@@ -1,6 +1,5 @@
 import asyncio
 import inspect
-import logging
 import time
 from datetime import datetime, timedelta
 
@@ -12,10 +11,8 @@ from celery_app import celery_app
 from config import settings
 from database import SessionLocal
 from models import Base, PasswordResetToken, User
+from utils.logging import logger
 from utils.metrics import record_email_send
-
-# Setup logging
-logger = logging.getLogger(__name__)
 
 
 def _record_email_send(email_type: str, status: str, start_time: float) -> None:

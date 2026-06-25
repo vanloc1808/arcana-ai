@@ -1,5 +1,4 @@
 # noqa: E501
-import logging
 from datetime import datetime, timedelta
 
 from celery import current_task
@@ -9,9 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from celery_app import celery_app
 from config import settings
 from models import ChatSession, User
-
-# Setup logging
-logger = logging.getLogger(__name__)
+from utils.logging import logger
 
 # Database setup for tasks
 engine = create_engine(settings.SQLALCHEMY_DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://"))

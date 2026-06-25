@@ -1,4 +1,3 @@
-import logging
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -6,8 +5,7 @@ from web3 import Web3
 
 from config import settings
 from models import EthereumTransaction, User
-
-logger = logging.getLogger(__name__)
+from utils.logging import logger
 
 
 class EthereumService:

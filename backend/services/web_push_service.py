@@ -12,7 +12,6 @@ Caller (sync) example::
 from __future__ import annotations
 
 import json
-import logging
 from dataclasses import dataclass
 
 from pywebpush import WebPushException, webpush
@@ -20,8 +19,7 @@ from sqlalchemy.orm import Session
 
 from config import settings
 from models import WebPushSubscription
-
-logger = logging.getLogger(__name__)
+from utils.logging import logger
 
 _DEAD_SUBSCRIPTION_STATUSES = {404, 410}
 

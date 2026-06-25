@@ -2,7 +2,6 @@
 Task management API endpoints for monitoring and controlling Celery tasks.
 """
 
-import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,8 +14,7 @@ from utils.celery_utils import (
     notification_task_manager,
     task_manager,
 )
-
-logger = logging.getLogger(__name__)
+from utils.logging import logger
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
