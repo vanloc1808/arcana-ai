@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-import logging
 from datetime import UTC, datetime
 
 import httpx
@@ -10,8 +9,7 @@ from config import settings
 from database import get_db
 from models import CheckoutSession, PaymentTransaction, SubscriptionEvent, TurnUsageHistory, User
 from schemas import TurnConsumptionResult
-
-logger = logging.getLogger(__name__)
+from utils.logging import logger
 
 
 class SubscriptionService:
@@ -273,9 +271,6 @@ class SubscriptionService:
                 checkout_session.customer_id = str(customer_id)
             db.add(checkout_session)
 
-        # Store previous subscription status for comparison
-        previous_status = user.subscription_status
-
         # Process the specific event
         turns_affected = 0
         if event_name in ["subscription_created", "subscription_updated"]:
@@ -409,8 +404,6 @@ class SubscriptionService:
 
         # Log payment transaction
         if turns_added > 0 and product_variant:
-            product_info = self.get_product_info(product_variant)
-
             # Get order amount from webhook, convert from cents to dollars
             total_amount = attributes.get("total", 0)
             amount_dollars = f"{total_amount / 100:.2f}" if total_amount else "0.00"

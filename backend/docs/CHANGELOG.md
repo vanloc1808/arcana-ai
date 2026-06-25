@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Celery workers and beat now expose a dedicated Prometheus metrics endpoint on port `8001`, aggregating prefork task/email counters with `prometheus_client` multiprocess mode for central monitoring scrapes.
 
 ### Changed
+- Backend logging now uses Loguru with a shared configuration while preserving structured request metadata in log records.
 - Monitoring documentation now lists separate scrape targets for the FastAPI backend (`tarot-backend:8000/metrics`) and Celery services (`tarot-celery-worker:8001/metrics`, `tarot-celery-beat:8001/metrics`).
 
 ## [0.0.20] - 2026-06-22

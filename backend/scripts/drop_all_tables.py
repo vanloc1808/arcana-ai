@@ -15,7 +15,6 @@ Options:
 """
 
 import argparse
-import logging
 import sys
 from pathlib import Path
 
@@ -26,10 +25,7 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from database import engine  # noqa: E402
-
-# Set up logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
+from utils.logging import logger  # noqa: E402
 
 
 def get_all_tables():

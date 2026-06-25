@@ -5,67 +5,61 @@ This module contains unit tests for the error handling utilities,
 covering custom exceptions, exception handlers, and logging functionality.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-import json
-from unittest.mock import Mock, patch, AsyncMock
-from datetime import datetime
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from utils.error_handlers import (
-    StructuredLogger,
-    TarotAPIException,
     AuthenticationError,
-    ValidationError,
+    ChatSessionError,
     DatabaseError,
-    ResourceNotFoundError,
-    UserNotFoundError,
+    ExternalServiceError,
+    IntentDetectionError,
+    MessageGenerationError,
     PermissionDeniedError,
     RateLimitError,
-    ServiceUnavailableError,
-    ExternalServiceError,
-    ChatSessionError,
-    MessageGenerationError,
-    IntentDetectionError,
     RateLimitExceededError,
+    ResourceNotFoundError,
+    ServiceUnavailableError,
+    StructuredLogger,
+    TarotAPIException,
+    UserNotFoundError,
+    ValidationError,
     extract_request_payload,
-    get_safe_headers,
-    tarot_exception_handler,
-    validation_exception_handler,
-    sqlalchemy_exception_handler,
     general_exception_handler,
+    get_safe_headers,
     integrity_error_handler,
     operational_error_handler,
+    sqlalchemy_exception_handler,
+    tarot_exception_handler,
+    validation_exception_handler,
 )
 
 
 class TestStructuredLogger:
     """Test suite for StructuredLogger class."""
 
-    @patch('utils.error_handlers.logging')
-    def test_structured_logger_initialization(self, mock_logging):
+    @patch("utils.error_handlers.loguru_logger")
+    def test_structured_logger_initialization(self, mock_loguru_logger):
         """Test StructuredLogger initialization."""
-        logger = StructuredLogger()
+        mock_bound_logger = Mock()
+        mock_loguru_logger.bind.return_value = mock_bound_logger
 
-        # Verify logger was created
-        assert logger.logger is not None
+        structured_logger = StructuredLogger()
 
-        # Verify logger level was set
-        mock_logging.getLogger.assert_called_with("tarot_api")
-        mock_logger_instance = mock_logging.getLogger.return_value
-        mock_logger_instance.setLevel.assert_called_with(mock_logging.INFO)
+        assert structured_logger.logger is mock_bound_logger
+        mock_loguru_logger.bind.assert_called_once_with(logger_name="tarot_api")
 
-    @patch('utils.error_handlers.logging')
-    @patch('utils.error_handlers.json.dumps')
-    def test_structured_logger_log_request_success(self, mock_json_dumps, mock_logging):
+    def test_structured_logger_log_request_success(self):
         """Test logging successful request."""
-        mock_logger_instance = Mock()
-        mock_logging.getLogger.return_value = mock_logger_instance
+        structured_logger = StructuredLogger()
+        request_logger = Mock()
+        structured_logger.logger = Mock()
+        structured_logger.logger.bind.return_value = request_logger
 
-        logger = StructuredLogger()
-
-        # Create mock request and response
         mock_request = Mock(spec=Request)
         mock_request.method = "GET"
         mock_request.url = "http://test.com/api/health"
@@ -75,87 +69,42 @@ class TestStructuredLogger:
         mock_response = Mock()
         mock_response.status_code = 200
 
-        # Mock JSON dumps
-        mock_json_dumps.return_value = '{"test": "data"}'
+        structured_logger.log_request(mock_request, mock_response)
 
-        # Log request
-        logger.log_request(mock_request, mock_response)
+        structured_logger.logger.bind.assert_called_once_with(
+            method="GET",
+            url="http://test.com/api/health",
+            client_host="192.168.1.100",
+            status_code=200,
+        )
+        request_logger.info.assert_called_once_with("Request processed")
 
-        # Verify logger was called
-        mock_logger_instance.info.assert_called_once()
-
-        # Verify JSON dumps was called
-        # The json.dumps may not be called in this case, so just verify the log was called
-        mock_logger_instance.info.assert_called_once()
-
-    @patch('utils.error_handlers.logging')
-    @patch('utils.error_handlers.json.dumps')
-    def test_structured_logger_log_request_with_error(self, mock_json_dumps, mock_logging):
+    def test_structured_logger_log_request_with_error(self):
         """Test logging request with error."""
-        mock_logger_instance = Mock()
-        mock_logging.getLogger.return_value = mock_logger_instance
+        structured_logger = StructuredLogger()
+        request_logger = Mock()
+        error_logger = Mock()
+        request_logger.bind.return_value = error_logger
+        structured_logger.logger = Mock()
+        structured_logger.logger.bind.return_value = request_logger
 
-        logger = StructuredLogger()
-
-        # Create mock request
         mock_request = Mock(spec=Request)
         mock_request.method = "POST"
         mock_request.url = "http://test.com/api/tarot"
         mock_request.client = Mock()
         mock_request.client.host = "192.168.1.100"
-
         mock_error = ValueError("Test error")
 
-        # Log request with error
-        logger.log_request(mock_request, error=mock_error)
+        structured_logger.log_request(mock_request, error=mock_error)
 
-        # Verify error logger was called
-        mock_logger_instance.error.assert_called_once()
-
-    @patch('utils.error_handlers.logging')
-    def test_structured_logger_json_formatter(self, mock_logging):
-        """Test JSON formatter functionality."""
-        mock_logger_instance = Mock()
-        mock_logging.getLogger.return_value = mock_logger_instance
-
-        logger = StructuredLogger()
-
-        # Create the formatter the same way StructuredLogger does
-        import json
-        import logging
-        from datetime import datetime
-
-        class JsonFormatter(logging.Formatter):
-            def format(self, record):
-                log_data = {
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "level": record.levelname,
-                    "message": record.getMessage(),
-                    "module": record.module,
-                    "function": record.funcName,
-                    "line": record.lineno,
-                }
-                return json.dumps(log_data)
-
-        formatter = JsonFormatter()
-
-        # Create a mock log record
-        mock_record = Mock()
-        mock_record.levelname = "INFO"
-        mock_record.getMessage.return_value = "Test message"
-        mock_record.module = "test_module"
-        mock_record.funcName = "test_function"
-        mock_record.lineno = 42
-        mock_record.created = 1234567890.123
-
-        # Format the record
-        formatted = formatter.format(mock_record)
-
-        # Verify that formatting worked
-        assert isinstance(formatted, str)
-        assert "INFO" in formatted
-        assert "Test message" in formatted
-        assert "test_module" in formatted
+        structured_logger.logger.bind.assert_called_once_with(
+            method="POST",
+            url="http://test.com/api/tarot",
+            client_host="192.168.1.100",
+            status_code=None,
+        )
+        request_logger.bind.assert_called_once_with(error="Test error")
+        error_logger.error.assert_called_once_with("Request failed")
 
 
 class TestCustomExceptions:
@@ -336,12 +285,11 @@ class TestRequestPayloadExtraction:
         mock_query_params.get = Mock(side_effect=lambda key, default=None: {"page": "1", "limit": "10"}.get(key, default))
         mock_request.query_params = mock_query_params
 
-        result = await extract_request_payload(mock_request)
+        await extract_request_payload(mock_request)
 
         # The result may vary depending on implementation
         # Just verify the function completes without error
         # The actual return value depends on the implementation
-        pass
 
     @pytest.mark.asyncio
     async def test_extract_request_payload_empty_body(self):
@@ -489,10 +437,6 @@ class TestExceptionHandlers:
         # Verify response
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-        expected_body = {
-            "error": "Validation error",
-            "details": mock_errors
-        }
         # Check that the response contains the expected validation error structure
         response_body = response.body.decode()
         assert '"error":"Validation error"' in response_body
@@ -506,7 +450,8 @@ class TestExceptionHandlers:
         mock_request = Mock(spec=Request)
         exc = SQLAlchemyError("Database connection failed")
 
-        response = await sqlalchemy_exception_handler(mock_request, exc)
+        with patch("utils.error_handlers.is_telegram_configured", return_value=False):
+            response = await sqlalchemy_exception_handler(mock_request, exc)
 
         # Verify logging was called
         mock_logger.log_request.assert_called_once_with(mock_request, error=exc)
@@ -524,7 +469,8 @@ class TestExceptionHandlers:
         mock_request = Mock(spec=Request)
         exc = ValueError("Unexpected error")
 
-        response = await general_exception_handler(mock_request, exc)
+        with patch("utils.error_handlers.is_telegram_configured", return_value=False):
+            response = await general_exception_handler(mock_request, exc)
 
         # Verify logging was called
         mock_logger.log_request.assert_called_once_with(mock_request, error=exc)

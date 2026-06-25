@@ -1,6 +1,4 @@
 import json
-import logging
-from datetime import datetime
 from typing import Any
 
 from fastapi import Request, status
@@ -10,41 +8,18 @@ from jose import jwt
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from config import settings
+from utils.logging import logger as loguru_logger
 from utils.metrics import record_application_error
 from utils.telegram_alerts import is_telegram_configured, send_500_error_alert, send_user_error_alert
 
 
 # Configure structured logging
 class StructuredLogger:
-    """Structured logger for the Tarot API, outputs logs in JSON format."""
+    """Loguru-backed structured logger for the Tarot API."""
 
     def __init__(self):
-        """Initializes the structured logger and sets up the JSON formatter."""
-        self.logger = logging.getLogger("tarot_api")
-        self.logger.setLevel(logging.INFO)
-
-        # Create JSON formatter
-        class JsonFormatter(logging.Formatter):
-            def format(self, record):
-                log_data = {
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "level": record.levelname,
-                    "message": record.getMessage(),
-                    "module": record.module,
-                    "function": record.funcName,
-                    "line": record.lineno,
-                }
-
-                # Add extra fields if they exist
-                if hasattr(record, "extra"):
-                    log_data.update(record.extra)
-
-                return json.dumps(log_data)
-
-        # Add JSON handler
-        handler = logging.StreamHandler()
-        handler.setFormatter(JsonFormatter())
-        self.logger.addHandler(handler)
+        """Initializes the structured logger."""
+        self.logger = loguru_logger.bind(logger_name="tarot_api")
 
     def log_request(self, request: Request, response: Any = None, error: Exception | None = None):
         """Logs an HTTP request and its outcome.
@@ -61,11 +36,11 @@ class StructuredLogger:
             "status_code": getattr(response, "status_code", None) if response else None,
         }
 
+        request_logger = self.logger.bind(**extra)
         if error:
-            extra["error"] = str(error)
-            self.logger.error("Request failed", extra=extra)
+            request_logger.bind(error=str(error)).error("Request failed")
         else:
-            self.logger.info("Request processed", extra=extra)
+            request_logger.info("Request processed")
 
 
 # Initialize logger

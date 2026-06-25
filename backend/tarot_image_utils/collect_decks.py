@@ -4,14 +4,12 @@ import requests
 from pathlib import Path
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
+from utils.logging import logger
 import time
-import logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 load_dotenv()
 

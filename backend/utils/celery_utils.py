@@ -2,15 +2,13 @@
 Utility functions for Celery task management and integration with FastAPI.
 """
 
-import logging
 from typing import Any
 
 from celery.result import AsyncResult
 from fastapi import HTTPException
 
 from celery_app import celery_app
-
-logger = logging.getLogger(__name__)
+from utils.logging import logger
 
 
 class TaskManager:

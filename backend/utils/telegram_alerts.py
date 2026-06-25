@@ -1,5 +1,4 @@
 import json
-import logging
 import socket
 import traceback
 from datetime import datetime, timedelta
@@ -8,7 +7,7 @@ from typing import Any
 
 import requests
 
-logger = logging.getLogger(__name__)
+from utils.logging import logger
 
 
 def is_telegram_configured(telegram_bot_token: str, chat_id: str) -> bool:

@@ -1323,7 +1323,7 @@ async def create_message(
 
             except Exception as e_stream:
                 record_chat_message(settings.FASTAPI_ENV, role="assistant", status="error")
-                logger.logger.error(f"Error during streaming response: {e_stream}", exc_info=True)
+                logger.logger.exception(f"Error during streaming response: {e_stream}")
                 raise HTTPException(
                     status_code=500, detail=f"An unexpected error occurred during response generation: {str(e_stream)}"
                 )

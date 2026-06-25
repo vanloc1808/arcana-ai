@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import random
 import time
 from collections.abc import AsyncGenerator
@@ -14,15 +13,8 @@ from langchain_openai import ChatOpenAI
 from sqlalchemy.orm import Session
 
 from config import settings
+from utils.logging import logger
 from utils.metrics import estimate_openai_cost_usd, record_openai_request
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()

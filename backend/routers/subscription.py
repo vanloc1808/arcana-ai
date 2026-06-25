@@ -1,5 +1,4 @@
 import json
-import logging
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -25,9 +24,8 @@ from schemas import (
 )
 from services.ethereum_service import EthereumService
 from services.subscription_service import SubscriptionService
+from utils.logging import logger
 from utils.metrics import record_payment_event
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["subscription"])
 subscription_service = SubscriptionService()
@@ -113,7 +111,7 @@ async def create_checkout_session(
             event_type="checkout_created",
             status="error",
         )
-        logger.error(f"Failed to create checkout session for user {current_user.id}: {str(e)}", exc_info=True)
+        logger.exception(f"Failed to create checkout session for user {current_user.id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create checkout session: {str(e)}"

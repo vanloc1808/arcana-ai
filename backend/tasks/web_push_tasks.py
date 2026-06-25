@@ -8,7 +8,6 @@ reminder as sent. Scheduled via Celery Beat (see ``celery_app.py``).
 
 from __future__ import annotations
 
-import logging
 from collections import defaultdict
 from datetime import UTC, datetime
 
@@ -21,8 +20,7 @@ from config import settings
 from models import ReadingReminder
 from services.web_push_service import is_configured as web_push_configured
 from services.web_push_service import send_to_user as send_push_to_user
-
-logger = logging.getLogger(__name__)
+from utils.logging import logger
 
 engine = create_engine(settings.SQLALCHEMY_DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://"))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

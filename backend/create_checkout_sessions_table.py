@@ -7,13 +7,11 @@ from pathlib import Path
 # Add backend to path
 sys.path.append(str(Path(__file__).parent))
 
-import logging
 
 from database import engine
 from models import CheckoutSession
+from utils.logging import logger
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 def create_checkout_sessions_table():
     """Create the checkout_sessions table."""
