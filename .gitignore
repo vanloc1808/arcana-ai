@@ -10,6 +10,7 @@ docs/ISSUE_SCANNING.md
 plans/*.md
 backend/tarot.db
 .claude
+backend/reset_password.py
 synthetic-traffic/.env
 synthetic-traffic/.env.*
 !synthetic-traffic/.env.example
