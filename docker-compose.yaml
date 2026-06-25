@@ -102,6 +102,19 @@ services:
     networks:
       - localnet
 
+  synthetic-traffic:
+    build: ./synthetic-traffic
+    image: arcana-synthetic-traffic:local
+    container_name: tarot-synthetic-traffic
+    env_file:
+      - path: ./synthetic-traffic/.env
+        required: false
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - localnet
+
 volumes:
   redis_data:
   celery_beat_data:
