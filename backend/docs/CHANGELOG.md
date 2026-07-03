@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - New users now receive a welcome email upon registration, and users are notified by email whenever their password is changed via the reset-password flow. Both emails reuse the same styled HTML layout as the existing password reset email.
+- Synthetic traffic can now create and use a dedicated local test account by email, then call the forgot-password API on a schedule to exercise Celery password reset email tasks.
+
+### Changed
+- Synthetic OpenAI message traffic now ensures the configured synthetic account exists before logging in, so local cron testing can run against an isolated account instead of a personal user.
 
 ## [0.0.22] - 2026-07-03
 
