@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from tasks.email_tasks import (
     send_password_reset_email_task,
+    send_password_changed_email_task,
     send_welcome_email_task,
     send_reminder_email_task,
     send_system_notification_email_task,
@@ -57,6 +58,44 @@ class TestSendPasswordResetEmailTask:
             "email": "test@example.com",
         }
         assert result == expected
+
+
+class TestSendPasswordChangedEmailTask:
+    """Test suite for send_password_changed_email_task function."""
+
+    @patch('tasks.email_tasks.current_task')
+    @patch('tasks.email_tasks._send_email_sync')
+    def test_send_password_changed_success_with_username(self, mock_send_email, mock_current_task):
+        """Test successful password changed email sending with a username."""
+        mock_current_task.request.id = "task_123"
+
+        result = send_password_changed_email_task("test@example.com", "testuser")
+
+        expected = {
+            "status": "success",
+            "message": "Password changed email sent successfully",
+            "task_id": "task_123",
+            "email": "test@example.com",
+        }
+        assert result == expected
+        mock_send_email.assert_called_once()
+
+    @patch('tasks.email_tasks.current_task')
+    @patch('tasks.email_tasks._send_email_sync')
+    def test_send_password_changed_success_without_username(self, mock_send_email, mock_current_task):
+        """Test successful password changed email sending without a username."""
+        mock_current_task.request.id = "task_123"
+
+        result = send_password_changed_email_task("test@example.com")
+
+        expected = {
+            "status": "success",
+            "message": "Password changed email sent successfully",
+            "task_id": "task_123",
+            "email": "test@example.com",
+        }
+        assert result == expected
+        mock_send_email.assert_called_once()
 
 
 class TestSendWelcomeEmailTask:
