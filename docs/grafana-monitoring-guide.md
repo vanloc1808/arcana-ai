@@ -1415,7 +1415,7 @@ Celery task rate:
 
 ```promql
 sum by (queue, task_name, status) (
-  rate(arcana_celery_tasks_total{project="arcana-ai", component="backend"}[$__rate_interval])
+  rate(arcana_celery_tasks_total{project="arcana-ai", component="celery"}[$__rate_interval])
 )
 ```
 
@@ -1423,7 +1423,7 @@ Celery failures:
 
 ```promql
 sum by (queue, task_name) (
-  rate(arcana_celery_task_failures_total{project="arcana-ai", component="backend"}[$__rate_interval])
+  rate(arcana_celery_task_failures_total{project="arcana-ai", component="celery"}[$__rate_interval])
 )
 ```
 
@@ -1433,7 +1433,7 @@ Celery p95 duration:
 histogram_quantile(
   0.95,
   sum by (le, queue, task_name) (
-    rate(arcana_celery_task_duration_seconds_bucket{project="arcana-ai", component="backend"}[$__rate_interval])
+    rate(arcana_celery_task_duration_seconds_bucket{project="arcana-ai", component="celery"}[$__rate_interval])
   )
 )
 ```
@@ -1458,7 +1458,7 @@ Email failures:
 
 ```promql
 sum by (email_type) (
-  rate(arcana_email_send_total{project="arcana-ai", component="backend", status="error"}[$__rate_interval])
+  rate(arcana_email_send_total{project="arcana-ai", component="celery", status="error"}[$__rate_interval])
 )
 ```
 
@@ -1468,7 +1468,7 @@ Email p95 latency:
 histogram_quantile(
   0.95,
   sum by (le, email_type) (
-    rate(arcana_email_send_duration_seconds_bucket{project="arcana-ai", component="backend"}[$__rate_interval])
+    rate(arcana_email_send_duration_seconds_bucket{project="arcana-ai", component="celery"}[$__rate_interval])
   )
 )
 ```
@@ -1519,6 +1519,7 @@ After `/metrics` exists and central Prometheus has a target:
 
 ```promql
 up{project="arcana-ai", component="backend"}
+up{project="arcana-ai", component="celery"}
 ```
 
 Expected value is `1`.
@@ -1527,6 +1528,7 @@ Expected value is `1`.
 
 ```promql
 {project="arcana-ai", component="backend", __name__=~"arcana_.*"}
+{project="arcana-ai", component="celery", __name__=~"arcana_.*"}
 ```
 
 5. Exercise the app, then query a rate:
