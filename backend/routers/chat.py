@@ -82,6 +82,13 @@ def _record_openai_error(exc: Exception, start_time: float, operation: str = "ch
     )
 
 
+def _log_llm_tool_calls(tool_calls: list[dict]) -> None:
+    logger.logger.info(
+        "LLM made a tool call",
+        extra={"tool_calls": tool_calls, "tool_call_count": len(tool_calls)},
+    )
+
+
 def load_system_prompt() -> str:
     """
     Load System Prompt from File
@@ -1044,10 +1051,7 @@ async def create_message(
                     _record_openai_success(llm_response, openai_start_time)
 
                 if llm_response.tool_calls:
-                    logger.logger.info(
-                        f"LLM made a tool call: {llm_response.tool_calls}",
-                        extra={"tool_calls": llm_response.tool_calls},
-                    )
+                    _log_llm_tool_calls(llm_response.tool_calls)
 
                 # Check if the model wants to use tools
                 if llm_response.tool_calls:
@@ -1323,7 +1327,7 @@ async def create_message(
 
             except Exception as e_stream:
                 record_chat_message(settings.FASTAPI_ENV, role="assistant", status="error")
-                logger.logger.exception(f"Error during streaming response: {e_stream}")
+                logger.logger.exception("Error during streaming response", extra={"error": str(e_stream)})
                 raise HTTPException(
                     status_code=500, detail=f"An unexpected error occurred during response generation: {str(e_stream)}"
                 )

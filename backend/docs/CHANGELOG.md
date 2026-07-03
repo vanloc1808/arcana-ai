@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Backend logging now uses Loguru with a shared configuration while preserving structured request metadata in log records.
 - Monitoring documentation now lists separate scrape targets for the FastAPI backend (`tarot-backend:8000/metrics`) and Celery services (`tarot-celery-worker:8001/metrics`, `tarot-celery-beat:8001/metrics`).
 
+### Fixed
+- Fixed OpenAI-backed chat message streams failing when the model returns tool calls by logging tool-call payloads as structured metadata instead of interpolating raw dictionaries into Loguru messages.
+
 ## [0.0.20] - 2026-06-22
 
 ### Added
