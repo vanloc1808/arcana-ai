@@ -333,6 +333,8 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(db_user)
 
+        EmailTaskManager.send_welcome_email_async(db_user.email, db_user.username)
+
         logger.logger.info(
             "User registered successfully",
             extra={"user_id": db_user.id, "username": db_user.username},
@@ -649,6 +651,8 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
         reset_token.is_used = True
 
         db.commit()
+
+        EmailTaskManager.send_password_changed_email_async(user.email, user.username)
 
         logger.logger.info("Password reset successful", extra={"user_id": user.id})
         record_auth_attempt(settings.FASTAPI_ENV, action="reset_password", status="success")

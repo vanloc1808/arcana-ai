@@ -30,6 +30,22 @@ def test_register_user_success(client):
     assert "password" not in data
 
 
+@patch("utils.celery_utils.EmailTaskManager.send_welcome_email_async")
+def test_register_sends_welcome_email(mock_send_email, client):
+    """Test that a welcome email is queued after successful registration"""
+    mock_send_email.return_value = "mock-task-id-456"
+    response = client.post(
+        "/auth/register",
+        json={
+            "username": "welcomeuser",
+            "email": "welcomeuser@example.com",
+            "password": "newpassword123",
+        },
+    )
+    assert response.status_code == status.HTTP_200_OK
+    mock_send_email.assert_called_once_with("welcomeuser@example.com", "welcomeuser")
+
+
 def test_register_duplicate_username(client, test_user):
     """Test registration with duplicate username returns 400"""
     response = client.post(
@@ -427,6 +443,17 @@ def test_reset_password_success(client, test_password_reset_token):
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["message"] == "Password has been reset successfully"
+
+
+@patch("utils.celery_utils.EmailTaskManager.send_password_changed_email_async")
+def test_reset_password_sends_password_changed_email(mock_send_email, client, test_password_reset_token, test_user):
+    """Test that a password changed email is queued after a successful password reset"""
+    mock_send_email.return_value = "mock-task-id-789"
+    response = client.post(
+        "/auth/reset-password", json={"token": test_password_reset_token.token, "new_password": "newpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    mock_send_email.assert_called_once_with(test_user.email, test_user.username)
 
 
 def test_reset_password_invalid_token(client):

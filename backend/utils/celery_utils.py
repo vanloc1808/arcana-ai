@@ -143,6 +143,24 @@ class EmailTaskManager:
         return result.id
 
     @staticmethod
+    def send_password_changed_email_async(email: str, username: str | None = None) -> str:
+        """
+        Enqueue password changed notification email task.
+
+        Args:
+            email: Email address
+            username: Optional username for a personalized greeting
+
+        Returns:
+            str: Task ID
+        """
+        from tasks.email_tasks import send_password_changed_email_task
+
+        result = send_password_changed_email_task.delay(email, username)
+        logger.info(f"Password changed email task queued: {result.id}")
+        return result.id
+
+    @staticmethod
     def send_welcome_email_async(email: str, username: str) -> str:
         """
         Enqueue welcome email task.

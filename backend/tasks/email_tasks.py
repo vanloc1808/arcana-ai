@@ -188,6 +188,77 @@ def send_password_reset_email_task(self, email: str, token: str, user_id: int | 
         raise self.retry(countdown=60, max_retries=3, exc=e)
 
 
+@celery_app.task(bind=True, name="send_password_changed_email")
+def send_password_changed_email_task(self, email: str, username: str | None = None):
+    """
+    Async task to send a notification email when a user's password has changed.
+
+    Args:
+        email: Email address of the account whose password was changed
+        username: Optional username for a personalized greeting
+
+    Returns:
+        dict: Task result with status and details
+    """
+    email_type = "password_changed"
+    try:
+        subject = "Your Password Has Been Changed - ArcanaAI"
+        greeting = f"Hi {username}," if username else "Hello,"
+
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #4A90E2; text-align: center;">Password Changed</h2>
+                <p>{greeting}</p>
+                <p>This is a confirmation that the password for your ArcanaAI account has just been changed.</p>
+                <p style="color: #e74c3c; font-weight: bold;">If you did not make this change, please contact our support team immediately and reset your password.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="color: #666; font-size: 14px;">Best regards,<br>The ArcanaAI Team</p>
+            </div>
+        </body>
+        </html>
+        """
+
+        message = MessageSchema(
+            subject=subject,
+            recipients=[email],
+            body=html_body,
+            subtype=MessageType.html,
+        )
+
+        # Send email
+        start_time = time.perf_counter()
+        try:
+            _send_email_sync(message)
+        except Exception:
+            _record_email_send(email_type, "error", start_time)
+            raise
+        else:
+            _record_email_send(email_type, "success", start_time)
+
+        logger.info(
+            "Password changed email sent successfully",
+            extra={"task_id": current_task.request.id, "email": email},
+        )
+
+        return {
+            "status": "success",
+            "message": "Password changed email sent successfully",
+            "task_id": current_task.request.id,
+            "email": email,
+        }
+
+    except Exception as e:
+        logger.error(
+            f"Error sending password changed email: {str(e)}",
+            extra={"task_id": current_task.request.id, "email": email, "error": str(e)},
+        )
+
+        # Retry the task
+        raise self.retry(countdown=60, max_retries=3, exc=e)
+
+
 @celery_app.task(bind=True, name="send_welcome_email")
 def send_welcome_email_task(self, email: str, username: str):
     """
@@ -205,19 +276,21 @@ def send_welcome_email_task(self, email: str, username: str):
         subject = "Welcome to ArcanaAI!"
         html_body = f"""
         <html>
-        <body>
-            <h2>Welcome to ArcanaAI, {username}!</h2>
-            <p>Thank you for joining our mystical community!</p>
-            <p>You can now:</p>
-            <ul>
-                <li>Get personalized tarot readings</li>
-                <li>Explore different tarot spreads</li>
-                <li>Save your reading history</li>
-                <li>Discover the wisdom of the cards</li>
-            </ul>
-            <p>Start your journey by getting your first reading!</p>
-            <br>
-            <p>May the cards guide your path,<br>The ArcanaAI Team</p>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #4A90E2; text-align: center;">Welcome to ArcanaAI, {username}!</h2>
+                <p>Thank you for joining our mystical community!</p>
+                <p>You can now:</p>
+                <ul>
+                    <li>Get personalized tarot readings</li>
+                    <li>Explore different tarot spreads</li>
+                    <li>Save your reading history</li>
+                    <li>Discover the wisdom of the cards</li>
+                </ul>
+                <p>Start your journey by getting your first reading!</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="color: #666; font-size: 14px;">May the cards guide your path,<br>The ArcanaAI Team</p>
+            </div>
         </body>
         </html>
         """
