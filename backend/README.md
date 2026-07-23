@@ -352,8 +352,9 @@ The backend includes a comprehensive GitHub Actions workflow:
 ## 🔒 Security Features
 
 - **JWT authentication** with secure token handling
+- **Cookie sessions** with HttpOnly access/refresh cookies, refresh rotation, revocation, and CSRF protection
 - **Password hashing** using bcrypt
-- **Rate limiting** to prevent abuse
+- **Rate limiting and login lockouts** to prevent abuse
 - **Input validation** with Pydantic schemas
 - **SQL injection protection** with SQLAlchemy
 - **CORS configuration** for frontend integration

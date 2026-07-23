@@ -1,11 +1,10 @@
-import pytest
-from fastapi import status
-from unittest.mock import patch
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
+from unittest.mock import patch
 
-from models import User, PasswordResetToken
-from routers.auth import create_access_token, generate_reset_token
+from fastapi import status
+
+from models import PasswordResetToken, User
+from routers.auth import create_refresh_token
 
 
 # Registration Tests
@@ -307,12 +306,73 @@ def test_login_success(client, test_user):
     assert len(data["access_token"]) > 0
 
 
+def test_login_sets_http_only_auth_cookies(client, test_user):
+    response = client.post("/auth/token", data={"username": "testuser", "password": "testpassword"})
+    assert response.status_code == status.HTTP_200_OK
+    cookies = response.headers.get_list("set-cookie")
+    assert any("access_token=" in cookie and "HttpOnly" in cookie for cookie in cookies)
+    assert any("refresh_token=" in cookie and "HttpOnly" in cookie for cookie in cookies)
+    assert any("csrf_token=" in cookie and "HttpOnly" not in cookie for cookie in cookies)
+
+
+def test_cookie_session_can_access_profile_and_logout(client, test_user):
+    login_response = client.post("/auth/token", data={"username": "testuser", "password": "testpassword"})
+    assert login_response.status_code == status.HTTP_200_OK
+    assert client.get("/auth/me").status_code == status.HTTP_200_OK
+
+    csrf_token = client.cookies.get("csrf_token")
+    logout_response = client.post("/auth/logout", headers={"X-CSRF-Token": csrf_token})
+    assert logout_response.status_code == status.HTTP_204_NO_CONTENT
+    assert client.get("/auth/me").status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_cookie_authenticated_mutation_requires_csrf_token(client, test_user):
+    response = client.post("/auth/token", data={"username": "testuser", "password": "testpassword"})
+    assert response.status_code == status.HTTP_200_OK
+    assert client.post("/auth/logout").status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_refresh_token_rotation_revokes_reused_token(client, test_user):
+    client.post("/auth/token", data={"username": "testuser", "password": "testpassword"})
+    old_refresh_token = client.cookies.get("refresh_token")
+    assert old_refresh_token
+
+    refresh_response = client.post("/auth/refresh", headers={"X-CSRF-Token": client.cookies.get("csrf_token")})
+    assert refresh_response.status_code == status.HTTP_200_OK
+    assert client.cookies.get("refresh_token") != old_refresh_token
+
+    replay_response = client.post(
+        "/auth/refresh",
+        json={"refresh_token": old_refresh_token},
+        headers={"X-CSRF-Token": client.cookies.get("csrf_token")},
+    )
+    assert replay_response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert client.get("/auth/me").status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_legacy_refresh_token_is_migrated_to_cookie_session(client, test_user):
+    legacy_refresh_token = create_refresh_token(data={"sub": "testuser"})
+    response = client.post("/auth/refresh", json={"refresh_token": legacy_refresh_token})
+    assert response.status_code == status.HTTP_200_OK
+    assert client.get("/auth/me").status_code == status.HTTP_200_OK
+
+
 def test_login_wrong_password(client, test_user):
     """Test login with wrong password returns 401"""
     response = client.post("/auth/token", data={"username": "testuser", "password": "wrongpassword"})
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     data = response.json()
     assert "Incorrect username or password" in data["error"]
+
+
+def test_repeated_login_failures_temporarily_lock_account(client, test_user):
+    for _ in range(5):
+        response = client.post("/auth/token", data={"username": "testuser", "password": "wrongpassword"})
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    locked_response = client.post("/auth/token", data={"username": "testuser", "password": "testpassword"})
+    assert locked_response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "Incorrect username or password" in locked_response.json()["error"]
 
 
 def test_login_nonexistent_user(client):
@@ -466,7 +526,6 @@ def test_reset_password_invalid_token(client):
 
 def test_reset_password_expired_token(client, db_session, test_user):
     """Test password reset with expired token returns 400"""
-    from models import PasswordResetToken
 
     # Create expired token
     expired_token = PasswordResetToken(
@@ -487,7 +546,6 @@ def test_reset_password_expired_token(client, db_session, test_user):
 
 def test_reset_password_used_token(client, db_session, test_user):
     """Test password reset with already used token returns 400"""
-    from models import PasswordResetToken
 
     # Create used token
     used_token = PasswordResetToken(
@@ -528,14 +586,13 @@ def test_reset_password_empty_new_password(client, test_password_reset_token):
 
 
 # Token Renewal Tests
-def test_token_renewal_in_response_headers(client, auth_headers, test_cards, mock_tarot_reader):
-    """Test that authenticated requests return renewed tokens in headers"""
+def test_authenticated_requests_do_not_expose_renewed_tokens(client, auth_headers, test_cards, mock_tarot_reader):
+    """Authenticated requests no longer expose tokens through response headers."""
     response = client.post(
         "/tarot/reading", json={"concern": "What does my future hold?", "num_cards": 3}, headers=auth_headers
     )
     assert response.status_code == status.HTTP_200_OK
-    assert "X-Access-Token" in response.headers
-    assert len(response.headers["X-Access-Token"]) > 0
+    assert "X-Access-Token" not in response.headers
 
 
 # Edge Cases and Error Handling
@@ -594,7 +651,6 @@ def test_reset_password_token_marks_as_used(client, test_password_reset_token, d
     assert response.status_code == status.HTTP_200_OK
 
     # Verify token is marked as used
-    from models import PasswordResetToken
 
     used_token = db_session.query(PasswordResetToken).filter(PasswordResetToken.token == original_token).first()
     assert used_token.is_used is True

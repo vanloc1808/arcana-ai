@@ -7,8 +7,8 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // Check both cookie and Authorization header
-    const token = request.cookies.get('token')?.value || request.headers.get('Authorization')?.replace('Bearer ', '');
+    // Browser authentication uses the HttpOnly access cookie.
+    const token = request.cookies.get('access_token')?.value;
     const { pathname } = request.nextUrl;
 
     // Public routes that don't require authentication
@@ -33,18 +33,7 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
     }
 
-    // Clone the request headers and add Authorization if token exists
-    const requestHeaders = new Headers(request.headers);
-    if (token && !requestHeaders.has('Authorization')) {
-        requestHeaders.set('Authorization', `Bearer ${token}`);
-    }
-
-    // Return the response with modified headers
-    return NextResponse.next({
-        request: {
-            headers: requestHeaders,
-        },
-    });
+    return NextResponse.next();
 }
 
 export const config = {

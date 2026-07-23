@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.25] - 2026-07-23
+
+### Changed
+- Browser authentication now uses Secure, HttpOnly access and refresh cookies while preserving the existing 14-day and 180-day token lifetimes.
+- Refresh tokens are rotated and server-side sessions can be revoked, including automatic family revocation when a token is replayed.
+- Added CSRF validation for cookie-authenticated state-changing requests, login lockout protection, and session invalidation after password reset.
+- Existing browser sessions are migrated once through the legacy refresh token on the first frontend load after deployment.
+
 ## [0.0.24] - 2026-07-23
 
 ### Changed

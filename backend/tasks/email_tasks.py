@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import inspect
 import time
 from datetime import datetime, timedelta
@@ -90,24 +91,28 @@ def send_password_reset_email_task(self, email: str, token: str, user_id: int | 
             # Store token in database
             if user_id:
                 # Check if token already exists (for retry scenarios)
+                token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
                 existing_token = (
                     db.query(PasswordResetToken)
-                    .filter(PasswordResetToken.token == token, PasswordResetToken.user_id == user_id)
+                    .filter(PasswordResetToken.token_hash == token_hash, PasswordResetToken.user_id == user_id)
                     .first()
                 )
 
                 if not existing_token:
                     try:
                         # Generate unique token if this one already exists globally
-                        while db.query(PasswordResetToken).filter(PasswordResetToken.token == token).first():
+                        while db.query(PasswordResetToken).filter(PasswordResetToken.token_hash == token_hash).first():
                             import secrets
                             import string
 
                             alphabet = string.ascii_letters + string.digits
                             token = "".join(secrets.choice(alphabet) for _ in range(32))
+                            token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
                         reset_token = PasswordResetToken(
-                            user_id=user_id, token=token, expires_at=datetime.utcnow() + timedelta(hours=1)
+                            user_id=user_id,
+                            token_hash=token_hash,
+                            expires_at=datetime.utcnow() + timedelta(hours=1),
                         )
                         db.add(reset_token)
                         db.commit()

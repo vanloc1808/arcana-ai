@@ -196,12 +196,13 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                 formDataToSend.append('files', file);
             });
 
-            const token = localStorage.getItem('token');
+            const csrfToken = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/)?.[1];
             const response = await fetch(`${API_URL}/api/support/`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    ...(csrfToken ? { 'X-CSRF-Token': decodeURIComponent(csrfToken) } : {}),
                 },
+                credentials: 'include',
                 body: formDataToSend,
             });
 

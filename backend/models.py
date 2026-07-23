@@ -73,6 +73,8 @@ class User(Base):
     is_deleted = Column(Boolean, default=False, nullable=False, index=True)
     is_admin = Column(Boolean, default=False)
     favorite_deck_id = Column(Integer, ForeignKey("decks.id"), default=1, index=True)
+    failed_login_attempts = Column(Integer, default=0, nullable=False)
+    login_locked_until = Column(DateTime(timezone=True), nullable=True, index=True)
 
     # Subscription and turn management
     lemon_squeezy_customer_id = Column(String, nullable=True, index=True)
@@ -111,6 +113,7 @@ class User(Base):
     subscription_events = relationship("SubscriptionEvent", back_populates="user", cascade="all, delete-orphan")
     payment_transactions = relationship("PaymentTransaction", back_populates="user", cascade="all, delete-orphan")
     turn_usage_history = relationship("TurnUsageHistory", back_populates="user", cascade="all, delete-orphan")
+    auth_sessions = relationship("AuthSession", back_populates="user", cascade="all, delete-orphan")
 
     @property
     def password(self):
@@ -400,6 +403,7 @@ class PasswordResetToken(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     token = Column(String, unique=True, index=True)
+    token_hash = Column(String, unique=True, nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     expires_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -407,6 +411,26 @@ class PasswordResetToken(Base):
 
     # Relationships
     user = relationship("User")
+
+
+class AuthSession(Base):
+    """Server-side record for a rotatable refresh-token session."""
+
+    __tablename__ = "auth_sessions"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    family_id = Column(String, nullable=False, index=True)
+    refresh_token_hash = Column(String, unique=True, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    revoked_reason = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    ip_address = Column(String, nullable=True)
+
+    user = relationship("User", back_populates="auth_sessions")
 
 
 class Spread(Base):
@@ -1103,5 +1127,3 @@ class WebPushSubscription(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "endpoint", name="uq_web_push_endpoint_per_user"),
     )
-
-

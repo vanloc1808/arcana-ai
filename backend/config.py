@@ -74,6 +74,15 @@ class Settings(BaseSettings):
         return value
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 20160  # 14 * 24 * 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 180  # 180 days
+    AUTH_COOKIE_DOMAIN: str | None = os.getenv("AUTH_COOKIE_DOMAIN") or None
+    AUTH_COOKIE_SECURE: bool = os.getenv(
+        "AUTH_COOKIE_SECURE", "true" if os.getenv("FASTAPI_ENV") == "production" else "false"
+    ).lower() == "true"
+    AUTH_COOKIE_SAMESITE: str = os.getenv("AUTH_COOKIE_SAMESITE", "lax")
+    AUTH_COOKIE_PATH: str = "/"
+    CSRF_COOKIE_NAME: str = "csrf_token"
+    ACCESS_COOKIE_NAME: str = "access_token"
+    REFRESH_COOKIE_NAME: str = "refresh_token"
 
     # Database Settings
     SQLALCHEMY_DATABASE_URL: str = os.getenv(
