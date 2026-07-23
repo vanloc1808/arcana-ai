@@ -7,7 +7,7 @@ export interface DailyCard {
   keywords: string[];
 }
 
-// Shape of the /tarot/card-of-the-day response we rely on for display.
+// Shape of the /api/tarot/card-of-the-day response we rely on for display.
 export interface CardOfTheDayApi {
   name?: string | null;
   image_url?: string | null;
@@ -17,7 +17,7 @@ export interface CardOfTheDayApi {
 }
 
 // All 22 Major Arcana in numerology order, matching the backend's
-// `/tarot/card-of-the-day` rotation (Card.numerology asc). Used as a
+// `/api/tarot/card-of-the-day` rotation (Card.numerology asc). Used as a
 // deterministic offline fallback and as the source of the human-readable
 // guidance sentence the API does not provide.
 const featuredCards: DailyCard[] = [

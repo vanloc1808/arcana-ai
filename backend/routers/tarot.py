@@ -32,7 +32,7 @@ from utils.error_handlers import TarotAPIException, ValidationError, logger
 from utils.metrics import record_tarot_reading
 from utils.rate_limiter import RATE_LIMITS, limiter
 
-router = APIRouter(prefix="/tarot", tags=["tarot"])
+router = APIRouter(prefix="/api/tarot", tags=["tarot"])
 
 
 DEFAULT_DECK_ID = 1

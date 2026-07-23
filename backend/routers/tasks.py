@@ -16,7 +16,7 @@ from utils.celery_utils import (
 )
 from utils.logging import logger
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 
 # Pydantic models for request/response

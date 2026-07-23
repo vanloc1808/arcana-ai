@@ -50,7 +50,7 @@ export default function AdminSharedReadingsPage() {
     const loadReadings = async () => {
         try {
             setLoading(true);
-            const res = await api.get("/admin/shared_readings?limit=100");
+            const res = await api.get("/api/admin/shared_readings?limit=100");
             setReadings(res.data);
         } catch (error) {
             console.error("Error loading shared readings:", error);

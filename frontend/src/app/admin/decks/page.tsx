@@ -43,7 +43,7 @@ export default function AdminDecksPage() {
     const loadDecks = async () => {
         try {
             setLoading(true);
-            const res = await api.get("/admin/decks?limit=100");
+            const res = await api.get("/api/admin/decks?limit=100");
             setDecks(res.data);
         } catch {
             console.error("Error loading decks");
@@ -55,7 +55,7 @@ export default function AdminDecksPage() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this deck?")) return;
         try {
-            await api.delete(`/admin/decks/${id}`);
+            await api.delete(`/api/admin/decks/${id}`);
             loadDecks();
         } catch {
             alert("Failed to delete deck.");
@@ -128,7 +128,7 @@ function DeckCard({ d, onSaved, onDelete }: { d: AdminDeck; onSaved: () => void;
                         e.preventDefault();
                         const fd = new FormData(e.currentTarget);
                         try {
-                            await api.put(`/admin/decks/${d.id}`, {
+                            await api.put(`/api/admin/decks/${d.id}`, {
                                 name: fd.get("name"),
                                 description: fd.get("description"),
                             });

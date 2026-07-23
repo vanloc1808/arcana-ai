@@ -215,7 +215,7 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
 
     useEffect(() => {
         let cancelled = false;
-        api.get("/admin/dashboard")
+        api.get("/api/admin/dashboard")
             .then((res) => { if (!cancelled) setCounts(res.data ?? {}); })
             .catch(() => { /* counts are best-effort */ });
         return () => { cancelled = true; };
@@ -227,9 +227,9 @@ export default function AdminLayout({ children, activePath, breadcrumb, username
         setSearching(true);
         try {
             const [users, cards, sessions] = await Promise.all([
-                api.post("/admin/search", { query: q, model_type: "users", limit: 1, offset: 0 }),
-                api.post("/admin/search", { query: q, model_type: "cards", limit: 1, offset: 0 }),
-                api.post("/admin/search", { query: q, model_type: "chat_sessions", limit: 1, offset: 0 }),
+                api.post("/api/admin/search", { query: q, model_type: "users", limit: 1, offset: 0 }),
+                api.post("/api/admin/search", { query: q, model_type: "cards", limit: 1, offset: 0 }),
+                api.post("/api/admin/search", { query: q, model_type: "chat_sessions", limit: 1, offset: 0 }),
             ]);
 
             const user = users.data?.[0];

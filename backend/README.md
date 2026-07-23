@@ -229,19 +229,19 @@ backend/
 
 ### Authentication
 - `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
+- `POST /api/auth/token` - User login
 - `POST /api/auth/forgot-password` - Password reset request
 - `POST /api/auth/reset-password` - Password reset
 
 ### Tarot Readings
 - `POST /api/tarot/reading` - Create tarot reading
-- `GET /api/tarot/cards` - Get available tarot cards
+- `GET /api/tarot/library` - Get available tarot cards
 - `GET /api/tarot/spreads` - Get available spreads
 
 ### User Management
-- `GET /api/users/profile` - Get user profile
-- `PUT /api/users/profile` - Update user profile
-- `POST /api/users/avatar` - Upload avatar
+- `GET /api/auth/me` - Get user profile
+- `PUT /api/auth/me` - Update user profile
+- `POST /api/auth/avatar/upload` - Upload avatar
 
 ### Subscription
 - `POST /api/subscription/checkout` - Create checkout session
@@ -334,8 +334,8 @@ The backend includes a comprehensive GitHub Actions workflow:
 ## 📊 Monitoring
 
 ### Health Checks
-- `GET /health` - Basic health check
-- `GET /health/detailed` - Detailed system health
+- `GET /api/health/` - Basic health check
+- `GET /api/health/db` - Database connectivity health check
 
 ### Metrics
 - FastAPI exposes Prometheus metrics at `GET /metrics` on `tarot-backend:8000`.

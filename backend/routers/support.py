@@ -14,7 +14,7 @@ from schemas import SupportTicketResponse
 from utils.error_handlers import logger
 
 # Initialize support router with prefix and tags
-router = APIRouter(prefix="/support", tags=["support"])
+router = APIRouter(prefix="/api/support", tags=["support"])
 
 # Configuration for file uploads
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB per file (Slack limit is 1GB, but we'll be conservative)

@@ -68,8 +68,8 @@ export default function AdminDashboard() {
         try {
             setLoading(true);
             const [dashRes, decksRes] = await Promise.all([
-                api.get("/admin/dashboard"),
-                api.get("/admin/decks?limit=100"),
+                api.get("/api/admin/dashboard"),
+                api.get("/api/admin/decks?limit=100"),
             ]);
             setStats(dashRes.data ?? {});
             setDecks(decksRes.data ?? []);

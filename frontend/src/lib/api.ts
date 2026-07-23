@@ -166,7 +166,7 @@ export const auth = {
         formData.append('username', username);
         formData.append('password', password);
 
-        const response = await fetch(`${API_URL}/auth/token`, {
+        const response = await fetch(`${API_URL}/api/auth/token`, {
             method: 'POST',
             body: formData,
         });
@@ -183,7 +183,7 @@ export const auth = {
     },
 
     refreshToken: async (refreshToken: string) => {
-        const response = await fetch(`${API_URL}/auth/refresh`, {
+        const response = await fetch(`${API_URL}/api/auth/refresh`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -201,7 +201,7 @@ export const auth = {
 
     register: async (username: string, email: string, password: string) => {
         try {
-            const response = await api.post("/auth/register", {
+            const response = await api.post("/api/auth/register", {
                 username,
                 email,
                 password,
@@ -222,12 +222,12 @@ export const auth = {
     },
 
     forgotPassword: async (emailOrUsername: string) => {
-        const response = await api.post("/auth/forgot-password", { email_or_username: emailOrUsername });
+        const response = await api.post("/api/auth/forgot-password", { email_or_username: emailOrUsername });
         return response.data;
     },
 
     resetPassword: async (token: string, newPassword: string) => {
-        const response = await api.post("/auth/reset-password", {
+        const response = await api.post("/api/auth/reset-password", {
             token,
             new_password: newPassword,
         });
@@ -235,27 +235,27 @@ export const auth = {
     },
 
     getProfile: async () => {
-        const response = await api.get("/auth/me");
+        const response = await api.get("/api/auth/me");
         return response.data;
     },
 
     updateProfile: async (data: ProfileUpdatePayload) => {
-        const response = await api.put("/auth/me", data);
+        const response = await api.put("/api/auth/me", data);
         return response.data;
     },
 
     getDecks: async () => {
-        const response = await api.get("/auth/decks");
+        const response = await api.get("/api/auth/decks");
         return response.data;
     },
 
     getTimezones: async () => {
-        const response = await api.get("/utilities/timezones");
+        const response = await api.get("/api/utilities/timezones");
         return response.data;
     },
 
     me: async () => {
-        const response = await api.get("/auth/me");
+        const response = await api.get("/api/auth/me");
         return response.data;
     },
 
@@ -263,7 +263,7 @@ export const auth = {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await api.post("/auth/avatar/upload", formData, {
+        const response = await api.post("/api/auth/avatar/upload", formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -272,7 +272,7 @@ export const auth = {
     },
 
     deleteAvatar: async () => {
-        const response = await api.delete("/auth/avatar");
+        const response = await api.delete("/api/auth/avatar");
         return response.data;
     },
 };
@@ -280,41 +280,41 @@ export const auth = {
 // Chat endpoints
 export const chat = {
     getSessions: async (skip: number = 0, limit: number = 30) => {
-        const response = await api.get("/chat/sessions/", { params: { skip, limit } });
+        const response = await api.get("/api/chat/sessions/", { params: { skip, limit } });
         return response.data;
     },
 
     createSession: async (title: string = "New Chat") => {
-        const response = await api.post("/chat/sessions/", { title });
+        const response = await api.post("/api/chat/sessions/", { title });
         return response.data;
     },
 
     getMessages: async (sessionId: number) => {
-        const response = await api.get(`/chat/sessions/${sessionId}/messages/`);
+        const response = await api.get(`/api/chat/sessions/${sessionId}/messages/`);
         return response.data;
     },
 
     sendMessage: async (sessionId: number, content: string) => {
-        const response = await api.post(`/chat/sessions/${sessionId}/messages/`, {
+        const response = await api.post(`/api/chat/sessions/${sessionId}/messages/`, {
             content,
         });
         return response.data;
     },
 
     updateSession: async (sessionId: number, title: string) => {
-        const response = await api.patch(`/chat/sessions/${sessionId}`, {
+        const response = await api.patch(`/api/chat/sessions/${sessionId}`, {
             title,
         });
         return response.data;
     },
 
     deleteSession: async (sessionId: number) => {
-        const response = await api.delete(`/chat/sessions/${sessionId}`);
+        const response = await api.delete(`/api/chat/sessions/${sessionId}`);
         return response.data;
     },
 
     searchSessions: async (query: string) => {
-        const response = await api.get(`/chat/search?q=${encodeURIComponent(query)}`);
+        const response = await api.get(`/api/chat/search?q=${encodeURIComponent(query)}`);
         return response.data;
     },
 };
@@ -331,27 +331,27 @@ export const tarot = {
             requestData.spread_id = spreadId;
         }
 
-        const response = await api.post("/tarot/reading", requestData);
+        const response = await api.post("/api/tarot/reading", requestData);
         return response.data;
     },
 
     getSpreads: async () => {
-        const response = await api.get("/tarot/spreads");
+        const response = await api.get("/api/tarot/spreads");
         return response.data;
     },
 
     getSpread: async (spreadId: number) => {
-        const response = await api.get(`/tarot/spreads/${spreadId}`);
+        const response = await api.get(`/api/tarot/spreads/${spreadId}`);
         return response.data;
     },
 
     getFeaturedCards: async (count: number = 3) => {
-        const response = await api.get(`/tarot/featured-cards?count=${count}`);
+        const response = await api.get(`/api/tarot/featured-cards?count=${count}`);
         return response.data;
     },
 
     getCardOfTheDay: async () => {
-        const response = await api.get(`/tarot/card-of-the-day`);
+        const response = await api.get(`/api/tarot/card-of-the-day`);
         return response.data;
     },
 
@@ -360,19 +360,19 @@ export const tarot = {
         if (suit) params.set('suit', suit);
         if (search) params.set('search', search);
         const query = params.toString() ? `?${params.toString()}` : '';
-        const response = await api.get(`/tarot/library${query}`);
+        const response = await api.get(`/api/tarot/library${query}`);
         return response.data;
     },
 
     getCompatibilityReading: async (payload: CompatibilityReadingRequest): Promise<CompatibilityReadingResponse> => {
-        const response = await api.post("/tarot/compatibility", payload);
+        const response = await api.post("/api/tarot/compatibility", payload);
         return response.data;
     },
 
     interpretCompatibilityReading: async (
         payload: CompatibilityInterpretRequest,
     ): Promise<CompatibilityInterpretResponse> => {
-        const response = await api.post("/tarot/compatibility/interpret", payload);
+        const response = await api.post("/api/tarot/compatibility/interpret", payload);
         return response.data;
     },
 
@@ -383,7 +383,7 @@ export const tarot = {
         onError: (error: string) => void,
     ): Promise<void> => {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/tarot/compatibility/interpret/stream`, {
+        const response = await fetch(`${API_URL}/api/tarot/compatibility/interpret/stream`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -480,32 +480,32 @@ export const sharing = {
         deck_name?: string;
         expires_in_days?: number;
     }) => {
-        const response = await api.post("/sharing/create", readingData);
+        const response = await api.post("/api/sharing/create", readingData);
         return response.data;
     },
 
     getSharedReading: async (uuid: string) => {
-        const response = await api.get(`/sharing/${uuid}`);
+        const response = await api.get(`/api/sharing/${uuid}`);
         return response.data;
     },
 
     getUserSharedReadings: async (limit: number = 20, offset: number = 0) => {
-        const response = await api.get(`/sharing/user/readings?limit=${limit}&offset=${offset}`);
+        const response = await api.get(`/api/sharing/user/readings?limit=${limit}&offset=${offset}`);
         return response.data;
     },
 
     deleteSharedReading: async (uuid: string) => {
-        const response = await api.delete(`/sharing/${uuid}`);
+        const response = await api.delete(`/api/sharing/${uuid}`);
         return response.data;
     },
 
     toggleReadingPrivacy: async (uuid: string) => {
-        const response = await api.post(`/sharing/${uuid}/toggle-privacy`);
+        const response = await api.post(`/api/sharing/${uuid}/toggle-privacy`);
         return response.data;
     },
 
     getUserSharingStats: async () => {
-        const response = await api.get("/sharing/user/stats");
+        const response = await api.get("/api/sharing/user/stats");
         return response.data;
     },
 };

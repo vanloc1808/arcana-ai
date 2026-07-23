@@ -87,8 +87,8 @@ function AdminUsersPageContent() {
             setLoading(true);
             const usersParams = activeFilter === "no_sessions" ? { limit: 100, no_sessions: true } : { limit: 100 };
             const [usersRes, decksRes] = await Promise.all([
-                api.get("/admin/users", { params: usersParams }),
-                api.get("/admin/decks?limit=100"),
+                api.get("/api/admin/users", { params: usersParams }),
+                api.get("/api/admin/decks?limit=100"),
             ]);
             setUsers(usersRes.data);
             setDecks(decksRes.data);
@@ -182,7 +182,7 @@ function AdminUsersPageContent() {
                                     setIsBulkDeleting(true);
                                     try {
                                         await Promise.all(
-                                            Array.from(selectedUserIds).map((id) => api.delete(`/admin/users/${id}`)),
+                                            Array.from(selectedUserIds).map((id) => api.delete(`/api/admin/users/${id}`)),
                                         );
                                         setSelectedUserIds(new Set());
                                         setSelectionMode(false);
@@ -345,7 +345,7 @@ function UserRow({
                         if (!validation.isValid) { setValidationError(validation.error ?? "Invalid username"); return; }
                         setValidationError("");
                         try {
-                            await api.put(`/admin/users/${u.id}`, {
+                            await api.put(`/api/admin/users/${u.id}`, {
                                 username,
                                 email: fd.get("email"),
                                 full_name: fd.get("full_name"),
@@ -356,7 +356,7 @@ function UserRow({
                             });
                             const newPassword = (fd.get("new_password") as string | null)?.trim() ?? "";
                             if (newPassword) {
-                                await api.post(`/admin/users/${u.id}/reset-password`, { new_password: newPassword });
+                                await api.post(`/api/admin/users/${u.id}/reset-password`, { new_password: newPassword });
                             }
                             setOpen(false);
                             onSaved();

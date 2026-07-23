@@ -39,7 +39,7 @@ export default function AdminSpreadsPage() {
     const loadSpreads = async () => {
         try {
             setLoading(true);
-            const res = await api.get("/admin/spreads?limit=100");
+            const res = await api.get("/api/admin/spreads?limit=100");
             setSpreads(res.data);
         } catch (error) {
             console.error("Error loading spreads:", error);

@@ -32,6 +32,29 @@ from app import app
 from routers.auth import create_access_token
 from tests.factories import UserFactory, ChatSessionFactory, CardFactory
 
+
+class ApiPrefixTestClient(TestClient):
+    """Accept legacy test paths while the application API uses /api consistently."""
+
+    _api_prefixes = (
+        "/auth",
+        "/chat",
+        "/tarot",
+        "/admin",
+        "/sharing",
+        "/support",
+        "/tasks",
+        "/health",
+        "/utilities",
+        "/changelog",
+    )
+
+    def request(self, method, url, *args, **kwargs):
+        if isinstance(url, str) and url.startswith(self._api_prefixes):
+            url = f"/api{url}"
+        return super().request(method, url, *args, **kwargs)
+
+
 # Create test database - use persistent file for CI, in-memory for local
 if os.getenv("CI") == "true":
     SQLALCHEMY_DATABASE_URL = "sqlite:///./tarot.db"
@@ -124,7 +147,7 @@ def client(db_session, mock_celery_app):
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[Request] = override_get_request
-    with TestClient(app) as test_client:
+    with ApiPrefixTestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
 

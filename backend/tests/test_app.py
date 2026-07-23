@@ -18,11 +18,22 @@ def test_read_root(client):
 
 def test_health_check(client):
     """Test the health check endpoint"""
-    response = client.get("/health/")
+    response = client.get("/api/health/")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["status"] == "ok"
     assert data["message"] == "Application is healthy"
+
+
+def test_legacy_api_route_is_not_exposed(client):
+    with TestClient(app) as raw_client:
+        response = raw_client.get("/health/")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_versioned_api_routes_use_api_prefix(client):
+    paths = client.get("/openapi.json").json()["paths"]
+    assert all(path == "/" or path.startswith("/api/") for path in paths)
 
 
 def test_docs_available(client):
