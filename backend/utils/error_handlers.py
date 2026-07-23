@@ -331,9 +331,14 @@ async def tarot_exception_handler(request: Request, exc: TarotAPIException):
     logger.log_request(request, error=exc)
 
     # Send Telegram alert for 500 errors only if Telegram is configured
-    if exc.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR and is_telegram_configured(
-        settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID
-    ):
+    # and we are not in a local/test environment (avoids alert noise from
+    # synthetic traffic, test suites, and intentional error-path tests).
+    _should_alert = (
+        exc.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        and settings.FASTAPI_ENV not in ("local", "test")
+        and is_telegram_configured(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID)
+    )
+    if _should_alert:
         request_payload = await extract_request_payload(request)
         request_headers = get_safe_headers(request)
 
@@ -374,7 +379,12 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     logger.log_request(request, error=exc)
 
     # Send Telegram alert for database errors only if Telegram is configured
-    if is_telegram_configured(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID):
+    # and we are not in a local/test environment.
+    _should_alert = (
+        settings.FASTAPI_ENV not in ("local", "test")
+        and is_telegram_configured(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID)
+    )
+    if _should_alert:
         request_payload = await extract_request_payload(request)
         request_headers = get_safe_headers(request)
 
@@ -402,7 +412,12 @@ async def general_exception_handler(request: Request, exc: Exception):
     logger.log_request(request, error=exc)
 
     # Send Telegram alert for general exceptions only if Telegram is configured
-    if is_telegram_configured(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID):
+    # and we are not in a local/test environment.
+    _should_alert = (
+        settings.FASTAPI_ENV not in ("local", "test")
+        and is_telegram_configured(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID)
+    )
+    if _should_alert:
         request_payload = await extract_request_payload(request)
         request_headers = get_safe_headers(request)
 
