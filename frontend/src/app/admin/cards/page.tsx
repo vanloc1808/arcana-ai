@@ -86,8 +86,8 @@ function AdminCardsPageContent() {
         try {
             setLoading(true);
             const [cardsRes, decksRes] = await Promise.all([
-                api.get("/admin/cards?limit=100"),
-                api.get("/admin/decks?limit=100"),
+                api.get("/api/admin/cards?limit=100"),
+                api.get("/api/admin/decks?limit=100"),
             ]);
             setCards(cardsRes.data);
             setDecks(decksRes.data);
@@ -101,7 +101,7 @@ function AdminCardsPageContent() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this card?")) return;
         try {
-            await api.delete(`/admin/cards/${id}`);
+            await api.delete(`/api/admin/cards/${id}`);
             loadData();
         } catch {
             alert("Failed to delete card.");
@@ -217,7 +217,7 @@ function CardRow({ c, decks, deckName, onSaved, onDelete }: {
                         e.preventDefault();
                         const fd = new FormData(e.currentTarget);
                         try {
-                            await api.put(`/admin/cards/${c.id}`, {
+                            await api.put(`/api/admin/cards/${c.id}`, {
                                 name: fd.get("name"),
                                 suit: fd.get("suit"),
                                 rank: fd.get("rank"),

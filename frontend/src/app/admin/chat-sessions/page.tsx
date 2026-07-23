@@ -75,10 +75,10 @@ function AdminChatSessionsPageContent() {
         try {
             setLoading(true);
             const [sessionsRes, dashRes] = await Promise.all([
-                api.get("/admin/chat-sessions", {
+                api.get("/api/admin/chat-sessions", {
                     params: { limit: 100, sort_by: sortField, sort_direction: sortDirection },
                 }),
-                api.get("/admin/dashboard"),
+                api.get("/api/admin/dashboard"),
             ]);
             setSessions(sessionsRes.data ?? []);
             setStats(dashRes.data ?? {});

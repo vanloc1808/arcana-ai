@@ -29,7 +29,7 @@ from schemas import (
 )
 from utils.avatar_utils import avatar_manager
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+router = APIRouter(prefix="/api/admin", tags=["Admin"])
 security = HTTPBearer()
 
 

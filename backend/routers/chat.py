@@ -37,7 +37,7 @@ from utils.metrics import (
 )
 from utils.rate_limiter import RATE_LIMITS, limiter
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 # How long the frontend plays the card-drawing animation. The stream waits this
 # long after signalling a draw before revealing cards and streaming the reading,

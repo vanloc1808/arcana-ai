@@ -50,7 +50,7 @@ interface StreamResponse {
 // How long the card-drawing animation plays before cards/reading are revealed.
 export const CARD_DRAW_ANIMATION_MS = 5000;
 
-// Number of sessions fetched per page by the paginated /chat/sessions/ endpoint.
+// Number of sessions fetched per page by the paginated /api/chat/sessions/ endpoint.
 export const SESSIONS_PAGE_SIZE = 30;
 
 export const useChatSessions = () => {
@@ -246,7 +246,7 @@ export const useChatSessions = () => {
             }
 
             // Make streaming request using fetch API
-            const response = await fetch(`${API_URL}/chat/sessions/${sessionId}/messages/`, {
+            const response = await fetch(`${API_URL}/api/chat/sessions/${sessionId}/messages/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

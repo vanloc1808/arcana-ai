@@ -18,7 +18,7 @@ export async function GET(
             );
         }
 
-        const response = await fetch(`${BACKEND_URL}/changelog/version/${version}`, {
+        const response = await fetch(`${BACKEND_URL}/api/changelog/version/${version}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

@@ -197,7 +197,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
             });
 
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/support/`, {
+            const response = await fetch(`${API_URL}/api/support/`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,

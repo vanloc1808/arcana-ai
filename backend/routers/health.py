@@ -6,9 +6,9 @@ by monitoring systems, load balancers, and deployment tools to check the
 application's health status.
 
 Endpoints:
-    - GET /health/: Basic application health check
-    - GET /health/db: Database connectivity health check
-    - GET /health/test-500: Error testing endpoint (local environment only)
+    - GET /api/health/: Basic application health check
+    - GET /api/health/db: Database connectivity health check
+    - GET /api/health/test-500: Error testing endpoint (local environment only)
 
 The health endpoints are designed to:
     - Provide quick response times for monitoring systems
@@ -30,8 +30,8 @@ Usage:
 
 Example:
     ```bash
-    curl -f http://api.example.com/health/
-    curl -f http://api.example.com/health/db
+    curl -f http://api.example.com/api/health/
+    curl -f http://api.example.com/api/health/db
     ```
 
 Author: ArcanaAI Development Team
@@ -49,7 +49,7 @@ from database import get_db
 from utils.error_handlers import logger
 
 # Initialize health router with prefix and tags for OpenAPI documentation
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(prefix="/api/health", tags=["health"])
 
 
 @router.get("/")

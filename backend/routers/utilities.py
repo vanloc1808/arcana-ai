@@ -4,7 +4,7 @@ from schemas import TimezoneOption
 from utils.rate_limiter import RATE_LIMITS, limiter
 from utils.timezones import get_standard_timezones
 
-router = APIRouter(prefix="/utilities", tags=["utilities"])
+router = APIRouter(prefix="/api/utilities", tags=["utilities"])
 
 
 @router.get("/timezones", response_model=list[TimezoneOption])

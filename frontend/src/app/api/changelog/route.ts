@@ -6,7 +6,7 @@ const BACKEND_URL = API_URL;
 
 export async function GET() {
     try {
-        const response = await fetch(`${BACKEND_URL}/changelog/`, {
+        const response = await fetch(`${BACKEND_URL}/api/changelog/`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'text/plain',

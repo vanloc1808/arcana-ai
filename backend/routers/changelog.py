@@ -18,7 +18,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 
-router = APIRouter(prefix="/changelog", tags=["changelog"])
+router = APIRouter(prefix="/api/changelog", tags=["changelog"])
 
 # Path to the changelog file
 CHANGELOG_PATH = Path(__file__).parent.parent / "docs" / "CHANGELOG.md"

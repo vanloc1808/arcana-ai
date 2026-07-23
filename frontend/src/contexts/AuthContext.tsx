@@ -116,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setRefreshToken(storedRefreshToken);
 
                 try {
-                    logDebug("AuthProvider: Verifying initial session with /auth/me", { component: 'AuthContext' });
+                    logDebug("AuthProvider: Verifying initial session with /api/auth/me", { component: 'AuthContext' });
                     const userData = await auth.getProfile(); // Call the API to validate the session and get user data
                     if (isMounted) {
                         logDebug("AuthProvider: Initial session verified successfully", { component: 'AuthContext' });

@@ -226,7 +226,7 @@ class AvatarManager:
 
         file_path = self.upload_dir / filename
         if file_path.exists():
-            return f"{base_url}/auth/avatars/{filename}"
+            return f"{base_url}/api/auth/avatars/{filename}"
         return None
 
     def find_user_avatars(self, username: str) -> list[Path]:
@@ -324,7 +324,7 @@ class NoOpAvatarManager:
         """Get avatar URL (returns placeholder URL)."""
         if not filename:
             return None
-        return f"{base_url}/auth/avatars/placeholder.jpg"
+            return f"{base_url}/api/auth/avatars/placeholder.jpg"
 
     def find_user_avatars(self, username: str) -> list[Path]:
         """Find user avatars (returns empty list)."""

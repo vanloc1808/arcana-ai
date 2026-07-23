@@ -17,7 +17,7 @@ from schemas import (
 from utils.error_handlers import ResourceNotFoundError, TarotAPIException, ValidationError, logger
 from utils.rate_limiter import RATE_LIMITS, limiter
 
-router = APIRouter(prefix="/sharing", tags=["sharing"])
+router = APIRouter(prefix="/api/sharing", tags=["sharing"])
 
 
 @router.post("/create", response_model=dict)
