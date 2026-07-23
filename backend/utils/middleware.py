@@ -35,9 +35,10 @@ Version: 1.0.0
 
 import time
 
-from fastapi import Request
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from .correlation import get_correlation_id, set_correlation_id
 from .error_handlers import logger
 
 
@@ -85,35 +86,16 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next):
-        """
-        Process HTTP request and response with logging
-
-        Handles the complete request/response cycle while capturing timing
-        information and logging relevant details for monitoring and debugging.
-
-        Args:
-            request (Request): The incoming HTTP request object
-            call_next (callable): The next middleware or route handler in the chain
-
-        Returns:
-            Response: The HTTP response object from the downstream handlers
-
-        Raises:
-            Exception: Re-raises any exceptions from downstream handlers after logging
-
-        Process:
-            1. Record start time for performance measurement
-            2. Process request through downstream handlers
-            3. Calculate processing time
-            4. Log success/failure with comprehensive details
-            5. Return response or re-raise exception
-        """
         # Record start time for performance measurement
         start_time = time.time()
 
+        # Set correlation ID from incoming header or generate a new one
+        incoming_cid = request.headers.get("X-Correlation-ID")
+        correlation_id = set_correlation_id(incoming_cid)
+        request.state.correlation_id = correlation_id
+
         # Process request through the middleware/handler chain
         try:
-            # Call the next middleware or route handler
             response = await call_next(request)
 
             # Calculate total processing time
@@ -131,6 +113,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
             # Log successful request processing
             logger.logger.info("Request processed successfully", extra=log_details)
+
+            # Echo correlation ID back to the caller
+            if correlation_id:
+                response.headers["X-Correlation-ID"] = correlation_id
 
             return response
 

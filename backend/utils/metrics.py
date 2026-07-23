@@ -70,23 +70,23 @@ db_query_duration_seconds = Histogram(
 openai_requests_total = Counter(
     "arcana_openai_requests_total",
     "OpenAI requests by model, operation, and outcome.",
-    COMMON_LABELS + ["model", "operation", "status"],
+    COMMON_LABELS + ["model", "operation", "status", "prompt_version"],
 )
 openai_request_duration_seconds = Histogram(
     "arcana_openai_request_duration_seconds",
     "OpenAI request duration in seconds.",
-    COMMON_LABELS + ["model", "operation"],
+    COMMON_LABELS + ["model", "operation", "prompt_version"],
     buckets=(0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60),
 )
 openai_tokens_total = Counter(
     "arcana_openai_tokens_total",
     "OpenAI token usage.",
-    COMMON_LABELS + ["model", "token_type"],
+    COMMON_LABELS + ["model", "token_type", "prompt_version"],
 )
 openai_cost_usd_total = Counter(
     "arcana_openai_cost_usd_total",
     "Estimated OpenAI cost in USD.",
-    COMMON_LABELS + ["model"],
+    COMMON_LABELS + ["model", "prompt_version"],
 )
 openai_errors_total = Counter(
     "arcana_openai_errors_total",
@@ -154,6 +154,12 @@ email_send_duration_seconds = Histogram(
     "Email send duration in seconds.",
     COMMON_LABELS + ["email_type"],
     buckets=(0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60),
+)
+
+content_safety_triggers_total = Counter(
+    "arcana_content_safety_triggers_total",
+    "Content safety trigger events by category and action.",
+    COMMON_LABELS + ["trigger_type", "action"],
 )
 
 
@@ -353,6 +359,7 @@ def record_openai_request(
     completion_tokens: int = 0,
     cost_usd: float = 0.0,
     error_type: str | None = None,
+    prompt_version: str = "unknown",
 ) -> None:
     """Record an OpenAI request, including optional tokens, cost, and error type."""
     labels = base_labels(env)
@@ -361,11 +368,13 @@ def record_openai_request(
         model=model,
         operation=operation,
         status=status,
+        prompt_version=prompt_version,
     ).inc()
     openai_request_duration_seconds.labels(
         **labels,
         model=model,
         operation=operation,
+        prompt_version=prompt_version,
     ).observe(duration)
 
     if prompt_tokens > 0:
@@ -373,17 +382,20 @@ def record_openai_request(
             **labels,
             model=model,
             token_type="prompt",
+            prompt_version=prompt_version,
         ).inc(prompt_tokens)
     if completion_tokens > 0:
         openai_tokens_total.labels(
             **labels,
             model=model,
             token_type="completion",
+            prompt_version=prompt_version,
         ).inc(completion_tokens)
     if cost_usd > 0:
         openai_cost_usd_total.labels(
             **labels,
             model=model,
+            prompt_version=prompt_version,
         ).inc(cost_usd)
     if error_type:
         openai_errors_total.labels(
@@ -513,3 +525,12 @@ def record_email_send(
         **labels,
         email_type=email_type,
     ).observe(duration)
+
+
+def record_safety_trigger(env: str, trigger_type: str, action: str) -> None:
+    """Record a content safety trigger event."""
+    content_safety_triggers_total.labels(
+        **base_labels(env),
+        trigger_type=trigger_type,
+        action=action,
+    ).inc()

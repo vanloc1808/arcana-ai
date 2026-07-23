@@ -7,11 +7,19 @@ from loguru import logger
 _CONFIGURED = False
 
 
-def _flatten_standard_extra(record: dict[str, Any]) -> None:
-    """Preserve stdlib-style ``extra={...}`` fields when logging through Loguru."""
+def _record_patcher(record: dict[str, Any]) -> None:
+    """Combined patcher: flatten stdlib extra + inject correlation ID."""
+    # Preserve stdlib-style ``extra={...}`` fields
     standard_extra = record["extra"].pop("extra", None)
     if isinstance(standard_extra, dict):
         record["extra"].update(standard_extra)
+
+    # Inject correlation ID for request tracing
+    from utils.correlation import get_correlation_id
+
+    cid = get_correlation_id()
+    if cid:
+        record["extra"]["correlation_id"] = cid
 
 
 def configure_logging() -> None:
@@ -21,7 +29,7 @@ def configure_logging() -> None:
         return
 
     logger.remove()
-    logger.configure(patcher=_flatten_standard_extra)
+    logger.configure(patcher=_record_patcher)
     logger.add(
         sys.stderr,
         level=os.environ.get("LOG_LEVEL", "INFO").upper(),

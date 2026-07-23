@@ -2,7 +2,7 @@ import asyncio
 import hashlib
 import inspect
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timezone as dt_timezone
 
 from celery import current_task
 from fastapi_mail import FastMail, MessageSchema, MessageType
@@ -12,8 +12,11 @@ from celery_app import celery_app
 from config import settings
 from database import SessionLocal
 from models import Base, PasswordResetToken, User
+from utils.correlation import set_correlation_id
+from utils.idempotency import check_and_set_idempotency_key
 from utils.logging import logger
 from utils.metrics import record_email_send
+from utils.retry import compute_backoff
 
 
 def _record_email_send(email_type: str, status: str, start_time: float) -> None:
@@ -49,7 +52,7 @@ else:
 """
 
 
-@celery_app.task(bind=True, name="send_password_reset_email")
+@celery_app.task(bind=True, name="send_password_reset_email", acks_late=True)
 def send_password_reset_email_task(self, email: str, token: str, user_id: int | None = None):
     """
     Async task to send password reset email.
@@ -62,6 +65,17 @@ def send_password_reset_email_task(self, email: str, token: str, user_id: int | 
     Returns:
         dict: Task result with status and details
     """
+
+    # Propagate correlation ID
+    headers = getattr(self.request, "headers", {}) or {}
+    set_correlation_id(headers.get("correlation_id", ""))
+
+    # Idempotency guard — at most one reset email per token
+    id_key = f"email:send_password_reset_email:{email}:{token[:20]}"
+    if not check_and_set_idempotency_key(id_key):
+        logger.info("Duplicate password reset email skipped", extra={"email": email})
+        return {"status": "skipped", "reason": "duplicate"}
+
     email_type = "password_reset"
     try:
         # Create database session
@@ -189,11 +203,17 @@ def send_password_reset_email_task(self, email: str, token: str, user_id: int | 
             extra={"task_id": current_task.request.id, "email": email, "error": str(e)},
         )
 
-        # Retry the task
-        raise self.retry(countdown=60, max_retries=3, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task(
+                "log_failed_task",
+                args=[self.name, [email, token, user_id], str(e)],
+                queue="dead_letter",
+            )
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
-@celery_app.task(bind=True, name="send_password_changed_email")
+@celery_app.task(bind=True, name="send_password_changed_email", acks_late=True)
 def send_password_changed_email_task(self, email: str, username: str | None = None):
     """
     Async task to send a notification email when a user's password has changed.
@@ -205,6 +225,16 @@ def send_password_changed_email_task(self, email: str, username: str | None = No
     Returns:
         dict: Task result with status and details
     """
+
+    headers = getattr(self.request, "headers", {}) or {}
+    set_correlation_id(headers.get("correlation_id", ""))
+
+    # At most one password-changed notification per email per hour
+    id_key = f"email:send_password_changed_email:{email}:{datetime.now(dt_timezone.utc).strftime('%Y%m%d%H')}"
+    if not check_and_set_idempotency_key(id_key):
+        logger.info("Duplicate password changed email skipped", extra={"email": email})
+        return {"status": "skipped", "reason": "duplicate"}
+
     email_type = "password_changed"
     try:
         subject = "Your Password Has Been Changed - ArcanaAI"
@@ -260,11 +290,13 @@ def send_password_changed_email_task(self, email: str, username: str | None = No
             extra={"task_id": current_task.request.id, "email": email, "error": str(e)},
         )
 
-        # Retry the task
-        raise self.retry(countdown=60, max_retries=3, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [email, username], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
-@celery_app.task(bind=True, name="send_welcome_email")
+@celery_app.task(bind=True, name="send_welcome_email", acks_late=True)
 def send_welcome_email_task(self, email: str, username: str):
     """
     Async task to send welcome email to new users.
@@ -276,6 +308,16 @@ def send_welcome_email_task(self, email: str, username: str):
     Returns:
         dict: Task result with status and details
     """
+
+    headers = getattr(self.request, "headers", {}) or {}
+    set_correlation_id(headers.get("correlation_id", ""))
+
+    # Welcome email should never be sent more than once
+    id_key = f"email:send_welcome_email:{email}"
+    if not check_and_set_idempotency_key(id_key):
+        logger.info("Duplicate welcome email skipped", extra={"email": email})
+        return {"status": "skipped", "reason": "duplicate"}
+
     email_type = "welcome"
     try:
         subject = "Welcome to ArcanaAI!"
@@ -336,24 +378,27 @@ def send_welcome_email_task(self, email: str, username: str):
             extra={"task_id": current_task.request.id, "email": email, "error": str(e)},
         )
 
-        # Retry the task
-        raise self.retry(countdown=60, max_retries=3, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [email, username], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
-@celery_app.task(bind=True, name="send_reminder_email")
+@celery_app.task(bind=True, name="send_reminder_email", acks_late=True)
 def send_reminder_email_task(self, email: str, username: str, reminder_type: str, days_since_reading: int):
     """
     Async task to send reading reminder email.
-
-    Args:
-        email: User's email address
-        username: User's username
-        reminder_type: Type of reminder (daily, weekly, monthly)
-        days_since_reading: Days since last reading
-
-    Returns:
-        dict: Task result with status and details
     """
+
+    headers = getattr(self.request, "headers", {}) or {}
+    set_correlation_id(headers.get("correlation_id", ""))
+
+    # At most one reminder email per user per type per day
+    id_key = f"email:send_reminder_email:{email}:{reminder_type}:{datetime.now(dt_timezone.utc).strftime('%Y%m%d')}"
+    if not check_and_set_idempotency_key(id_key):
+        logger.info("Duplicate reminder email skipped", extra={"email": email, "type": reminder_type})
+        return {"status": "skipped", "reason": "duplicate"}
+
     email_type = "reading_reminder"
     try:
         # Customize message based on reminder type and days since reading
@@ -432,11 +477,13 @@ def send_reminder_email_task(self, email: str, username: str, reminder_type: str
             extra={"task_id": current_task.request.id, "email": email, "reminder_type": reminder_type, "error": str(e)},
         )
 
-        # Retry the task
-        raise self.retry(countdown=60, max_retries=3, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [email, username, reminder_type, days_since_reading], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
-@celery_app.task(bind=True, name="send_system_notification_email")
+@celery_app.task(bind=True, name="send_system_notification_email", acks_late=True)
 def send_system_notification_email_task(
     self,
     emails: list[str],
@@ -446,16 +493,12 @@ def send_system_notification_email_task(
 ):
     """
     Async task to send system notification emails.
-
-    Args:
-        emails: List of email addresses
-        subject: Email subject
-        html_body: HTML email body
-        text_body: Plain text email body
-
-    Returns:
-        dict: Task result with status and details
     """
+
+    headers = getattr(self.request, "headers", {}) or {}
+    set_correlation_id(headers.get("correlation_id", ""))
+
+    # Idempotency per subject+email combo
     email_type = "system_notification"
     try:
         successful_sends = []
@@ -509,11 +552,13 @@ def send_system_notification_email_task(
             extra={"task_id": current_task.request.id, "error": str(e)},
         )
 
-        # Retry the task
-        raise self.retry(countdown=120, max_retries=2, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [emails, subject, html_body, text_body], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
-@celery_app.task(bind=True, name="send_bulk_notification_email")
+@celery_app.task(bind=True, name="send_bulk_notification_email", acks_late=True)
 def send_bulk_notification_email_task(
     self,
     emails: list[str],
@@ -523,16 +568,11 @@ def send_bulk_notification_email_task(
 ):
     """
     Async task to send bulk notification emails.
-
-    Args:
-        emails: List of email addresses
-        subject: Email subject
-        html_body: HTML email body
-        text_body: Plain text email body
-
-    Returns:
-        dict: Task result with status and details
     """
+
+    headers = getattr(self.request, "headers", {}) or {}
+    set_correlation_id(headers.get("correlation_id", ""))
+
     email_type = "bulk_notification"
     try:
         successful_sends = []
@@ -583,8 +623,10 @@ def send_bulk_notification_email_task(
     except Exception as e:
         logger.error(f"Error in bulk email task: {str(e)}", extra={"task_id": current_task.request.id, "error": str(e)})
 
-        # Retry the task
-        raise self.retry(countdown=120, max_retries=2, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [emails, subject, html_body, text_body], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
 # -----------------------

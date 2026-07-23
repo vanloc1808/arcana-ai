@@ -10,6 +10,7 @@ from langchain_core.callbacks import UsageMetadataCallbackHandler
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from openai import APIConnectionError, RateLimitError
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -18,6 +19,13 @@ from utils.metrics import estimate_openai_cost_usd, record_openai_request
 
 # Load environment variables
 load_dotenv()
+
+PROMPT_VERSION = "2.0"
+
+# Errors worth retrying on a new connection attempt
+_RETRIABLE_ERRORS = (RateLimitError, APIConnectionError)
+_MAX_LLM_RETRIES = 3
+_LLM_RETRY_BASE_SECONDS = 1.0
 
 
 def _usage_from_callback(cb: UsageMetadataCallbackHandler) -> tuple[int, int]:
@@ -213,24 +221,26 @@ class TarotReader:
     async def create_reading(self, concern: str, cards: list[dict]) -> AsyncGenerator[str, None]:
         """Create a tarot reading based on the drawn cards and the user's concern."""
         logger.info("Creating tarot reading...")
-        # Create the prompt template
         template = (
             "You are an experienced and empathetic tarot reader. "
             "Create a CONCISE reading (maximum 1000 words) based on the following:\n\n"
             "User's concern: {concern}\n\n"
             "Cards drawn (in order):\n{cards}\n\n"
-            "Please provide a focused and insightful reading that:\n"
-            "1. Addresses the user's concern directly and concisely\n"
-            "2. Briefly interprets each card in the context of their concern\n"
-            "3. Considers card reversals in the interpretation\n"
-            "4. Creates a coherent but succinct narrative\n"
-            "5. Offers 1-2 practical action items\n"
-            "6. Maintains a compassionate tone while being brief\n\n"
+            "STRUCTURE YOUR RESPONSE WITH THESE EXACT SECTIONS:\n\n"
+            "## Overview\n"
+            "[2-3 sentences synthesizing the reading's main message]\n\n"
+            "## Card-by-Card Analysis\n"
+            "[For each card: ### Card Name (Orientation) followed by a brief interpretation paragraph]\n\n"
+            "## Synthesis\n"
+            "[How the cards work together as a narrative]\n\n"
+            "## Guidance\n"
+            "[1-2 practical, actionable suggestions]\n\n"
+            "## Wellbeing Note\n"
+            "[One sentence reminding the reader this is for reflection, not professional advice]\n\n"
             "Keep the total response under 1000 words.\n\n"
             "Tarot Reading:"
         )
 
-        # Format the cards information
         logger.info("Formatting cards information...")
         cards_text = ""
         for i, card in enumerate(cards, 1):
@@ -240,45 +250,75 @@ class TarotReader:
             cards_text += f"   Meaning: {meaning}\n"
             logger.debug(f"Formatted card {i}: {card['name']}")
 
-        # Create and run the chain
         logger.info("Generating reading with language model...")
         prompt = ChatPromptTemplate.from_template(template)
         chain = prompt | self.llm | self.output_parser
-        start_time = time.perf_counter()
         model = getattr(self.llm, "model_name", settings.OPENAI_MODEL)
         operation = "tarot_interpretation"
         usage_cb = UsageMetadataCallbackHandler()
 
-        # Generate the reading in streaming mode
-        try:
-            async for chunk in chain.astream(
-                {"concern": concern, "cards": cards_text},
-                config={"callbacks": [usage_cb]},
-            ):
-                yield chunk
-                await asyncio.sleep(0)  # Allow other tasks to run
-        except Exception as exc:
-            record_openai_request(
-                env=settings.FASTAPI_ENV,
-                model=model,
-                operation=operation,
-                status="error",
-                duration=time.perf_counter() - start_time,
-                error_type=type(exc).__name__,
-            )
-            raise
-        else:
-            prompt_tokens, completion_tokens = _usage_from_callback(usage_cb)
-            record_openai_request(
-                env=settings.FASTAPI_ENV,
-                model=model,
-                operation=operation,
-                status="success",
-                duration=time.perf_counter() - start_time,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                cost_usd=estimate_openai_cost_usd(prompt_tokens, completion_tokens),
-            )
+        # Retry loop — only before streaming begins. Once chunks flow, failures are terminal.
+        last_exc = None
+        for attempt in range(1, _MAX_LLM_RETRIES + 1):
+            start_time = time.perf_counter()
+            try:
+                async for chunk in chain.astream(
+                    {"concern": concern, "cards": cards_text},
+                    config={"callbacks": [usage_cb]},
+                ):
+                    yield chunk
+                    await asyncio.sleep(0)
+            except _RETRIABLE_ERRORS as exc:
+                last_exc = exc
+                if attempt < _MAX_LLM_RETRIES:
+                    delay = _LLM_RETRY_BASE_SECONDS * (2 ** (attempt - 1))
+                    logger.warning(
+                        "LLM call failed, retrying",
+                        extra={"attempt": attempt, "delay": delay, "error": str(exc)},
+                    )
+                    await asyncio.sleep(delay)
+                    # Recreate chain with fresh callback — the old one may have stale state
+                    usage_cb = UsageMetadataCallbackHandler()
+                    chain = prompt | self.llm | self.output_parser
+                    continue
+                record_openai_request(
+                    env=settings.FASTAPI_ENV,
+                    model=model,
+                    operation=operation,
+                    status="error",
+                    duration=time.perf_counter() - start_time,
+                    error_type=type(exc).__name__,
+                    prompt_version=PROMPT_VERSION,
+                )
+                raise
+            except Exception as exc:
+                record_openai_request(
+                    env=settings.FASTAPI_ENV,
+                    model=model,
+                    operation=operation,
+                    status="error",
+                    duration=time.perf_counter() - start_time,
+                    error_type=type(exc).__name__,
+                    prompt_version=PROMPT_VERSION,
+                )
+                raise
+            else:
+                prompt_tokens, completion_tokens = _usage_from_callback(usage_cb)
+                record_openai_request(
+                    env=settings.FASTAPI_ENV,
+                    model=model,
+                    operation=operation,
+                    status="success",
+                    duration=time.perf_counter() - start_time,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    cost_usd=estimate_openai_cost_usd(prompt_tokens, completion_tokens),
+                    prompt_version=PROMPT_VERSION,
+                )
+                break
+
+        if last_exc is not None and attempt >= _MAX_LLM_RETRIES:
+            raise last_exc
 
         logger.info("Reading generation completed")
 
@@ -343,6 +383,7 @@ class TarotReader:
                 status="error",
                 duration=time.perf_counter() - start_time,
                 error_type=type(exc).__name__,
+                prompt_version=PROMPT_VERSION,
             )
             raise
         else:
@@ -356,6 +397,7 @@ class TarotReader:
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 cost_usd=estimate_openai_cost_usd(prompt_tokens, completion_tokens),
+                prompt_version=PROMPT_VERSION,
             )
 
     async def create_compatibility_reading(
@@ -424,6 +466,7 @@ class TarotReader:
                 status="error",
                 duration=time.perf_counter() - start_time,
                 error_type=type(exc).__name__,
+                prompt_version=PROMPT_VERSION,
             )
             raise
         else:
@@ -437,6 +480,7 @@ class TarotReader:
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 cost_usd=estimate_openai_cost_usd(prompt_tokens, completion_tokens),
+                prompt_version=PROMPT_VERSION,
             )
         logger.info("Compatibility reading generation completed")
         return result

@@ -1,5 +1,5 @@
 # noqa: E501
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 from celery import current_task
 from sqlalchemy import create_engine
@@ -8,25 +8,30 @@ from sqlalchemy.orm import sessionmaker
 from celery_app import celery_app
 from config import settings
 from models import ChatSession, User
+from utils.correlation import chain_task_with_correlation, set_correlation_id
+from utils.idempotency import check_and_set_idempotency_key
 from utils.logging import logger
+from utils.retry import compute_backoff
 
 # Database setup for tasks
 engine = create_engine(settings.SQLALCHEMY_DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://"))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@celery_app.task(bind=True, name="send_reading_reminder")
+@celery_app.task(bind=True, name="send_reading_reminder", acks_late=True)
 def send_reading_reminder_task(self, user_id: int, reminder_type: str = "daily"):
     """
     Async task to send reading reminders to users.
-
-    Args:
-        user_id: User ID to send reminder to
-        reminder_type: Type of reminder (daily, weekly, monthly)
-
-    Returns:
-        dict: Task result with status and details
     """
+
+    headers = getattr(self.request, "headers", {}) or {}
+    set_correlation_id(headers.get("correlation_id", ""))
+
+    # At most one reminder per user per type per day
+    id_key = f"notif:send_reading_reminder:{user_id}:{reminder_type}:{datetime.now(dt_timezone.utc).strftime('%Y%m%d')}"
+    if not check_and_set_idempotency_key(id_key):
+        logger.info("Duplicate reading reminder skipped", extra={"user_id": user_id})
+        return {"status": "skipped", "reason": "duplicate"}
     try:
         db = SessionLocal()
 
@@ -74,7 +79,8 @@ def send_reading_reminder_task(self, user_id: int, reminder_type: str = "daily")
             from tasks.email_tasks import send_reminder_email_task
 
             # Send reminder email
-            reminder_result = send_reminder_email_task.delay(
+            reminder_result = chain_task_with_correlation(
+                send_reminder_email_task,
                 email=user.email,
                 username=user.username,
                 reminder_type=reminder_type,
@@ -110,11 +116,13 @@ def send_reading_reminder_task(self, user_id: int, reminder_type: str = "daily")
             extra={"task_id": current_task.request.id, "user_id": user_id, "error": str(e)},
         )
 
-        # Retry the task
-        raise self.retry(countdown=300, max_retries=2, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [user_id, reminder_type], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
-@celery_app.task(bind=True, name="process_daily_reminders")
+@celery_app.task(bind=True, name="process_daily_reminders", acks_late=True)
 def process_daily_reminders_task(self):
     """
     Async task to process daily reading reminders for all eligible users.
@@ -134,7 +142,7 @@ def process_daily_reminders_task(self):
             for user in users:
                 # Check if user has opted in for reminders (add this to user model later)
                 # For now, send to all users
-                task_result = send_reading_reminder_task.delay(user.id, "daily")
+                task_result = chain_task_with_correlation(send_reading_reminder_task, user.id, "daily")
                 reminder_tasks.append({"user_id": user.id, "username": user.username, "task_id": task_result.id})
 
             logger.info(
@@ -162,11 +170,13 @@ def process_daily_reminders_task(self):
             f"Error processing daily reminders: {str(e)}", extra={"task_id": current_task.request.id, "error": str(e)}
         )
 
-        # Retry the task
-        raise self.retry(countdown=600, max_retries=1, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
-@celery_app.task(bind=True, name="send_system_notification")
+@celery_app.task(bind=True, name="send_system_notification", acks_late=True)
 def send_system_notification_task(self, notification_type: str, data: dict, target_users: list[int] | None = None):
     """
     Async task to send system notifications.
@@ -269,8 +279,12 @@ def send_system_notification_task(self, notification_type: str, data: dict, targ
                 text_body = data.get("text_body", data.get("message", ""))
 
             # Send bulk email
-            task_result = send_system_notification_email_task.delay(
-                emails=emails, subject=subject, html_body=html_body, text_body=text_body
+            task_result = chain_task_with_correlation(
+                send_system_notification_email_task,
+                emails=emails,
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body,
             )
 
             logger.info(
@@ -301,11 +315,13 @@ def send_system_notification_task(self, notification_type: str, data: dict, targ
             extra={"task_id": current_task.request.id, "notification_type": notification_type, "error": str(e)},
         )
 
-        # Retry the task
-        raise self.retry(countdown=300, max_retries=2, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [notification_type, data, target_users], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
-@celery_app.task(bind=True, name="cleanup_old_tasks")
+@celery_app.task(bind=True, name="cleanup_old_tasks", acks_late=True)
 def cleanup_old_tasks_task(self, days_old: int = 30):
     """
     Async task to cleanup old task results and logs.
@@ -337,11 +353,13 @@ def cleanup_old_tasks_task(self, days_old: int = 30):
     except Exception as e:
         logger.error(f"Error in cleanup task: {str(e)}", extra={"task_id": current_task.request.id, "error": str(e)})
 
-        # Retry the task
-        raise self.retry(countdown=3600, max_retries=1, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [days_old], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 
 
-@celery_app.task(bind=True, name="reset_monthly_free_turns")
+@celery_app.task(bind=True, name="reset_monthly_free_turns", acks_late=True)
 def reset_monthly_free_turns_task(self):
     """
     Async task to reset all users' free turns to 3 at the beginning of each month.
@@ -422,6 +440,8 @@ def reset_monthly_free_turns_task(self):
             extra={"task_id": current_task.request.id, "error": str(e)},
         )
 
-        # Retry the task
-        raise self.retry(countdown=3600, max_retries=2, exc=e)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task("log_failed_task", args=[self.name, [], str(e)], queue="dead_letter")
+            raise
+        raise self.retry(countdown=compute_backoff(self.request.retries), exc=e)
 

@@ -17,6 +17,7 @@ from celery.signals import (
 from dotenv import load_dotenv
 
 from config import settings
+from utils.correlation import set_correlation_id
 from utils.metrics import (
     mark_worker_process_dead,
     record_celery_failure,
@@ -37,7 +38,8 @@ celery_app = Celery(
     "tarot_tasks",
     broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
     backend=os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0"),
-    include=["tasks.email_tasks", "tasks.notification_tasks", "tasks.journal_tasks", "tasks.web_push_tasks"],
+    include=["tasks.email_tasks", "tasks.notification_tasks", "tasks.journal_tasks", "tasks.web_push_tasks",
+             "tasks.dead_letter"],
 )
 
 # Celery configuration
@@ -50,6 +52,8 @@ celery_app.conf.update(
     task_track_started=True,
     task_time_limit=30 * 60,  # 30 minutes
     task_soft_time_limit=25 * 60,  # 25 minutes
+    task_acks_late=True,  # Re-deliver on worker crash — idempotency guards needed
+    task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=1000,
     # Task routing
@@ -57,12 +61,14 @@ celery_app.conf.update(
         "tasks.email_tasks.*": {"queue": "email"},
         "tasks.notification_tasks.*": {"queue": "notifications"},
         "tasks.web_push_tasks.*": {"queue": "notifications"},
+        "tasks.dead_letter.*": {"queue": "dead_letter"},
     },
     # Task retry configuration
     task_default_retry_delay=60,  # 1 minute
     task_max_retries=3,
     # Task discovery
-    imports=("tasks.email_tasks", "tasks.notification_tasks", "tasks.journal_tasks", "tasks.web_push_tasks"),
+    imports=("tasks.email_tasks", "tasks.notification_tasks", "tasks.journal_tasks", "tasks.web_push_tasks",
+             "tasks.dead_letter"),
     # Periodic task schedule
     beat_schedule={
         "reset-monthly-free-turns": {
@@ -87,6 +93,20 @@ def _queue_name(task=None, request=None) -> str:
 
 def _task_name(sender) -> str:
     return getattr(sender, "name", "unknown")
+
+
+@task_prerun.connect
+def inject_correlation_id(sender=None, task=None, **kwargs):
+    """Propagate the correlation ID from task headers into the worker context.
+
+    This must run before ``track_task_start`` so that subsequent log lines and
+    metric records inside the task body include the same correlation ID that
+    the API requester saw.
+    """
+    headers = getattr(getattr(task, "request", None), "headers", {}) or {}
+    cid = headers.get("correlation_id", "")
+    if cid:
+        set_correlation_id(cid)
 
 
 @task_prerun.connect
