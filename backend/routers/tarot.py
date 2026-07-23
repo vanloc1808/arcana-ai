@@ -353,16 +353,9 @@ async def get_compatibility_reading(
         spread = db.query(Spread).filter(Spread.name == COMPATIBILITY_SPREAD_NAME).first()
         if not spread:
             reading_status = "not_found"
-            logger.logger.error(
-                "Compatibility spread not configured",
-                extra={"spread_name": COMPATIBILITY_SPREAD_NAME},
-            )
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail={
-                    "message": "Compatibility readings are currently unavailable. Please try again later.",
-                    "spread_name": COMPATIBILITY_SPREAD_NAME,
-                },
+            raise TarotAPIException(
+                message="Compatibility spread is not configured",
+                details={"spread_name": COMPATIBILITY_SPREAD_NAME},
             )
         subscription_service = SubscriptionService()
         turn_result = subscription_service.consume_user_turn(db, current_user, usage_context="reading")

@@ -26,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Telegram 500-error alerts are now suppressed in `local` and `test` environments (`FASTAPI_ENV`), preventing alert noise from synthetic traffic cron jobs and intentional error-path test runs.
 - The forgot-password endpoint no longer raises a 500 when the email dispatch to Celery fails; the failure is logged but the response remains `200 OK` to avoid leaking account existence.
-- The compatibility reading endpoint now returns a graceful `503 Service Unavailable` instead of a `500` when the Relationship Cross spread is not seeded in the database.
 
 ## [0.0.25] - 2026-07-23
 
