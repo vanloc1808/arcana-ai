@@ -93,9 +93,9 @@ class TestSendReadingReminderTask:
         # Mock current task
         mock_current_task.request.id = "task_123"
 
-        with patch('tasks.email_tasks.send_reminder_email_task.delay') as mock_delay:
-            mock_delay.return_value = Mock()
-            mock_delay.return_value.id = "email_task_456"
+        with patch('tasks.notification_tasks.chain_task_with_correlation') as mock_chain:
+            mock_chain.return_value = Mock()
+            mock_chain.return_value.id = "email_task_456"
 
             result = send_reading_reminder_task(1, "daily")
 
@@ -110,12 +110,12 @@ class TestSendReadingReminderTask:
         assert result == expected
 
         # Verify email task was called with correct parameters
-        mock_delay.assert_called_once_with(
-            email="test@example.com",
-            username="testuser",
-            reminder_type="daily",
-            days_since_reading=0,
-        )
+        mock_chain.assert_called_once()
+        call_kwargs = mock_chain.call_args.kwargs
+        assert call_kwargs["email"] == "test@example.com"
+        assert call_kwargs["username"] == "testuser"
+        assert call_kwargs["reminder_type"] == "daily"
+        assert call_kwargs["days_since_reading"] == 0
 
     @patch('tasks.notification_tasks.SessionLocal')
     @patch('tasks.notification_tasks.current_task')
@@ -189,9 +189,9 @@ class TestSendReadingReminderTask:
         # Mock current task
         mock_current_task.request.id = "task_123"
 
-        with patch('tasks.email_tasks.send_reminder_email_task.delay') as mock_delay:
-            mock_delay.return_value = Mock()
-            mock_delay.return_value.id = "email_task_456"
+        with patch('tasks.notification_tasks.chain_task_with_correlation') as mock_chain:
+            mock_chain.return_value = Mock()
+            mock_chain.return_value.id = "email_task_456"
 
             result = send_reading_reminder_task(1, "weekly")
 
@@ -206,12 +206,11 @@ class TestSendReadingReminderTask:
         assert result == expected
 
         # Verify email task was called with correct days since reading
-        mock_delay.assert_called_once_with(
-            email="test@example.com",
-            username="testuser",
-            reminder_type="weekly",
-            days_since_reading=8,
-        )
+        mock_chain.assert_called_once()
+        call_kwargs = mock_chain.call_args.kwargs
+        assert call_kwargs["email"] == "test@example.com"
+        assert call_kwargs["reminder_type"] == "weekly"
+        assert call_kwargs["days_since_reading"] == 8
 
 
 class TestProcessDailyRemindersTask:
@@ -263,7 +262,7 @@ class TestProcessDailyRemindersTask:
         # Mock current task
         mock_current_task.request.id = "task_123"
 
-        with patch('tasks.notification_tasks.send_reading_reminder_task.delay') as mock_delay:
+        with patch('tasks.notification_tasks.chain_task_with_correlation') as mock_chain:
             # Mock task results
             mock_task_results = []
             for i, user in enumerate(mock_users):
@@ -271,7 +270,7 @@ class TestProcessDailyRemindersTask:
                 mock_result.id = f"reminder_task_{i+1}"
                 mock_task_results.append(mock_result)
 
-            mock_delay.side_effect = mock_task_results
+            mock_chain.side_effect = mock_task_results
 
             result = process_daily_reminders_task()
 
@@ -288,11 +287,11 @@ class TestProcessDailyRemindersTask:
         }
         assert result == expected
 
-        # Verify send_reading_reminder_task.delay was called for each user
-        assert mock_delay.call_count == 3
-        mock_delay.assert_any_call(1, "daily")
-        mock_delay.assert_any_call(2, "daily")
-        mock_delay.assert_any_call(3, "daily")
+        # Verify chain_task_with_correlation was called for each user
+        assert mock_chain.call_count == 3
+        mock_chain.assert_any_call(send_reading_reminder_task, 1, "daily")
+        mock_chain.assert_any_call(send_reading_reminder_task, 2, "daily")
+        mock_chain.assert_any_call(send_reading_reminder_task, 3, "daily")
 
     @patch('tasks.notification_tasks.SessionLocal')
     @patch('tasks.notification_tasks.current_task')
@@ -408,19 +407,19 @@ class TestSendSystemNotificationTask:
         # Mock current task
         mock_current_task.request.id = "task_123"
 
-        with patch('tasks.email_tasks.send_system_notification_email_task.delay') as mock_delay:
-            mock_delay.return_value = Mock()
-            mock_delay.return_value.id = "email_task_456"
+        with patch('tasks.notification_tasks.chain_task_with_correlation') as mock_chain:
+            mock_chain.return_value = Mock()
+            mock_chain.return_value.id = "email_task_456"
 
             data = {"features": ["New card spreads", "Enhanced readings"]}
             send_system_notification_task("feature_update", data)
 
         # Verify email task was called with feature update content
-        mock_delay.assert_called_once()
-        call_args = mock_delay.call_args
-        assert "New Features Available" in call_args[1]["subject"]
-        assert "New card spreads" in call_args[1]["html_body"]
-        assert "Enhanced readings" in call_args[1]["html_body"]
+        mock_chain.assert_called_once()
+        call_kwargs = mock_chain.call_args.kwargs
+        assert "New Features Available" in call_kwargs["subject"]
+        assert "New card spreads" in call_kwargs["html_body"]
+        assert "Enhanced readings" in call_kwargs["html_body"]
 
     @patch('tasks.notification_tasks.SessionLocal')
     @patch('tasks.notification_tasks.current_task')
@@ -441,9 +440,9 @@ class TestSendSystemNotificationTask:
         # Mock current task
         mock_current_task.request.id = "task_123"
 
-        with patch('tasks.email_tasks.send_system_notification_email_task.delay') as mock_delay:
-            mock_delay.return_value = Mock()
-            mock_delay.return_value.id = "email_task_456"
+        with patch('tasks.notification_tasks.chain_task_with_correlation') as mock_chain:
+            mock_chain.return_value = Mock()
+            mock_chain.return_value.id = "email_task_456"
 
             data = {
                 "subject": "Custom Notification",
@@ -452,11 +451,11 @@ class TestSendSystemNotificationTask:
             }
             send_system_notification_task("custom", data)
 
-        mock_delay.assert_called_once()
-        call_args = mock_delay.call_args
-        assert call_args[1]["subject"] == "Custom Notification"
-        assert call_args[1]["html_body"] == "<p>Custom message</p>"
-        assert call_args[1]["text_body"] == "Custom message"
+        mock_chain.assert_called_once()
+        call_kwargs = mock_chain.call_args.kwargs
+        assert call_kwargs["subject"] == "Custom Notification"
+        assert call_kwargs["html_body"] == "<p>Custom message</p>"
+        assert call_kwargs["text_body"] == "Custom message"
 
 
 class TestCleanupOldTasksTask:
