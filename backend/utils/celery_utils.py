@@ -8,6 +8,7 @@ from celery.result import AsyncResult
 from fastapi import HTTPException
 
 from celery_app import celery_app
+from utils.correlation import dispatch_task_with_correlation
 from utils.logging import logger
 
 
@@ -138,7 +139,9 @@ class EmailTaskManager:
         """
         from tasks.email_tasks import send_password_reset_email_task
 
-        result = send_password_reset_email_task.delay(email, token, user_id)
+        result = dispatch_task_with_correlation(
+            send_password_reset_email_task, args=[email, token, user_id]
+        )
         logger.info(f"Password reset email task queued: {result.id}")
         return result.id
 
@@ -156,7 +159,9 @@ class EmailTaskManager:
         """
         from tasks.email_tasks import send_password_changed_email_task
 
-        result = send_password_changed_email_task.delay(email, username)
+        result = dispatch_task_with_correlation(
+            send_password_changed_email_task, args=[email, username]
+        )
         logger.info(f"Password changed email task queued: {result.id}")
         return result.id
 
@@ -174,7 +179,9 @@ class EmailTaskManager:
         """
         from tasks.email_tasks import send_welcome_email_task
 
-        result = send_welcome_email_task.delay(email, username)
+        result = dispatch_task_with_correlation(
+            send_welcome_email_task, args=[email, username]
+        )
         logger.info(f"Welcome email task queued: {result.id}")
         return result.id
 
@@ -194,7 +201,9 @@ class EmailTaskManager:
         """
         from tasks.email_tasks import send_bulk_notification_email_task
 
-        result = send_bulk_notification_email_task.delay(emails, subject, html_body, text_body)
+        result = dispatch_task_with_correlation(
+            send_bulk_notification_email_task, args=[emails, subject, html_body, text_body]
+        )
         logger.info(f"Bulk email task queued: {result.id}")
         return result.id
 
@@ -216,7 +225,9 @@ class NotificationTaskManager:
         """
         from tasks.notification_tasks import send_reading_reminder_task
 
-        result = send_reading_reminder_task.delay(user_id, reminder_type)
+        result = dispatch_task_with_correlation(
+            send_reading_reminder_task, args=[user_id, reminder_type]
+        )
         logger.info(f"Reading reminder task queued: {result.id}")
         return result.id
 
@@ -230,7 +241,7 @@ class NotificationTaskManager:
         """
         from tasks.notification_tasks import process_daily_reminders_task
 
-        result = process_daily_reminders_task.delay()
+        result = dispatch_task_with_correlation(process_daily_reminders_task)
         logger.info(f"Daily reminders processing task queued: {result.id}")
         return result.id
 
@@ -251,7 +262,9 @@ class NotificationTaskManager:
         """
         from tasks.notification_tasks import send_system_notification_task
 
-        result = send_system_notification_task.delay(notification_type, data, target_users)
+        result = dispatch_task_with_correlation(
+            send_system_notification_task, args=[notification_type, data, target_users]
+        )
         logger.info(f"System notification task queued: {result.id}")
         return result.id
 
@@ -268,7 +281,9 @@ class NotificationTaskManager:
         """
         from tasks.notification_tasks import cleanup_old_tasks_task
 
-        result = cleanup_old_tasks_task.delay(days_old)
+        result = dispatch_task_with_correlation(
+            cleanup_old_tasks_task, args=[days_old]
+        )
         logger.info(f"Cleanup task queued: {result.id}")
         return result.id
 
@@ -282,7 +297,7 @@ class NotificationTaskManager:
         """
         from tasks.notification_tasks import reset_monthly_free_turns_task
 
-        result = reset_monthly_free_turns_task.delay()
+        result = dispatch_task_with_correlation(reset_monthly_free_turns_task)
         logger.info(f"Monthly free turns reset task queued: {result.id}")
         return result.id
 

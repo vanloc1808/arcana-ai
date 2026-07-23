@@ -9,6 +9,7 @@ from pydantic import BaseModel, EmailStr
 
 from models import User
 from routers.auth import get_admin_user
+from tasks.dead_letter import get_dead_letter_entries, replay_dead_letter_entry
 from utils.celery_utils import (
     email_task_manager,
     notification_task_manager,
@@ -296,3 +297,19 @@ async def cleanup_old_tasks(days_old: int = 30, current_user: User = Depends(get
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error creating cleanup task: {str(e)}"
         )
+
+
+@router.get("/dead-letter")
+async def get_dead_letter(current_user: User = Depends(get_admin_user)):
+    """List dead-letter entries (permanently failed tasks that exhausted retries)."""
+    entries = get_dead_letter_entries()
+    return {"dead_letter_entries": entries, "count": len(entries)}
+
+
+@router.post("/dead-letter/replay/{index}")
+async def replay_dead_letter(index: int, current_user: User = Depends(get_admin_user)):
+    """Replay a dead-letter task and remove it from the list."""
+    entry = replay_dead_letter_entry(index)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Dead-letter entry not found")
+    return {"message": "Task replayed", "entry": entry}

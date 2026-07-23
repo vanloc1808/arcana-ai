@@ -777,8 +777,14 @@ async def forgot_password(request: Request, request_data: ForgotPasswordRequest,
             .first()
         )
         if user:
-            # Queue the email task (always send to user's email)
-            EmailTaskManager.send_password_reset_email_async(user.email, token, user.id)
+            # Queue the email task — log but don't fail the request if dispatch errors out.
+            try:
+                EmailTaskManager.send_password_reset_email_async(user.email, token, user.id)
+            except Exception as dispatch_error:
+                logger.logger.error(
+                    "Failed to dispatch password reset email task",
+                    extra={"user_id": user.id, "error": str(dispatch_error)},
+                )
         record_auth_attempt(settings.FASTAPI_ENV, action="forgot_password", status="success")
         return {"message": "If an account exists with this email or username, a password reset token has been sent."}
     except Exception as e:

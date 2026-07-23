@@ -20,7 +20,10 @@ from config import settings
 from models import ReadingReminder
 from services.web_push_service import is_configured as web_push_configured
 from services.web_push_service import send_to_user as send_push_to_user
+from utils.correlation import set_correlation_id
+from utils.idempotency import check_and_set_idempotency_key
 from utils.logging import logger
+from utils.retry import compute_backoff
 
 engine = create_engine(settings.SQLALCHEMY_DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://"))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -63,7 +66,7 @@ def _finalize_reminder(reminder, result, now) -> str:
     return "retry"
 
 
-@celery_app.task(bind=True, name="process_due_reading_reminders")
+@celery_app.task(bind=True, name="process_due_reading_reminders", acks_late=True)
 def process_due_reading_reminders_task(self):
     """Deliver web-push notifications for overdue ``ReadingReminder`` rows.
 
@@ -72,6 +75,16 @@ def process_due_reading_reminders_task(self):
     is actually delivered, when the user has no push subscriptions, or after
     MAX_DELIVERY_ATTEMPTS — transient failures are left for the next run.
     """
+
+    headers = getattr(self.request, "headers", {}) or {}
+    set_correlation_id(headers.get("correlation_id", ""))
+
+    # At most one web push processing run per hour
+    id_key = f"webpush:process_due_reading_reminders:{datetime.now(UTC).strftime('%Y%m%d%H')}"
+    if not check_and_set_idempotency_key(id_key):
+        logger.info("Duplicate web push processing skipped")
+        return {"status": "skipped", "reason": "duplicate"}
+
     if not web_push_configured():
         return {"status": "skipped", "reason": "web_push_not_configured"}
 

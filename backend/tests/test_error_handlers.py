@@ -385,13 +385,15 @@ class TestExceptionHandlers:
         assert '"field":"required"' in response_body
 
     @pytest.mark.asyncio
+    @patch('utils.error_handlers.settings')
     @patch('utils.error_handlers.logger')
     @patch('utils.error_handlers.send_500_error_alert')
     @patch('utils.error_handlers.is_telegram_configured')
     @patch('utils.error_handlers.extract_request_payload')
     @patch('utils.error_handlers.get_safe_headers')
     async def test_tarot_exception_handler_500_with_telegram(self, mock_get_headers, mock_extract_payload,
-                                                            mock_telegram_configured, mock_send_alert, mock_logger):
+                                                            mock_telegram_configured, mock_send_alert, mock_logger,
+                                                            mock_settings):
         """Test TarotAPIException handler for 500 errors with Telegram alerts."""
         mock_request = Mock(spec=Request)
         mock_request.method = "POST"
@@ -401,8 +403,9 @@ class TestExceptionHandlers:
 
         exc = TarotAPIException("Server error", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Mock Telegram configuration
+        # Mock Telegram configuration + production env
         mock_telegram_configured.return_value = True
+        mock_settings.FASTAPI_ENV = "production"
         mock_extract_payload.return_value = {"test": "payload"}
         mock_get_headers.return_value = {"content-type": "application/json"}
 

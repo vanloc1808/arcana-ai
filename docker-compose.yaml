@@ -72,7 +72,7 @@ services:
                source .venv/bin/activate &&
                /app/wait-for-it.sh tarot-redis:6379 --timeout=60 --strict -- echo 'Redis is up' &&
                cd /app &&
-               PYTHONPATH=/app celery -A celery_app worker --loglevel=info --queues=email,notifications,celery"
+               PYTHONPATH=/app celery -A celery_app worker --loglevel=info --queues=email,notifications,celery,dead_letter"
     networks:
       - localnet
 

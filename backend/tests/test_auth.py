@@ -616,11 +616,13 @@ def test_forgot_password_token_generation_failure(mock_generate_token, client, t
 
 @patch("utils.celery_utils.EmailTaskManager.send_password_reset_email_async")
 def test_forgot_password_email_task_failure(mock_send_email, client, test_user):
-    """Test forgot password when email task fails"""
+    """Test forgot password still returns 200 when email dispatch fails (no leak)."""
     mock_send_email.side_effect = Exception("Email task failed")
 
     response = client.post("/auth/forgot-password", json={"email_or_username": "test@example.com"})
-    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "If an account exists" in data["message"]
 
 
 def test_reset_password_short_password(client, test_password_reset_token):

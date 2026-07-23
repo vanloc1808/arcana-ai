@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.26] - 2026-07-23
+
+### Added
+- Request correlation IDs flow from API through Celery tasks into structured Loguru logs, with the `X-Correlation-ID` header echoed on every response for end-to-end tracing.
+- Exponential backoff with jitter replaces fixed-interval retries on all Celery tasks, preventing thundering herds on transient failures.
+- Redis-backed idempotency keys guard email, notification, and web push tasks against duplicate delivery from worker crashes or `acks_late` re-delivery.
+- Dead-letter queue persists permanently failed tasks to a Redis list, with admin endpoints at `GET /api/tasks/dead-letter` and `POST /api/tasks/dead-letter/replay/{index}` for inspection and replay.
+- AI reading prompts now request structured output (`## Overview`, `## Card-by-Card Analysis`, `## Synthesis`, `## Guidance`, `## Wellbeing Note`) and the LLM call retries on rate-limit and connection errors before giving up.
+- A `prompt_version` label on all Prometheus OpenAI metrics enables tracking response quality across prompt iterations.
+- Content safety screening detects crisis, medical, legal, and financial keywords in user messages, records triggers via `arcana_content_safety_triggers_total`, prepends crisis resources to the system prompt when needed, and appends a wellbeing disclaimer to every AI reading.
+- Safety guidelines and structured output rules added to `system_prompt.txt`, and wellbeing disclaimers appended to non-streaming compatibility readings.
+
+### Changed
+- Celery worker commands now consume the `dead_letter` queue in addition to `email`, `notifications`, and `celery`.
+- All existing Prometheus metrics continue flowing to the central monitoring stack; new `prompt_version` labels are additive and do not break existing dashboards.
+- Celery task acknowledgements are now late (`acks_late=True`) for at-least-once delivery semantics with idempotency protection.
+- The Loguru record patcher injects the active correlation ID into every log line automatically.
+
+### Fixed
+- Telegram 500-error alerts are now suppressed in `local` and `test` environments (`FASTAPI_ENV`), preventing alert noise from synthetic traffic cron jobs and intentional error-path test runs.
+- The forgot-password endpoint no longer raises a 500 when the email dispatch to Celery fails; the failure is logged but the response remains `200 OK` to avoid leaking account existence.
+
 ## [0.0.25] - 2026-07-23
 
 ### Changed

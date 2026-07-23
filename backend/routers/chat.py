@@ -37,12 +37,20 @@ from utils.metrics import (
 )
 from utils.rate_limiter import RATE_LIMITS, limiter
 
+from utils.content_safety import (
+    CRISIS_RESPONSE_PREFIX,
+    WELLBEING_DISCLAIMER,
+    screen_content,
+)
+from utils.metrics import record_safety_trigger
+
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 # How long the frontend plays the card-drawing animation. The stream waits this
 # long after signalling a draw before revealing cards and streaming the reading,
 # so the reading starts streaming only once the animation finishes.
 CARD_DRAW_ANIMATION_SECONDS = 5
+CHAT_PROMPT_VERSION = "1.0"
 
 # Initialize TarotReader
 reader = TarotReader()
@@ -68,6 +76,7 @@ def _record_openai_success(response, start_time: float, operation: str = "chat_m
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
         cost_usd=estimate_openai_cost_usd(prompt_tokens, completion_tokens),
+        prompt_version=CHAT_PROMPT_VERSION,
     )
 
 
@@ -79,6 +88,7 @@ def _record_openai_error(exc: Exception, start_time: float, operation: str = "ch
         status="error",
         duration=time.perf_counter() - start_time,
         error_type=type(exc).__name__,
+        prompt_version=CHAT_PROMPT_VERSION,
     )
 
 
@@ -1017,6 +1027,15 @@ async def create_message(
                 # Create the system message
                 system_message_content = load_system_prompt()
 
+                # Content safety screening on user's latest message
+                triggers = screen_content(message_request.content)
+                is_crisis = "crisis" in triggers
+                has_triggers = bool(triggers)
+                for trigger in triggers:
+                    record_safety_trigger(settings.FASTAPI_ENV, trigger, "flagged")
+                if is_crisis:
+                    system_message_content = CRISIS_RESPONSE_PREFIX + system_message_content
+
                 # Fetch historical messages for context
                 db_messages_for_context = (
                     db.query(Message)
@@ -1140,12 +1159,13 @@ async def create_message(
                                 full_reading_text += chunk
                                 yield f"data: {json.dumps({'type': 'content_chunk', 'content': chunk})}\n\n"
 
-                            # Save the complete AI response
                             complete_ai_content = (
                                 start_message_content + card_details_content + reading_header + full_reading_text
                             )
 
-                            # Validate that the chat session still exists before saving
+                            # Append wellbeing disclaimer to readings
+                            complete_ai_content += WELLBEING_DISCLAIMER
+                            yield f"data: {json.dumps({'type': 'content_chunk', 'content': WELLBEING_DISCLAIMER})}\n\n"
                             if not validate_chat_session_exists(db, session_id, current_user.id):
                                 logger.logger.error(
                                     "Chat session no longer exists while saving assistant message",
@@ -1254,6 +1274,7 @@ async def create_message(
                             operation="chat_message",
                             status="success",
                             duration=time.perf_counter() - openai_start_time,
+                            prompt_version=CHAT_PROMPT_VERSION,
                         )
 
                     # Save the complete AI response if no tools were called
