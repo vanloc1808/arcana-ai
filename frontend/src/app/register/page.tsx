@@ -84,11 +84,7 @@ export default function Register() {
             console.log('Registration successful, logging in...');
             const loginData = await auth.login(username, password);
 
-            // Store the token in both localStorage and cookie
-            localStorage.setItem('token', loginData.access_token);
-            document.cookie = `token=${loginData.access_token}; path=/`;
-
-            // Set token in AuthContext
+            // The backend stores authentication tokens in HttpOnly cookies.
             setTokens(loginData.access_token, loginData.refresh_token);
 
             // Redirect to onboarding for new users after a short delay to ensure token is set

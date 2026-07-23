@@ -392,17 +392,16 @@ def test_tarot_reading_repeated_requests(client, auth_headers, test_cards, mock_
         assert len(data) == 3
 
 
-# Tarot Reading Tests - Token Renewal
-def test_tarot_reading_token_renewal_header(client, auth_headers, test_cards, mock_tarot_reader):
-    """Test that tarot reading returns renewed token in response headers"""
+# Tarot Reading Tests - Token Exposure
+def test_tarot_reading_does_not_expose_token_header(client, auth_headers, test_cards, mock_tarot_reader):
+    """Test that tarot reading does not renew tokens through response headers"""
     response = client.post(
         "/tarot/reading",
         json={"concern": "Token renewal test", "num_cards": 3},
         headers=auth_headers
     )
     assert response.status_code == status.HTTP_200_OK
-    assert "X-Access-Token" in response.headers
-    assert len(response.headers["X-Access-Token"]) > 0
+    assert "X-Access-Token" not in response.headers
 
 
 # Tarot Reading Tests - Different User Scenarios

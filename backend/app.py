@@ -29,10 +29,12 @@ Author: ArcanaAI Development Team
 Version: 1.0.0
 """
 
+import hmac
+
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from scalar_fastapi import get_scalar_api_reference
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
@@ -116,6 +118,31 @@ async def security_headers_middleware(request: Request, call_next):
     return response
 
 
+@app.middleware("http")
+async def csrf_middleware(request: Request, call_next):
+    """Require a double-submit CSRF token when browser cookies authenticate a request."""
+    state_changing = request.method in {"POST", "PUT", "PATCH", "DELETE"}
+    exempt_paths = {
+        "/api/auth/token",
+        "/api/auth/forgot-password",
+        "/api/auth/reset-password",
+    }
+    cookie_authenticated = bool(request.cookies.get(settings.ACCESS_COOKIE_NAME))
+    bearer_authenticated = bool(request.headers.get("Authorization"))
+    if (
+        state_changing
+        and request.url.path.startswith("/api/")
+        and request.url.path not in exempt_paths
+        and cookie_authenticated
+        and not bearer_authenticated
+    ):
+        csrf_cookie = request.cookies.get(settings.CSRF_COOKIE_NAME)
+        csrf_header = request.headers.get("X-CSRF-Token")
+        if not csrf_cookie or not csrf_header or not hmac.compare_digest(csrf_cookie, csrf_header):
+            return JSONResponse(status_code=403, content={"error": "CSRF validation failed"})
+    return await call_next(request)
+
+
 # Configure CORS (Cross-Origin Resource Sharing)
 # This allows the frontend to communicate with the backend API
 app.add_middleware(
@@ -137,6 +164,7 @@ app.add_middleware(
         "Content-Language",
         "Content-Type",
         "Authorization",
+        "X-CSRF-Token",
         "X-Requested-With",
         "X-Access-Token",
         "Cache-Control",

@@ -4,6 +4,9 @@ services:
     container_name: tarot-backend
     env_file:
       - ./backend/.env
+    environment:
+      AUTH_COOKIE_DOMAIN: .nguyenvanloc.com
+      AUTH_COOKIE_SECURE: "true"
     volumes:
       - ./user-avatars:/avatar
     depends_on:

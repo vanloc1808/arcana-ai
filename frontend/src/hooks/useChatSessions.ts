@@ -239,20 +239,16 @@ export const useChatSessions = () => {
             // Show user message immediately
             setMessages(prev => [...prev, tempUserMessage]);
 
-            // Get auth token
-            const token = localStorage.getItem('token');
-            if (!token) {
-                throw new Error('No authentication token');
-            }
-
             // Make streaming request using fetch API
+            const csrfToken = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/)?.[1];
             const response = await fetch(`${API_URL}/api/chat/sessions/${sessionId}/messages/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
                     'Accept': 'text/event-stream',
+                    ...(csrfToken ? { 'X-CSRF-Token': decodeURIComponent(csrfToken) } : {}),
                 },
+                credentials: 'include',
                 body: JSON.stringify({ content }),
             });
 

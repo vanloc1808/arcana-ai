@@ -1,10 +1,13 @@
+import hashlib
+import hmac
 import os
 import secrets
 import string
 import traceback
+import uuid
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi_mail import FastMail, MessageSchema
@@ -14,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from config import settings
 from database import get_db
-from models import Deck, PasswordResetToken, User
+from models import AuthSession, Deck, PasswordResetToken, User
 from schemas import (
     DeckResponse,
     ForgotPasswordRequest,
@@ -44,7 +47,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
 
 
-def create_access_token(data: dict):
+def create_access_token(data: dict, session_id: str | None = None, family_id: str | None = None):
     """
     Create JWT Access Token
 
@@ -62,7 +65,11 @@ def create_access_token(data: dict):
     try:
         to_encode = data.copy()
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        to_encode.update({"exp": expire})
+        to_encode.update({"exp": expire, "type": "access", "jti": uuid.uuid4().hex})
+        if session_id:
+            to_encode["sid"] = session_id
+        if family_id:
+            to_encode["fid"] = family_id
         encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
         return encoded_jwt
     except Exception as e:
@@ -70,7 +77,7 @@ def create_access_token(data: dict):
         raise ServiceUnavailableError(message="Error creating access token", details={"error": str(e)})
 
 
-def create_refresh_token(data: dict):
+def create_refresh_token(data: dict, session_id: str | None = None, family_id: str | None = None):
     """
     Create JWT Refresh Token
 
@@ -88,7 +95,11 @@ def create_refresh_token(data: dict):
     try:
         to_encode = data.copy()
         expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-        to_encode.update({"exp": expire, "type": "refresh"})
+        to_encode.update({"exp": expire, "type": "refresh", "jti": uuid.uuid4().hex})
+        if session_id:
+            to_encode["sid"] = session_id
+        if family_id:
+            to_encode["fid"] = family_id
         encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
         return encoded_jwt
     except Exception as e:
@@ -98,20 +109,83 @@ def create_refresh_token(data: dict):
         raise ServiceUnavailableError(message="Error creating refresh token", details={"error": str(e)})
 
 
+def hash_token(token: str) -> str:
+    """Hash a token before storing it so database access cannot mint sessions."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    common = {
+        "secure": settings.AUTH_COOKIE_SECURE,
+        "httponly": True,
+        "samesite": settings.AUTH_COOKIE_SAMESITE,
+        "domain": settings.AUTH_COOKIE_DOMAIN,
+        "path": settings.AUTH_COOKIE_PATH,
+    }
+    response.set_cookie(
+        settings.ACCESS_COOKIE_NAME,
+        access_token,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        **common,
+    )
+    response.set_cookie(
+        settings.REFRESH_COOKIE_NAME,
+        refresh_token,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        **common,
+    )
+    response.set_cookie(
+        settings.CSRF_COOKIE_NAME,
+        secrets.token_urlsafe(32),
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        secure=settings.AUTH_COOKIE_SECURE,
+        httponly=False,
+        samesite=settings.AUTH_COOKIE_SAMESITE,
+        domain=settings.AUTH_COOKIE_DOMAIN,
+        path=settings.AUTH_COOKIE_PATH,
+    )
+
+
+def clear_auth_cookies(response: Response) -> None:
+    for name in (settings.ACCESS_COOKIE_NAME, settings.REFRESH_COOKIE_NAME, settings.CSRF_COOKIE_NAME):
+        response.delete_cookie(
+            name,
+            domain=settings.AUTH_COOKIE_DOMAIN,
+            path=settings.AUTH_COOKIE_PATH,
+        )
+
+
+def revoke_session(session: AuthSession, reason: str) -> None:
+    session.revoked_at = datetime.utcnow()
+    session.revoked_reason = reason
+
+
+def revoke_user_sessions(db: Session, user_id: int, reason: str) -> None:
+    sessions = db.query(AuthSession).filter(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None)).all()
+    for session in sessions:
+        revoke_session(session, reason)
+
+
+def request_metadata(request: Request) -> tuple[str | None, str | None]:
+    return request.client.host if request.client else None, request.headers.get("user-agent")
+
+
+async def get_auth_token(request: Request, bearer_token: str | None = Depends(optional_oauth2_scheme)) -> str | None:
+    """Prefer the browser access cookie while retaining bearer-token API compatibility."""
+    return bearer_token or request.cookies.get(settings.ACCESS_COOKIE_NAME)
+
+
 async def get_current_user(
-    response: Response,
-    token: str = Depends(oauth2_scheme),
+    token: str | None = Depends(get_auth_token),
     db: Session = Depends(get_db),
 ) -> User:
     """
     Get Current Authenticated User
 
-    Validate JWT token and return the current user. Also handles token renewal
-    by setting a new token in the response headers.
+    Validate a JWT from the browser cookie or bearer header and return the current user.
 
     Args:
-        response (Response): FastAPI response object for setting headers
-        token (str): JWT token from Authorization header
+        token (str): JWT token from the access cookie or Authorization header
         db (Session): Database session
 
     Returns:
@@ -122,6 +196,8 @@ async def get_current_user(
         UserNotFoundError (401): If user doesn't exist
     """
     try:
+        if not token:
+            raise AuthenticationError(message="Authentication required")
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
@@ -139,20 +215,21 @@ async def get_current_user(
         logger.logger.error("JWT decode error", extra={"error": str(e)})
         raise AuthenticationError(message="Invalid token", details={"error": str(e)})
 
-    user = db.query(User).filter(User.username == token_data.username).first()
+    session_id = payload.get("sid")
+    if session_id:
+        session = db.query(AuthSession).filter(AuthSession.id == session_id).first()
+        if not session or session.revoked_at or session.expires_at <= datetime.utcnow():
+            raise AuthenticationError(message="Session is no longer valid")
+
+    user = db.query(User).filter(User.username == token_data.username, User.is_deleted == False).first()  # noqa: E712
     if user is None:
         raise UserNotFoundError(message="User not found", details={"username": token_data.username})
-
-    # Renew token
-    new_access_token = create_access_token(data={"sub": user.username})
-    response.headers["X-Access-Token"] = new_access_token
-    response.headers["Access-Control-Expose-Headers"] = "X-Access-Token"
 
     return user
 
 
 async def get_optional_current_user(
-    token: str | None = Depends(optional_oauth2_scheme),
+    token: str | None = Depends(get_auth_token),
     db: Session = Depends(get_db),
 ) -> User | None:
     """Return the authenticated user when a valid token is present, otherwise None.
@@ -170,7 +247,13 @@ async def get_optional_current_user(
     except JWTError:
         return None
 
-    return db.query(User).filter(User.username == username).first()
+    session_id = payload.get("sid")
+    if session_id:
+        session = db.query(AuthSession).filter(AuthSession.id == session_id).first()
+        if not session or session.revoked_at or session.expires_at <= datetime.utcnow():
+            return None
+
+    return db.query(User).filter(User.username == username, User.is_deleted == False).first()  # noqa: E712
 
 
 async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
@@ -242,7 +325,7 @@ async def send_reset_email(email: str, token: str, db: Session):
 
         # Create reset token
         reset_token = PasswordResetToken(
-            token=token,
+            token_hash=hash_token(token),
             user_id=user.id,
             expires_at=datetime.utcnow() + timedelta(hours=1),
         )
@@ -359,7 +442,12 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/token")
 @limiter.limit(RATE_LIMITS["auth"])
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login(
+    request: Request,
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
     """
     User Login
 
@@ -387,7 +475,14 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             extra={"username_or_email": form_data.username},
         )
 
-        user = db.query(User).filter(or_(User.username == form_data.username, User.email == form_data.username)).first()
+        user = (
+            db.query(User)
+            .filter(
+                or_(User.username == form_data.username, User.email == form_data.username),
+                User.is_deleted == False,  # noqa: E712
+            )
+            .first()
+        )
         if not user:
             record_auth_attempt(
                 settings.FASTAPI_ENV,
@@ -403,7 +498,15 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
                 details={"username_or_email": form_data.username},
             )
 
+        if user.login_locked_until and user.login_locked_until > datetime.utcnow():
+            record_auth_attempt(settings.FASTAPI_ENV, action="login", status="rejected")
+            raise AuthenticationError(message="Incorrect username or password")
+
         if not user.verify_password(form_data.password):
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= 5:
+                user.login_locked_until = datetime.utcnow() + timedelta(minutes=15)
+            db.commit()
             record_auth_attempt(
                 settings.FASTAPI_ENV,
                 action="login",
@@ -418,9 +521,35 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
                 details={"username_or_email": form_data.username},
             )
 
+        user.failed_login_attempts = 0
+        user.login_locked_until = None
         try:
-            access_token = create_access_token(data={"sub": user.username})
-            refresh_token = create_refresh_token(data={"sub": user.username})
+            session_id = str(uuid.uuid4())
+            family_id = str(uuid.uuid4())
+            refresh_token = create_refresh_token(
+                data={"sub": user.username},
+                session_id=session_id,
+                family_id=family_id,
+            )
+            access_token = create_access_token(
+                data={"sub": user.username},
+                session_id=session_id,
+                family_id=family_id,
+            )
+            ip_address, user_agent = request_metadata(request)
+            db.add(
+                AuthSession(
+                    id=session_id,
+                    user_id=user.id,
+                    family_id=family_id,
+                    refresh_token_hash=hash_token(refresh_token),
+                    expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                )
+            )
+            db.commit()
+            set_auth_cookies(response, access_token, refresh_token)
         except Exception as token_error:
             record_auth_attempt(
                 settings.FASTAPI_ENV,
@@ -465,7 +594,12 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 
 @router.post("/refresh")
 @limiter.limit(RATE_LIMITS["auth"])
-async def refresh_token(request: Request, refresh_token_data: RefreshToken, db: Session = Depends(get_db)):
+async def refresh_token(
+    request: Request,
+    response: Response,
+    refresh_token_data: RefreshToken | None = Body(default=None),
+    db: Session = Depends(get_db),
+):
     """
     Refresh Access Token
 
@@ -486,9 +620,15 @@ async def refresh_token(request: Request, refresh_token_data: RefreshToken, db: 
         AuthenticationError (401): Invalid or expired refresh token
     """
     try:
+        refresh_token_value = (refresh_token_data.refresh_token if refresh_token_data else None) or request.cookies.get(
+            settings.REFRESH_COOKIE_NAME
+        )
+        if not refresh_token_value:
+            raise AuthenticationError(message="Refresh token required")
+
         # Verify refresh token
         payload = jwt.decode(
-            refresh_token_data.refresh_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+            refresh_token_value, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
         )
 
         # Check if it's a refresh token
@@ -502,17 +642,57 @@ async def refresh_token(request: Request, refresh_token_data: RefreshToken, db: 
             raise AuthenticationError(message="Invalid token payload")
 
         # Verify user exists
-        user = db.query(User).filter(User.username == username).first()
+        user = db.query(User).filter(User.username == username, User.is_deleted == False).first()  # noqa: E712
         if user is None:
             record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="rejected")
             raise AuthenticationError(message="User not found")
 
-        # Generate new tokens
-        access_token = create_access_token(data={"sub": user.username})
-        refresh_token = create_refresh_token(data={"sub": user.username})
+        session_id = payload.get("sid")
+        family_id = payload.get("fid") or str(uuid.uuid4())
+        old_session = db.query(AuthSession).filter(AuthSession.id == session_id).first() if session_id else None
+        if old_session:
+            if old_session.revoked_at:
+                sessions = db.query(AuthSession).filter(AuthSession.family_id == old_session.family_id).all()
+                for session in sessions:
+                    revoke_session(session, "refresh_token_reuse")
+                db.commit()
+                record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="rejected")
+                raise AuthenticationError(message="Refresh token has already been used")
+            if old_session.expires_at <= datetime.utcnow() or not hmac.compare_digest(
+                old_session.refresh_token_hash, hash_token(refresh_token_value)
+            ):
+                raise AuthenticationError(message="Invalid refresh token")
+            family_id = old_session.family_id
+            revoke_session(old_session, "rotated")
+
+        new_session_id = str(uuid.uuid4())
+        new_refresh_token = create_refresh_token(
+            data={"sub": user.username},
+            session_id=new_session_id,
+            family_id=family_id,
+        )
+        access_token = create_access_token(
+            data={"sub": user.username},
+            session_id=new_session_id,
+            family_id=family_id,
+        )
+        ip_address, user_agent = request_metadata(request)
+        db.add(
+            AuthSession(
+                id=new_session_id,
+                user_id=user.id,
+                family_id=family_id,
+                refresh_token_hash=hash_token(new_refresh_token),
+                expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+        )
+        db.commit()
+        set_auth_cookies(response, access_token, new_refresh_token)
 
         record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="success")
-        return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+        return {"access_token": access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
     except JWTError as e:
         record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="rejected")
         logger.logger.error("JWT decode error", extra={"error": str(e)})
@@ -526,6 +706,31 @@ async def refresh_token(request: Request, refresh_token_data: RefreshToken, db: 
         record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="error")
         logger.logger.error("Error refreshing token", extra={"error": str(e)})
         raise TarotAPIException(message="Error refreshing token", details={"error": str(e)})
+
+
+@router.post("/logout", status_code=204)
+async def logout(request: Request, response: Response, token: str | None = Depends(get_auth_token), db: Session = Depends(get_db)):
+    """Revoke the current browser/API session and clear authentication cookies."""
+    if token:
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+            session_id = payload.get("sid")
+            if session_id:
+                session = db.query(AuthSession).filter(AuthSession.id == session_id).first()
+                if session and not session.revoked_at:
+                    revoke_session(session, "logout")
+                    db.commit()
+        except JWTError:
+            pass
+    clear_auth_cookies(response)
+
+
+@router.post("/logout-all", status_code=204)
+async def logout_all(response: Response, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Revoke every active session for the authenticated user."""
+    revoke_user_sessions(db, current_user.id, "logout_all")
+    db.commit()
+    clear_auth_cookies(response)
 
 
 @router.post("/forgot-password")
@@ -629,7 +834,10 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
         reset_token = (
             db.query(PasswordResetToken)
             .filter(
-                PasswordResetToken.token == request_data.token,
+                or_(
+                    PasswordResetToken.token_hash == hash_token(request_data.token),
+                    PasswordResetToken.token == request_data.token,
+                ),
                 PasswordResetToken.expires_at > datetime.utcnow(),
                 PasswordResetToken.is_used == False,  # noqa: E712
             )
@@ -640,7 +848,7 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
             record_auth_attempt(settings.FASTAPI_ENV, action="reset_password", status="validation_error")
             raise ValidationError(
                 message="Invalid or expired reset token",
-                details={"token": request_data.token},
+                details={},
             )
 
         # Update user's password
@@ -649,6 +857,7 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
 
         # Mark token as used
         reset_token.is_used = True
+        revoke_user_sessions(db, user.id, "password_reset")
 
         db.commit()
 
@@ -661,7 +870,7 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
         raise
     except Exception as e:
         record_auth_attempt(settings.FASTAPI_ENV, action="reset_password", status="error")
-        logger.logger.error("Error resetting password", extra={"error": str(e), "token": request_data.token})
+        logger.logger.error("Error resetting password", extra={"error": str(e)})
         raise TarotAPIException(message="Error resetting password", details={"error": str(e)})
 
 

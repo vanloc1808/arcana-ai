@@ -42,7 +42,14 @@ const api = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
+    withCredentials: true,
 });
+
+function getCsrfToken(): string | null {
+    if (typeof document === "undefined") return null;
+    const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
 
 let isRefreshing = false;
 let failedQueue: { resolve: (value: unknown) => void; reject: (reason?: Error) => void }[] = [];
@@ -61,9 +68,9 @@ const processQueue = (error: Error | null = null, token: string | null = null) =
 // Request interceptor
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem("token");
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        const csrfToken = getCsrfToken();
+        if (csrfToken && config.method && !["get", "head", "options"].includes(config.method.toLowerCase())) {
+            config.headers["X-CSRF-Token"] = csrfToken;
         }
         return config;
     },
@@ -75,28 +82,18 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
     (response) => {
-        // Check for new token in response headers
-        const newToken = response.headers['x-access-token'];
-        if (newToken) {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (refreshToken) {
-                localStorage.setItem('token', newToken);
-                document.cookie = `token=${newToken}; path=/`;
-            }
-        }
         return response;
     },
     async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.endsWith('/auth/refresh')) {
             if (isRefreshing) {
                 // If token refresh is in progress, add request to queue
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 })
                     .then((token) => {
-                        originalRequest.headers.Authorization = `Bearer ${token}`;
                         return api(originalRequest);
                     })
                     .catch((err) => {
@@ -108,23 +105,9 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const refreshToken = localStorage.getItem('refreshToken');
-                if (!refreshToken) {
-                    throw new Error('No refresh token available');
-                }
+                await auth.refreshToken();
 
-                const response = await auth.refreshToken(refreshToken);
-                const { access_token, refresh_token } = response;
-
-                localStorage.setItem('token', access_token);
-                localStorage.setItem('refreshToken', refresh_token);
-                document.cookie = `token=${access_token}; path=/`;
-                document.cookie = `refreshToken=${refresh_token}; path=/`;
-
-                api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-                originalRequest.headers.Authorization = `Bearer ${access_token}`;
-
-                processQueue(null, access_token);
+                processQueue(null, 'cookie');
                 return api(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError as Error, null);
@@ -168,6 +151,7 @@ export const auth = {
 
         const response = await fetch(`${API_URL}/api/auth/token`, {
             method: 'POST',
+            credentials: 'include',
             body: formData,
         });
 
@@ -182,13 +166,16 @@ export const auth = {
         return response.json();
     },
 
-    refreshToken: async (refreshToken: string) => {
+    refreshToken: async (legacyRefreshToken?: string) => {
+        const csrfToken = getCsrfToken();
         const response = await fetch(`${API_URL}/api/auth/refresh`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                ...(legacyRefreshToken ? { 'Content-Type': 'application/json' } : {}),
+                ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
             },
-            body: JSON.stringify({ refresh_token: refreshToken }),
+            credentials: 'include',
+            ...(legacyRefreshToken ? { body: JSON.stringify({ refresh_token: legacyRefreshToken }) } : {}),
         });
 
         if (!response.ok) {
@@ -197,6 +184,14 @@ export const auth = {
         }
 
         return response.json();
+    },
+
+    logout: async () => {
+        await api.post("/api/auth/logout");
+    },
+
+    logoutAll: async () => {
+        await api.post("/api/auth/logout-all");
     },
 
     register: async (username: string, email: string, password: string) => {
@@ -382,14 +377,15 @@ export const tarot = {
         onDone: () => void,
         onError: (error: string) => void,
     ): Promise<void> => {
-        const token = localStorage.getItem('token');
+        const csrfToken = getCsrfToken();
         const response = await fetch(`${API_URL}/api/tarot/compatibility/interpret/stream`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'text/event-stream',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
             },
+            credentials: 'include',
             body: JSON.stringify(payload),
         });
 
