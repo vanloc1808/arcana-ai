@@ -43,6 +43,26 @@ from utils.rate_limiter import RATE_LIMITS, limiter
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Normalize database timestamps, including SQLite naive values, to UTC."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _is_expired(value: datetime) -> bool:
+    return _as_utc(value) <= _utc_now()
+
+
+def _is_in_future(value: datetime) -> bool:
+    return _as_utc(value) > _utc_now()
+
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
 
@@ -64,7 +84,7 @@ def create_access_token(data: dict, session_id: str | None = None, family_id: st
     """
     try:
         to_encode = data.copy()
-        expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = _utc_now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         to_encode.update({"exp": expire, "type": "access", "jti": uuid.uuid4().hex})
         if session_id:
             to_encode["sid"] = session_id
@@ -94,7 +114,7 @@ def create_refresh_token(data: dict, session_id: str | None = None, family_id: s
     """
     try:
         to_encode = data.copy()
-        expire = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = _utc_now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         to_encode.update({"exp": expire, "type": "refresh", "jti": uuid.uuid4().hex})
         if session_id:
             to_encode["sid"] = session_id
@@ -156,7 +176,7 @@ def clear_auth_cookies(response: Response) -> None:
 
 
 def revoke_session(session: AuthSession, reason: str) -> None:
-    session.revoked_at = datetime.now(UTC)
+    session.revoked_at = _utc_now()
     session.revoked_reason = reason
 
 
@@ -218,7 +238,7 @@ async def get_current_user(
     session_id = payload.get("sid")
     if session_id:
         session = db.query(AuthSession).filter(AuthSession.id == session_id).first()
-        if not session or session.revoked_at or session.expires_at <= datetime.now(UTC):
+        if not session or session.revoked_at or _is_expired(session.expires_at):
             raise AuthenticationError(message="Session is no longer valid")
 
     user = db.query(User).filter(User.username == token_data.username, User.is_deleted == False).first()  # noqa: E712
@@ -250,7 +270,7 @@ async def get_optional_current_user(
     session_id = payload.get("sid")
     if session_id:
         session = db.query(AuthSession).filter(AuthSession.id == session_id).first()
-        if not session or session.revoked_at or session.expires_at <= datetime.now(UTC):
+        if not session or session.revoked_at or _is_expired(session.expires_at):
             return None
 
     return db.query(User).filter(User.username == username, User.is_deleted == False).first()  # noqa: E712
@@ -327,7 +347,7 @@ async def send_reset_email(email: str, token: str, db: Session):
         reset_token = PasswordResetToken(
             token_hash=hash_token(token),
             user_id=user.id,
-            expires_at=datetime.now(UTC) + timedelta(hours=1),
+            expires_at=_utc_now() + timedelta(hours=1),
         )
         db.add(reset_token)
         db.commit()
@@ -498,14 +518,14 @@ async def login(
                 details={"username_or_email": form_data.username},
             )
 
-        if user.login_locked_until and user.login_locked_until > datetime.now(UTC):
+        if user.login_locked_until and _is_in_future(user.login_locked_until):
             record_auth_attempt(settings.FASTAPI_ENV, action="login", status="rejected")
             raise AuthenticationError(message="Incorrect username or password")
 
         if not user.verify_password(form_data.password):
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
             if user.failed_login_attempts >= 5:
-                user.login_locked_until = datetime.now(UTC) + timedelta(minutes=15)
+                user.login_locked_until = _utc_now() + timedelta(minutes=15)
             db.commit()
             record_auth_attempt(
                 settings.FASTAPI_ENV,
@@ -543,7 +563,7 @@ async def login(
                     user_id=user.id,
                     family_id=family_id,
                     refresh_token_hash=hash_token(refresh_token),
-                    expires_at=datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+                    expires_at=_utc_now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
                     ip_address=ip_address,
                     user_agent=user_agent,
                 )
@@ -658,7 +678,7 @@ async def refresh_token(
                 db.commit()
                 record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="rejected")
                 raise AuthenticationError(message="Refresh token has already been used")
-            if old_session.expires_at <= datetime.now(UTC) or not hmac.compare_digest(
+            if _is_expired(old_session.expires_at) or not hmac.compare_digest(
                 old_session.refresh_token_hash, hash_token(refresh_token_value)
             ):
                 raise AuthenticationError(message="Invalid refresh token")
@@ -683,7 +703,7 @@ async def refresh_token(
                 user_id=user.id,
                 family_id=family_id,
                 refresh_token_hash=hash_token(new_refresh_token),
-                expires_at=datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+                expires_at=_utc_now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
                 ip_address=ip_address,
                 user_agent=user_agent,
             )
@@ -844,7 +864,7 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
                     PasswordResetToken.token_hash == hash_token(request_data.token),
                     PasswordResetToken.token == request_data.token,
                 ),
-                PasswordResetToken.expires_at > datetime.now(UTC),
+                PasswordResetToken.expires_at > _utc_now(),
                 PasswordResetToken.is_used == False,  # noqa: E712
             )
             .first()
