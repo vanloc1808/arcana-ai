@@ -5,7 +5,7 @@ import secrets
 import string
 import traceback
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse
@@ -64,7 +64,7 @@ def create_access_token(data: dict, session_id: str | None = None, family_id: st
     """
     try:
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         to_encode.update({"exp": expire, "type": "access", "jti": uuid.uuid4().hex})
         if session_id:
             to_encode["sid"] = session_id
@@ -94,7 +94,7 @@ def create_refresh_token(data: dict, session_id: str | None = None, family_id: s
     """
     try:
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         to_encode.update({"exp": expire, "type": "refresh", "jti": uuid.uuid4().hex})
         if session_id:
             to_encode["sid"] = session_id
@@ -156,7 +156,7 @@ def clear_auth_cookies(response: Response) -> None:
 
 
 def revoke_session(session: AuthSession, reason: str) -> None:
-    session.revoked_at = datetime.utcnow()
+    session.revoked_at = datetime.now(UTC)
     session.revoked_reason = reason
 
 
@@ -218,7 +218,7 @@ async def get_current_user(
     session_id = payload.get("sid")
     if session_id:
         session = db.query(AuthSession).filter(AuthSession.id == session_id).first()
-        if not session or session.revoked_at or session.expires_at <= datetime.utcnow():
+        if not session or session.revoked_at or session.expires_at <= datetime.now(UTC):
             raise AuthenticationError(message="Session is no longer valid")
 
     user = db.query(User).filter(User.username == token_data.username, User.is_deleted == False).first()  # noqa: E712
@@ -250,7 +250,7 @@ async def get_optional_current_user(
     session_id = payload.get("sid")
     if session_id:
         session = db.query(AuthSession).filter(AuthSession.id == session_id).first()
-        if not session or session.revoked_at or session.expires_at <= datetime.utcnow():
+        if not session or session.revoked_at or session.expires_at <= datetime.now(UTC):
             return None
 
     return db.query(User).filter(User.username == username, User.is_deleted == False).first()  # noqa: E712
@@ -327,7 +327,7 @@ async def send_reset_email(email: str, token: str, db: Session):
         reset_token = PasswordResetToken(
             token_hash=hash_token(token),
             user_id=user.id,
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
         )
         db.add(reset_token)
         db.commit()
@@ -498,14 +498,14 @@ async def login(
                 details={"username_or_email": form_data.username},
             )
 
-        if user.login_locked_until and user.login_locked_until > datetime.utcnow():
+        if user.login_locked_until and user.login_locked_until > datetime.now(UTC):
             record_auth_attempt(settings.FASTAPI_ENV, action="login", status="rejected")
             raise AuthenticationError(message="Incorrect username or password")
 
         if not user.verify_password(form_data.password):
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
             if user.failed_login_attempts >= 5:
-                user.login_locked_until = datetime.utcnow() + timedelta(minutes=15)
+                user.login_locked_until = datetime.now(UTC) + timedelta(minutes=15)
             db.commit()
             record_auth_attempt(
                 settings.FASTAPI_ENV,
@@ -543,7 +543,7 @@ async def login(
                     user_id=user.id,
                     family_id=family_id,
                     refresh_token_hash=hash_token(refresh_token),
-                    expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+                    expires_at=datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
                     ip_address=ip_address,
                     user_agent=user_agent,
                 )
@@ -658,7 +658,7 @@ async def refresh_token(
                 db.commit()
                 record_auth_attempt(settings.FASTAPI_ENV, action="refresh", status="rejected")
                 raise AuthenticationError(message="Refresh token has already been used")
-            if old_session.expires_at <= datetime.utcnow() or not hmac.compare_digest(
+            if old_session.expires_at <= datetime.now(UTC) or not hmac.compare_digest(
                 old_session.refresh_token_hash, hash_token(refresh_token_value)
             ):
                 raise AuthenticationError(message="Invalid refresh token")
@@ -683,7 +683,7 @@ async def refresh_token(
                 user_id=user.id,
                 family_id=family_id,
                 refresh_token_hash=hash_token(new_refresh_token),
-                expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+                expires_at=datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
                 ip_address=ip_address,
                 user_agent=user_agent,
             )
@@ -844,7 +844,7 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
                     PasswordResetToken.token_hash == hash_token(request_data.token),
                     PasswordResetToken.token == request_data.token,
                 ),
-                PasswordResetToken.expires_at > datetime.utcnow(),
+                PasswordResetToken.expires_at > datetime.now(UTC),
                 PasswordResetToken.is_used == False,  # noqa: E712
             )
             .first()
