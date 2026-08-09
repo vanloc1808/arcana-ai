@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - The application is now served at the additional production domain `stacyn.io.vn` (frontend) and `backend.stacyn.io.vn` (backend), with matching CORS allowed origins for `https://stacyn.io.vn` and `https://www.stacyn.io.vn`.
 
+### Fixed
+- Authentication now works from both the `nguyenvanloc.com` and `stacyn.io.vn` frontends by selecting a same-site backend at runtime and issuing host-only cookies instead of restricting them to `.nguyenvanloc.com`.
+
 ## [0.0.26] - 2026-07-23
 
 ### Added

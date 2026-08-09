@@ -5,7 +5,8 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      AUTH_COOKIE_DOMAIN: .nguyenvanloc.com
+      # A shared cookie domain cannot span nguyenvanloc.com and stacyn.io.vn.
+      AUTH_COOKIE_DOMAIN: ""
       AUTH_COOKIE_SECURE: "true"
     volumes:
       - ./user-avatars:/avatar
