@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Authentication now works from both the `nguyenvanloc.com` and `stacyn.io.vn` frontends by selecting a same-site backend at runtime and issuing host-only cookies instead of restricting them to `.nguyenvanloc.com`.
+- Post-login navigation and service-worker registration no longer get redirected to `/login`; route protection now verifies the host-only backend session in the frontend auth provider instead of expecting the API cookie on the frontend domain.
 
 ## [0.0.26] - 2026-07-23
 
