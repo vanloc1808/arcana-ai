@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.27] - 2026-08-09
+
+### Added
+- The application is now served at the additional production domain `stacyn.io.vn` (frontend) and `backend.stacyn.io.vn` (backend), with matching CORS allowed origins for `https://stacyn.io.vn` and `https://www.stacyn.io.vn`.
+
 ## [0.0.26] - 2026-07-23
 
 ### Added
