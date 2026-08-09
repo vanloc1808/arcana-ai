@@ -689,6 +689,41 @@ Create at least one encrypted offline backup of `keys.txt`. Losing every copy
 means the repository's secrets cannot be recovered. Anyone obtaining a copy
 can decrypt them.
 
+#### Use the same identity on another Mac
+
+The identity currently lives at:
+
+```text
+/Users/vanloc1808/.config/sops/age/keys.txt
+```
+
+This is the same location as `~/.config/sops/age/keys.txt` for the
+`vanloc1808` account. It is not stored in either Git repository.
+
+Only place the production identity on a company-managed device if its security
+policy permits personal production credentials. If permitted, transfer
+`keys.txt` through an encrypted private channel, such as an encrypted removable
+drive, an end-to-end encrypted password manager, or a direct AirDrop that you
+verify. Do not use Git, email, chat, a shared company drive, or a shell command
+that prints the file.
+
+After the transferred file is available at a temporary private path on the
+other Mac, install it into the canonical location:
+
+```bash
+install -d -m 700 "$HOME/.config/sops/age"
+install -m 600 "/path/to/temporarily-transferred/keys.txt" \
+  "$HOME/.config/sops/age/keys.txt"
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+age-keygen -y "$SOPS_AGE_KEY_FILE"
+```
+
+The final command prints only the public `age1...` recipient. Confirm it
+matches the recipient in `arcana-deployment/.sops.yaml`. Once verified, remove
+the temporary transferred copy using the secure-deletion or managed-device
+procedure appropriate for that storage location. Do not generate a new Age
+identity on the company laptop for these existing encrypted files.
+
 ### 15.3 Add the SOPS policy
 
 Create `.sops.yaml` at the root of `arcana-deployment`:
@@ -1338,6 +1373,48 @@ sudo k3s kubectl get pods -A -o wide
 
 Do not uninstall, reinstall, alter UFW, or restart Docker while diagnosing the
 first failure.
+
+## 19. Company-laptop handoff prompt
+
+After both repositories and the Age identity are available on the company
+laptop, paste the following prompt into the new assistant session:
+
+```text
+Continue guiding me through the ArcanaAI GitOps deployment. Read
+docs/arcana-deployment-repository-setup.md in the arcana-ai repository before
+giving me the next command.
+
+Current state:
+- The application repository is arcana-ai.
+- The separate GitOps repository is arcana-deployment.
+- GitHub Actions publishes SHA-tagged public images to Docker Hub.
+- The production VPS currently runs Docker Compose and Docker Traefik on ports
+  80 and 443; do not interrupt them.
+- The VPS has about 18 GiB free, with 10 GiB as the stop-and-investigate floor.
+- K3s v1.36.3+k3s1 was selected from the stable channel but Section 18 has not
+  been run yet.
+- K3s packaged Traefik and ServiceLB must remain disabled during staging.
+- TCP 6443 must not be opened publicly; Mac kubectl access will use an SSH
+  local-forward.
+- My SOPS Age identity is stored outside Git at
+  ~/.config/sops/age/keys.txt on this laptop.
+
+Before any SOPS command, I will run:
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+test -r "$SOPS_AGE_KEY_FILE"
+age-keygen -y "$SOPS_AGE_KEY_FILE"
+
+Resume at Section 18.1. Give me one subsection at a time. Do not run commands
+on my behalf, expose secrets, change the firewall, stop Docker, or take over
+ports 80/443. If output is unexpected, stop and diagnose it before continuing.
+```
+
+The prompt contains the key path but never the private key. On the company
+laptop, first update this guide with:
+
+```bash
+git pull origin main
+```
 
 ## Primary references
 
