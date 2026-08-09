@@ -17,6 +17,7 @@ jest.mock('next/navigation', () => ({
     useRouter: () => ({
         push: jest.fn(),
     }),
+    usePathname: () => '/password-reset-confirm',
     useSearchParams: jest.fn(() => ({
         get: (key: string) => mockSearchParamsState.value[key] || null,
     })),

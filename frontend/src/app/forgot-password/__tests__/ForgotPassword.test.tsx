@@ -16,6 +16,7 @@ jest.mock('next/navigation', () => ({
     useRouter: () => ({
         push: mockPush,
     }),
+    usePathname: () => '/forgot-password',
 }));
 
 describe('ForgotPassword', () => {
