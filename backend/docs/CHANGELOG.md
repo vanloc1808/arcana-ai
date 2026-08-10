@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.28] - 2026-08-10
+
+### Added
+- Documented secure post-installation K3s administration from a trusted workstation using a dedicated kubeconfig and an SSH local-forward, without publicly exposing the Kubernetes API.
+- Added a pinned, internal-only Argo CD installation phase with staging safety checks, server-side installation, rollout verification, exposure checks, and a stop point before private-repository and SOPS integration.
+- Documented least-privilege access from Argo CD to the private deployment repository using a dedicated read-only GitHub deploy key and an encrypted-at-rest Kubernetes repository Secret.
+- Added a pinned KSOPS sidecar integration procedure with isolated temporary storage, non-root execution, protected Age-key injection, encrypted Secret generation, server-side patch validation, and a staged stop before Application reconciliation.
+- Documented observation-only Argo CD Application staging to verify private-repository access and decrypted KSOPS rendering while preventing premature synchronization of the incomplete production stack.
+- Added a persistent Redis StatefulSet phase with pinned image, AOF durability, retained local-path storage, non-root execution, probes, resource limits, namespace-scoped network access, and render-only Argo CD verification.
+- Added an observation-only Next.js frontend deployment phase with a non-root read-only container, isolated writable cache paths, probes, resource limits, internal Service, SHA-pinned image promotion, and rendered-image verification.
+- Added a render-only Celery staging phase beginning with personal MacBook bootstrap instructions, a separate write-enabled repository deploy key, protected Age and kubeconfig transfer procedures, immutable backend-image contract checks, explicit migration-safety requirements, and cluster capacity gates before worker and Beat manifests are introduced.
+
+### Fixed
+- Corrected the KSOPS Application example to preserve the required Argo CD `spec.project: default` field when adding the config-management plugin.
+
 ## [0.0.27] - 2026-08-09
 
 ### Added
