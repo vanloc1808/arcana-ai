@@ -3243,15 +3243,19 @@ an ephemeral container without starting its default command:
 
 ```bash
 docker run --rm \
+  --platform linux/amd64 \
   --entrypoint /bin/sh \
   "vanloc1808/tarot-backend:$BACKEND_IMAGE_TAG" \
   -c 'test -x /app/.venv/bin/celery && test -r /app/celery_app.py && printf "Celery runtime exists\n"'
 ```
 
-The expected image default is `/app/start.sh`; this is evidence that the
-Kubernetes Celery manifests must override it. The final command must print
-`Celery runtime exists`. Do not print the image configuration as JSON because
-future images could contain build metadata that is not needed for this check.
+`--platform linux/amd64` is required when this check runs on an Apple Silicon
+Mac because the current production image is AMD64-only. The production VPS is
+x86-64, so this does not prevent the VPS from running the image. The expected
+image default is `/app/start.sh`; this is evidence that the Kubernetes Celery
+manifests must override it. The final command must print `Celery runtime
+exists`. Do not print the image configuration as JSON because future images
+could contain build metadata that is not needed for this check.
 
 Check current cluster headroom before adding two more desired Pods:
 
@@ -3279,11 +3283,731 @@ manifests. The next subsection will define one worker consuming the `email`,
 internal metrics Services, disposable Prometheus multiprocess directories,
 and persistent Beat schedule storage. Nothing should be synchronized yet.
 
-## 27. Personal-MacBook continuation prompt
+The review found that a separate transient Docker container was temporarily
+consuming most of the VPS CPU. Disk remained above the 10 GiB floor, memory
+remained healthy, and every K3s and Argo CD Pod remained healthy. Manifest
+authoring may continue because the Argo CD Application is observation-only,
+but no workload may be synchronized until the transient load ends and node
+capacity is checked again.
 
-After Section 26.1 is complete and both repositories and the Age identity are
-available on the personal MacBook, paste the following prompt into the new
-assistant session:
+### 26.4 Define the Celery worker
+
+**Run on:** the administration workstation, from the root of the
+`arcana-deployment` repository.
+
+Create `apps/arcana/base/celery-worker-deployment.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arcana-celery-worker
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: arcana-celery-worker
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: arcana-celery-worker
+        app.kubernetes.io/component: celery-worker
+
+    spec:
+      initContainers:
+        - name: wait-for-redis
+          image: redis:7.4.10-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              until redis-cli -h arcana-redis ping | grep -q PONG; do
+                echo "Waiting for Redis"
+                sleep 2
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+
+      containers:
+        - name: worker
+          image: vanloc1808/tarot-backend:latest
+          imagePullPolicy: IfNotPresent
+          workingDir: /app
+
+          command:
+            - /app/.venv/bin/celery
+          args:
+            - -A
+            - celery_app
+            - worker
+            - --loglevel=info
+            - --queues=email,notifications,celery,dead_letter
+            - --concurrency=1
+
+          envFrom:
+            - configMapRef:
+                name: arcana-backend-config
+            - secretRef:
+                name: arcana-backend-secrets
+
+          env:
+            - name: PYTHONPATH
+              value: /app
+            - name: PROMETHEUS_MULTIPROC_DIR
+              value: /tmp/prometheus-multiproc
+            - name: CELERY_METRICS_PORT
+              value: "8001"
+
+          ports:
+            - name: metrics
+              containerPort: 8001
+              protocol: TCP
+
+          volumeMounts:
+            - name: prometheus-multiproc
+              mountPath: /tmp/prometheus-multiproc
+
+          startupProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 30
+
+          readinessProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 384Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+
+      volumes:
+        - name: prometheus-multiproc
+          emptyDir: {}
+
+      terminationGracePeriodSeconds: 60
+```
+
+The direct command bypasses the backend image's `/app/start.sh`, so the worker
+cannot run Alembic or start Uvicorn. The disposable `emptyDir` gives each Pod a
+fresh Prometheus multiprocess directory. Concurrency starts at one to limit
+CPU use on the shared six-core VPS and may be tuned later from production
+measurements.
+
+Validate only the new file without contacting the cluster:
+
+```bash
+kubeconform \
+  -strict \
+  -summary \
+  -exit-on-error \
+  apps/arcana/base/celery-worker-deployment.yaml
+
+git diff --check
+```
+
+Do not add this file to `kustomization.yaml`, commit it, push it, or synchronize
+the Argo CD Application yet. Retain the validation output for review before
+defining its internal metrics Service.
+
+### 26.5 Define the Celery worker metrics Service
+
+**Run on:** the administration workstation, from the root of the
+`arcana-deployment` repository.
+
+Create `apps/arcana/base/celery-worker-service.yaml`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: arcana-celery-worker-metrics
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: arcana-celery-worker
+  ports:
+    - name: metrics
+      port: 8001
+      targetPort: metrics
+      protocol: TCP
+```
+
+This Service is internal to Kubernetes. It does not create a public port,
+Ingress, NodePort, or load balancer. It gives future in-cluster monitoring a
+stable endpoint while leaving the current Docker monitoring stack unchanged.
+
+Validate only the new file without contacting the cluster:
+
+```bash
+kubeconform \
+  -strict \
+  -summary \
+  -exit-on-error \
+  apps/arcana/base/celery-worker-service.yaml
+
+git diff --check
+```
+
+Do not add either Celery worker file to `kustomization.yaml`, commit, push, or
+synchronize yet. Retain the validation output before defining Celery Beat and
+its persistent schedule storage.
+
+### 26.6 Define persistent Celery Beat schedule storage
+
+**Run on:** the administration workstation, from the root of the
+`arcana-deployment` repository.
+
+Create `apps/arcana/base/celery-beat-pvc.yaml`:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arcana-celery-beat-data
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 256Mi
+```
+
+The claim stores Celery Beat's local schedule database under K3s's
+`local-path` StorageClass. The `Prune=false` annotation makes deletion an
+explicit administrative decision instead of allowing an Argo CD prune to
+remove scheduler state automatically. It does not constitute a backup.
+
+Validate only the new file without contacting the cluster:
+
+```bash
+kubeconform \
+  -strict \
+  -summary \
+  -exit-on-error \
+  apps/arcana/base/celery-beat-pvc.yaml
+
+git diff --check
+```
+
+Do not add any Celery resource to `kustomization.yaml`, commit, push, or
+synchronize yet. Retain the validation output before defining the single Beat
+scheduler Pod.
+
+### 26.7 Define the single Celery Beat scheduler
+
+**Run on:** the administration workstation, from the root of the
+`arcana-deployment` repository.
+
+Create `apps/arcana/base/celery-beat-deployment.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arcana-celery-beat
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: arcana-celery-beat
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: arcana-celery-beat
+        app.kubernetes.io/component: celery-beat
+
+    spec:
+      initContainers:
+        - name: wait-for-redis
+          image: redis:7.4.10-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              until redis-cli -h arcana-redis ping | grep -q PONG; do
+                echo "Waiting for Redis"
+                sleep 2
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+
+      containers:
+        - name: beat
+          image: vanloc1808/tarot-backend:latest
+          imagePullPolicy: IfNotPresent
+          workingDir: /app
+
+          command:
+            - /app/.venv/bin/celery
+          args:
+            - -A
+            - celery_app
+            - beat
+            - --loglevel=info
+            - --schedule=/var/lib/celery/celerybeat-schedule
+
+          envFrom:
+            - configMapRef:
+                name: arcana-backend-config
+            - secretRef:
+                name: arcana-backend-secrets
+
+          env:
+            - name: PYTHONPATH
+              value: /app
+            - name: PROMETHEUS_MULTIPROC_DIR
+              value: /tmp/prometheus-multiproc
+            - name: CELERY_METRICS_PORT
+              value: "8001"
+
+          ports:
+            - name: metrics
+              containerPort: 8001
+              protocol: TCP
+
+          volumeMounts:
+            - name: schedule
+              mountPath: /var/lib/celery
+            - name: prometheus-multiproc
+              mountPath: /tmp/prometheus-multiproc
+
+          startupProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 30
+
+          readinessProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 384Mi
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+
+      volumes:
+        - name: schedule
+          persistentVolumeClaim:
+            claimName: arcana-celery-beat-data
+        - name: prometheus-multiproc
+          emptyDir: {}
+
+      terminationGracePeriodSeconds: 60
+```
+
+`Recreate` and `replicas: 1` prevent two Beat schedulers from intentionally
+overlapping during an update. The PVC is mounted as a directory and the
+schedule database is stored as a file inside it. The direct command bypasses
+`/app/start.sh`, so Beat cannot run Alembic or start Uvicorn.
+
+Validate only the new file without contacting the cluster:
+
+```bash
+kubeconform \
+  -strict \
+  -summary \
+  -exit-on-error \
+  apps/arcana/base/celery-beat-deployment.yaml
+
+git diff --check
+```
+
+Do not add any Celery resource to `kustomization.yaml`, commit, push, or
+synchronize yet. Retain the validation output before defining Beat's internal
+metrics Service.
+
+### 26.8 Define the Celery Beat metrics Service
+
+**Run on:** the administration workstation, from the root of the
+`arcana-deployment` repository.
+
+Create `apps/arcana/base/celery-beat-service.yaml`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: arcana-celery-beat-metrics
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: arcana-celery-beat
+  ports:
+    - name: metrics
+      port: 8001
+      targetPort: metrics
+      protocol: TCP
+```
+
+This Service is internal to Kubernetes. It creates no public port, Ingress,
+NodePort, or load balancer and does not change the existing Docker monitoring
+stack.
+
+Validate only the new file without contacting the cluster:
+
+```bash
+kubeconform \
+  -strict \
+  -summary \
+  -exit-on-error \
+  apps/arcana/base/celery-beat-service.yaml
+
+git diff --check
+```
+
+Do not add any Celery resource to `kustomization.yaml`, commit, push, or
+synchronize yet. Retain the validation output before registering and rendering
+the complete Celery slice.
+
+### 26.9 Register and render the complete Celery slice
+
+**Run on:** the administration workstation, from the root of the
+`arcana-deployment` repository.
+
+Update `apps/arcana/base/kustomization.yaml` so its `resources` list is:
+
+```yaml
+resources:
+  - namespace.yaml
+  - backend-service.yaml
+  - backend-configmap.yaml
+  - backend-deployment.yaml
+  - redis-service.yaml
+  - redis-statefulset.yaml
+  - redis-networkpolicy.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
+  - celery-worker-deployment.yaml
+  - celery-worker-service.yaml
+  - celery-beat-pvc.yaml
+  - celery-beat-deployment.yaml
+  - celery-beat-service.yaml
+```
+
+Do not change the existing `apiVersion`, `kind`, or `labels` fields.
+
+Render and validate the complete base without invoking the production KSOPS
+generator:
+
+```bash
+kubectl kustomize apps/arcana/base \
+  | kubeconform -strict -summary -exit-on-error
+```
+
+Expected summary:
+
+```text
+Summary: 14 resources found parsing stdin - Valid: 14, Invalid: 0, Errors: 0, Skipped: 0
+```
+
+Inspect only non-secret relationships and exposure:
+
+```bash
+kubectl kustomize apps/arcana/base \
+  | rg '^(kind:|  name: arcana-|  type: (NodePort|LoadBalancer)|  image:|      claimName:)'
+
+rg -n 'type: (NodePort|LoadBalancer)' apps bootstrap || true
+rg -n 'tarot-redis|redis:7-alpine|redis:latest' apps bootstrap || true
+
+git diff --check
+git status --short
+```
+
+Expected results:
+
+- The base contains 14 valid resources.
+- The two Celery Deployments use the backend image match target
+  `vanloc1808/tarot-backend:latest`; the production overlay will replace all
+  occurrences with its immutable SHA.
+- Both Celery Services are `ClusterIP`; the external-Service search produces
+  no output.
+- Beat references the `arcana-celery-beat-data` claim.
+- The stale Redis image/name search produces no output.
+- Git lists the five intended Celery files and the base Kustomization change.
+
+Do not commit, push, or synchronize yet. Retain the render, search, and status
+output for review before staging the slice.
+
+### 26.10 Commit and push the Celery desired state
+
+**Run on:** the administration workstation, from the root of the
+`arcana-deployment` repository.
+
+Stage only the reviewed Celery slice:
+
+```bash
+git add \
+  apps/arcana/base/kustomization.yaml \
+  apps/arcana/base/celery-worker-deployment.yaml \
+  apps/arcana/base/celery-worker-service.yaml \
+  apps/arcana/base/celery-beat-pvc.yaml \
+  apps/arcana/base/celery-beat-deployment.yaml \
+  apps/arcana/base/celery-beat-service.yaml
+
+git diff --cached --check
+git diff --cached --stat
+git status --short
+```
+
+Expected staged scope:
+
+```text
+apps/arcana/base/celery-beat-deployment.yaml
+apps/arcana/base/celery-beat-pvc.yaml
+apps/arcana/base/celery-beat-service.yaml
+apps/arcana/base/celery-worker-deployment.yaml
+apps/arcana/base/celery-worker-service.yaml
+apps/arcana/base/kustomization.yaml
+```
+
+Do not proceed if any other file is staged. When the scope is exact, commit
+and push:
+
+```bash
+git commit -m "feat: add Celery worker and Beat workloads"
+git push origin main
+git status
+```
+
+The final status should report a clean working tree synchronized with
+`origin/main`. Pushing changes only Git and Argo CD's desired-state rendering;
+automated synchronization remains disabled, so no Arcana resource should be
+created in K3s.
+
+Do not manually sync the Application. Retain the commit SHA and push output
+for the render-only Argo CD verification.
+
+### 26.11 Refresh Argo CD without synchronizing
+
+**Run on:** the administration workstation, with the Section 19 SSH tunnel
+running and the dedicated kubeconfig active.
+
+Confirm the deployment repository is at the pushed revision:
+
+```bash
+git rev-parse HEAD
+git rev-parse origin/main
+```
+
+Both commands must print the same Celery commit SHA. Then request a render-only
+hard refresh:
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+```
+
+This annotation asks Argo CD to fetch and render the new Git revision. It does
+not synchronize the Application.
+
+Verify status, conditions, and the non-secret desired-resource inventory:
+
+```bash
+kubectl get application -n argocd arcana-production \
+  -o custom-columns='NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status,REVISION:.status.sync.revision'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.conditions[*]}{.type}{": "}{.message}{"\n"}{end}'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.resources[*]}{.kind}{"\t"}{.namespace}{"\t"}{.name}{"\t"}{.status}{"\n"}{end}' \
+  | sort
+```
+
+Expected results after reconciliation:
+
+- The revision matches the pushed Celery commit.
+- Sync remains `OutOfSync` and health remains `Missing`.
+- The conditions command produces no output.
+- The inventory contains 15 desired resources: the previous ten plus the
+  Celery worker Deployment and Service, Beat PVC, Beat Deployment, and Beat
+  Service.
+- Every desired resource remains `OutOfSync` or `Missing`; nothing is live.
+
+The image summary may be empty while every desired resource is still missing
+because the Application has never synchronized. If it is populated, inspect it
+without printing Secret content:
+
+```bash
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.summary.images[*]}{.}{"\n"}{end}' \
+  | sort
+```
+
+An empty result is acceptable at this pre-sync stage. Prove production image
+replacement offline with a temporary copy of the base and production overlay
+that deliberately omits the KSOPS generator. This temporary render therefore
+cannot decrypt or print the backend Secret:
+
+```bash
+RENDER_TMP="$(mktemp -d)" || exit 1
+test -n "$RENDER_TMP"
+
+mkdir -p "$RENDER_TMP/apps/arcana/overlays/production"
+cp -R apps/arcana/base "$RENDER_TMP/apps/arcana/base"
+
+sed '/^generators:/,$d' \
+  apps/arcana/overlays/production/kustomization.yaml \
+  >"$RENDER_TMP/apps/arcana/overlays/production/kustomization.yaml"
+
+kustomize build "$RENDER_TMP/apps/arcana/overlays/production" \
+  | rg 'image:' \
+  | sort
+```
+
+Expected output contains three SHA-tagged backend references (backend, worker,
+and Beat), one SHA-tagged frontend reference, and three
+`redis:7.4.10-alpine` references (Redis plus two init containers). No image may
+end in `:latest`.
+
+The temporary directory contains no decrypted Secret. Record its printed path
+with `printf '%s\n' "$RENDER_TMP"` if it will be cleaned up later; do not use
+an unverified path in a recursive deletion command.
+
+Finally, prove observation-only mode and the absence of live Arcana resources:
+
+```bash
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{.spec.syncPolicy.automated.enabled}{"\n"}'
+
+kubectl get namespace arcana --ignore-not-found -o name
+```
+
+Expected output is `false` followed by no namespace name. Do not sync the
+Application. Retain all output for review before adding the dedicated database
+migration Job.
+
+### 26.12 End-of-session checkpoint
+
+The Celery desired state is complete and pushed in the deployment repository.
+Argo CD successfully rendered commit `100674f883cd3144a7f622e21ee91e06dc6cc5f7`
+as 15 desired resources with no conditions. The offline non-secret production
+render proved that all three backend workloads and the frontend use the pinned
+commit-SHA image, all three Redis references use `redis:7.4.10-alpine`, and no
+rendered image uses `:latest`.
+
+Automated synchronization remains disabled, the `arcana` namespace does not
+exist, and no Arcana resource has been created in K3s.
+
+A Docker workload owned by another VPS user, `incrview-backend`, was still
+transiently consuming most of the six-core server. Do not stop, restart, limit,
+or reconfigure that container. Before the first Arcana synchronization, wait
+for its owner to finish it and then rerun:
+
+```bash
+ssh vps \
+  "docker ps --filter name=incrview-backend --format 'table {{.Names}}\t{{.Status}}'"
+
+for sample in 1 2 3; do
+  date
+  kubectl top node myvps
+  sleep 10
+done
+
+ssh vps 'uptime; df -h /; sudo du -sh /var/lib/rancher'
+```
+
+The next manifest phase is a dedicated database migration Job so application
+Pods do not all run Alembic through `/app/start.sh`. Authoring may proceed
+while the external workload is active, but no manual or automated Argo CD sync
+may occur until capacity is healthy and the migration ordering and rollback
+behavior have been reviewed.
+
+## 27. Company-laptop continuation prompt
+
+After both repositories and the Age identity are available on the company
+laptop, paste the following prompt into the new assistant session:
 
 ```text
 Continue guiding me through the ArcanaAI GitOps deployment. Read
@@ -3308,34 +4032,46 @@ Current state:
 - The `arcana-production` Application exists in observation-only mode with
   automated synchronization disabled; private Git and KSOPS rendering are
   verified, and no `arcana` namespace or workload has been created.
-- Persistent Redis desired state is rendered with an internal Service,
-  StatefulSet, retained local-path claim template, and NetworkPolicy, but has
-  not been synchronized.
-- The SHA-pinned frontend Deployment and internal Service are rendered; Argo
-  CD now reports ten desired resources, but none has been synchronized.
+- Argo CD renders deployment commit
+  `100674f883cd3144a7f622e21ee91e06dc6cc5f7` as 15 desired resources with no
+  conditions, but none has been synchronized.
+- Desired state contains the backend, persistent Redis, frontend, one
+  concurrency-one Celery worker, one Celery Beat scheduler, retained Beat
+  schedule storage, and internal Services. Production Kustomize replacement
+  was verified offline: backend and frontend use the pinned commit SHA, Redis
+  uses `redis:7.4.10-alpine`, and no rendered image uses `:latest`.
+- A transient Docker workload owned by another VPS user was consuming most of
+  the six-core server. Do not modify it. Recheck capacity after it ends before
+  considering any synchronization.
 - K3s packaged Traefik and ServiceLB must remain disabled during staging.
 - TCP 6443 is not open publicly; workstation kubectl access uses an SSH
   local-forward and a dedicated kubeconfig at `~/.kube/arcana-k3s.yaml`.
 - My SOPS Age identity is stored outside Git at
   ~/.config/sops/age/keys.txt on this laptop.
-- The personal MacBook uses its own write-enabled, repository-scoped deploy
-  key. It does not reuse Argo CD's read-only deploy key.
+- This administration workstation uses its own write-enabled,
+  repository-scoped deploy key. It does not reuse Argo CD's read-only deploy
+  key.
 
 Before any SOPS command, I will run:
 export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 test -r "$SOPS_AGE_KEY_FILE"
 age-keygen -y "$SOPS_AGE_KEY_FILE"
 
-Resume at Section 26.2. Give me one subsection at a time. Do not run commands
-on my behalf, expose secrets, change the firewall, stop Docker, or take over
-ports 80/443. If output is unexpected, stop and diagnose it before continuing.
+Resume after Section 26.12. First reconcile both repositories and recheck the
+transient VPS CPU load. Then guide me through designing a dedicated Argo CD
+migration Job before any synchronization. Give me one subsection at a time.
+Do not run deployment commands on my behalf, expose secrets, change the
+firewall, stop Docker, modify another user's container, synchronize the
+Application, or take over ports 80/443. If output is unexpected, stop and
+diagnose it before continuing.
 ```
 
-The prompt contains the key path but never the private key. On the personal
-MacBook, first update this guide with:
+The prompt contains the key path but never the private key. On the company
+laptop, first update both repositories with:
 
 ```bash
-git pull origin main
+git -C /path/to/arcana-ai pull --ff-only origin main
+git -C /path/to/arcana-deployment pull --ff-only origin main
 ```
 
 ## Primary references
