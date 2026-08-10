@@ -4060,6 +4060,11 @@ age-keygen -y "$SOPS_AGE_KEY_FILE"
 Resume after Section 26.12. First reconcile both repositories and recheck the
 transient VPS CPU load. Then guide me through designing a dedicated Argo CD
 migration Job before any synchronization. Give me one subsection at a time.
+Whenever you add instructions to this Markdown guide, put an explicit
+`Run on: VPS` or `Run on: current administration workstation` line before the
+commands. Do not use ambiguous locations such as `local machine`; clearly say
+whether each command runs through SSH on the VPS or directly on my current
+computer.
 Do not run deployment commands on my behalf, expose secrets, change the
 firewall, stop Docker, modify another user's container, synchronize the
 Application, or take over ports 80/443. If output is unexpected, stop and
