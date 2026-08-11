@@ -16,9 +16,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a persistent Redis StatefulSet phase with pinned image, AOF durability, retained local-path storage, non-root execution, probes, resource limits, namespace-scoped network access, and render-only Argo CD verification.
 - Added an observation-only Next.js frontend deployment phase with a non-root read-only container, isolated writable cache paths, probes, resource limits, internal Service, SHA-pinned image promotion, and rendered-image verification.
 - Added a render-only Celery staging phase beginning with personal MacBook bootstrap instructions, a separate write-enabled repository deploy key, protected Age and kubeconfig transfer procedures, immutable backend-image contract checks, explicit migration-safety requirements, and cluster capacity gates before worker and Beat manifests are introduced.
+- Added a dedicated database-migration staging phase beginning with clean-repository reconciliation, immutable image runtime and Alembic-head verification, non-disclosing encrypted database-key validation, and explicit safeguards against duplicate backend migrations or overlapping Celery Beat schedulers.
+- Documented a two-gate database rollout that first creates an inert zero-replica Kubernetes baseline, then runs an explicitly authorized migration hook with bounded retries before separately activating application workloads and cutting over Celery Beat.
+- Added exact Gate A manifest-authoring and non-secret render-validation instructions for direct Uvicorn startup, production zero-replica controls, and an intentionally unregistered migration hook.
+- Added Gate A commit and Argo CD render-only verification instructions with revision polling, fail-closed condition and inventory checks, explicit migration-Job absence, and proof that synchronization and namespace creation remain disabled.
+- Added a revision-pinned first Gate A synchronization procedure with preflight capacity and Docker checks, pruning disabled, bounded operation polling, zero-replica and no-Job assertions, Redis and retained-storage health verification, and a data-aware rollback boundary.
+- Added Gate B recovery preflight instructions that classify the encrypted database provider without disclosure, require a verified Supabase recovery point, compare the read-only production Alembic revision with the pinned image head, and stop before registering or running the migration Job.
+- Documented the narrowly scoped Supabase Free exception for an explicitly accepted no-backup migration-ownership transfer when production `current` already equals the pinned image head; any future revision gap still requires a recovery point.
+- Added a registration-only Gate B phase that validates and commits the migration hook separately, proves immutable rendering and zero-replica gates offline, refreshes Argo CD without synchronization, and fails if any operation or live Job starts prematurely.
+- Added the separately authorized Gate B execution procedure with an immediate no-op revision recheck, exact-revision sync guards, stale-operation protection, bounded hook polling, retained failure diagnostics, successful-hook cleanup checks, and before-and-after schema revision proof.
+- Added a post-migration hook-retirement phase so subsequent application syncs cannot rerun Alembic, while retaining the validated Job template in Git and proving zero-replica workload gates remain intact before backend activation.
+- Added a backend-only activation phase with host-only cookie and Prometheus configuration corrections, revision-pinned manual synchronization, direct-Uvicorn verification, internal application/database smoke tests, and explicit isolation from Docker production and public ingress.
+- Added a frontend-only activation phase with immutable render and exposure checks, guarded manual synchronization, non-root read-only filesystem verification, local port-forward rendering tests, and continued worker/Beat and public-ingress isolation.
+- Added a worker-only activation phase with isolated-broker reasoning, immutable queue/concurrency validation, guarded manual synchronization, Redis control-plane and registered-task checks without submitting work, internal metrics verification, and continued Beat/public-ingress isolation.
+- Added an observation-only persistent-avatar inventory phase that resolves and validates the Docker bind mount, records aggregate file and database-reference counts without disclosing filenames, proves Kubernetes has no durable avatar mount, and preserves Docker as the sole writer before snapshot staging.
+- Added staged persistent-avatar storage and seeding procedures with a pruning-protected dedicated claim, backend-only mount, private source backup, fail-closed empty-destination copy, content-set digest verification, controlled restart persistence proof, and an explicit final-delta boundary before public cutover.
+- Added a post-persistence convergence and traffic-boundary inventory phase that removes controlled-restart drift through a guarded Argo CD sync, revalidates avatar integrity, and records Docker Traefik and Kubernetes topology without changing routing or listeners.
 
 ### Fixed
 - Corrected the KSOPS Application example to preserve the required Argo CD `spec.project: default` field when adding the config-management plugin.
+- Corrected the migration preflight namespace guard so a Kubernetes connection failure stops execution instead of being misreported as an absent namespace.
+- Corrected Gate A rendering checks so a missing temporary directory or failed Kustomize build cannot continue into a misleading zero-resource validation result.
+- Prevented Gate A validation failures from closing an interactive administration shell by containing failure handling inside a returning shell function.
+- Moved the non-secret Gate A render workspace from `/tmp` to a protected user cache directory so confined Ubuntu Kustomize packages can access it.
+- Updated Gate A validation to use Kustomize embedded in `kubectl`, avoiding dependency on an unavailable or separately confined standalone executable.
+- Corrected first-sync health expectations for K3s `local-path`: the zero-replica Beat claim intentionally remains pending under `WaitForFirstConsumer`, while only Redis storage binds during Gate A.
+- Corrected the frontend smoke test to accept the application's expected initial HTTP 307, inspect its redirect target, and require a successful final HTML response after following redirects.
+- Made avatar-storage verification fail closed when the PVC or exact backend mount is absent, preventing the image's writable but ephemeral `/avatar` directory from being mistaken for persistent storage.
+- Corrected avatar snapshot extraction to avoid restoring source ownership inside the capability-restricted backend container, while preserving the fail-closed rule against retrying or deleting partially extracted data.
+
+### Security
+- Added mandatory non-root UID/GID and writable-volume ownership remediation after the first Kubernetes Celery worker rollout exposed Celery's superuser warning, using the pinned image's resolvable `nobody:nogroup` identity until a dedicated application account is built into a future image.
 
 ## [0.0.27] - 2026-08-09
 

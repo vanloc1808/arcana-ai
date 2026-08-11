@@ -4004,7 +4004,4431 @@ while the external workload is active, but no manual or automated Argo CD sync
 may occur until capacity is healthy and the migration ordering and rollback
 behavior have been reviewed.
 
-## 27. Company-laptop continuation prompt
+## 27. Add a dedicated database migration Job
+
+Move schema migration ownership out of the backend container startup path
+before the first Arcana synchronization. The migration must run exactly once
+for a selected application image revision, complete successfully before any
+database-using Kubernetes workload starts, and leave the existing Docker
+production stack untouched during staging.
+
+Adding a Job alone is insufficient: the current backend image defaults to
+`/app/start.sh`, which also runs `alembic upgrade head`. A later subsection
+will therefore give Argo CD explicit migration ordering and change the
+Kubernetes backend command to start Uvicorn directly. Celery already overrides
+the image command and cannot invoke `/app/start.sh`.
+
+Keep automated synchronization disabled. Do not create the `arcana` namespace,
+run Alembic against production, scale either Celery scheduler, or stop any
+Docker container during this section.
+
+### 27.1 Reconcile inputs and verify the migration contract
+
+**Run on: current administration workstation (this Ubuntu machine).**
+
+Start with clean, current checkouts. Replace the two example paths with the
+actual repository paths on this Ubuntu machine:
+
+```bash
+ARCANA_AI_REPO=/absolute/path/to/arcana-ai
+ARCANA_DEPLOYMENT_REPO=/absolute/path/to/arcana-deployment
+
+test -d "$ARCANA_AI_REPO/.git"
+test -d "$ARCANA_DEPLOYMENT_REPO/.git"
+
+git -C "$ARCANA_AI_REPO" status --short
+git -C "$ARCANA_DEPLOYMENT_REPO" status --short
+```
+
+Both status commands must produce no output. Do not pull across uncommitted or
+untracked work. When both repositories are clean:
+
+```bash
+git -C "$ARCANA_AI_REPO" pull --ff-only origin main
+git -C "$ARCANA_DEPLOYMENT_REPO" pull --ff-only origin main
+
+git -C "$ARCANA_AI_REPO" rev-parse HEAD
+git -C "$ARCANA_AI_REPO" rev-parse origin/main
+git -C "$ARCANA_DEPLOYMENT_REPO" rev-parse HEAD
+git -C "$ARCANA_DEPLOYMENT_REPO" rev-parse origin/main
+```
+
+Each repository's `HEAD` must equal its own `origin/main`. The two repositories
+are independent and are not expected to have the same commit.
+
+Resolve the backend image tag from GitOps desired state and require an
+immutable 40-character Git SHA:
+
+```bash
+cd "$ARCANA_DEPLOYMENT_REPO"
+
+BACKEND_IMAGE_TAG="$(
+  awk '
+    $1 == "-" && $2 == "name:" && $3 == "vanloc1808/tarot-backend" { in_backend=1; next }
+    in_backend && $1 == "newTag:" { print $2; exit }
+  ' apps/arcana/overlays/production/kustomization.yaml
+)"
+
+printf 'Backend image tag: %s\n' "$BACKEND_IMAGE_TAG"
+printf '%s\n' "$BACKEND_IMAGE_TAG" \
+  | rg -x '[0-9a-f]{40}' >/dev/null
+
+docker manifest inspect \
+  "vanloc1808/tarot-backend:$BACKEND_IMAGE_TAG" \
+  >/dev/null &&
+echo 'Pinned backend image exists'
+```
+
+Inspect the migration and direct application runtimes inside that exact image
+without supplying production environment variables. On Apple Silicon,
+`--platform linux/amd64` matches the x86-64 VPS image:
+
+```bash
+docker run --rm \
+  --platform linux/amd64 \
+  --entrypoint /bin/sh \
+  "vanloc1808/tarot-backend:$BACKEND_IMAGE_TAG" \
+  -ec '
+    test -x /app/.venv/bin/alembic
+    test -x /app/.venv/bin/uvicorn
+    test -r /app/alembic.ini
+    test -d /app/migrations
+    printf "Migration and Uvicorn runtimes exist\n"
+    cd /app
+    /app/.venv/bin/alembic heads
+  '
+```
+
+The command must print `Migration and Uvicorn runtimes exist` followed by the
+Alembic head revision or revisions. Multiple heads are not automatically an
+error, but they must be explained by an intentional merge revision before a
+production migration is authorized. This command does not connect to the
+database because `alembic heads` only inspects packaged migration files.
+
+Confirm that the encrypted Secret contains the database URL key without
+printing its value or writing plaintext to disk:
+
+```bash
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+test -r "$SOPS_AGE_KEY_FILE"
+test "$(stat -c '%a' "$SOPS_AGE_KEY_FILE")" = 600
+
+sops filestatus \
+  apps/arcana/overlays/production/backend-secret.sops.yaml
+
+sops --decrypt \
+  --extract '["stringData"]["SQLALCHEMY_DATABASE_URL"]' \
+  apps/arcana/overlays/production/backend-secret.sops.yaml \
+  >/dev/null &&
+echo 'Encrypted database URL is present and decryptable'
+```
+
+Expected results are `{"encrypted":true}` and the final confirmation line.
+Never remove the redirection, use shell tracing, print the decrypted Secret,
+or place its value in a command-line argument.
+
+Finally, reconfirm that staging remains observation-only:
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='automated={.spec.syncPolicy.automated}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}'
+
+ARCANA_NAMESPACE="$(
+  kubectl get namespace arcana --ignore-not-found -o name
+)" || {
+  echo 'STOP: unable to verify whether the arcana namespace exists' >&2
+  exit 1
+}
+
+if test -n "$ARCANA_NAMESPACE"; then
+  echo 'STOP: arcana namespace already exists' >&2
+  exit 1
+else
+  echo 'Confirmed: arcana namespace has not been created'
+fi
+```
+
+Automated synchronization must explicitly show `enabled:false`, and the
+namespace must remain absent. Stop on any unexpected result. Retain all output
+for review before choosing the Job lifecycle, Argo CD sync wave, backend
+command override, and first-sync replica gates.
+
+### 27.2 Stop for migration-design review
+
+**Run on: no machine; this is a review checkpoint.**
+
+Do not author or apply the Job yet. The next subsection must settle four
+linked decisions together:
+
+1. The migration Job's retry, timeout, and cleanup behavior.
+2. Argo CD ordering that blocks application workloads until migration succeeds.
+3. A direct Uvicorn command that prevents the backend Pod from rerunning
+   Alembic.
+4. Production-overlay replica gates that prevent Kubernetes Celery Beat from
+   overlapping with the still-running Docker Celery Beat during staging.
+
+### 27.3 Adopt a two-gate migration and activation design
+
+**Run on: no machine; this subsection records the reviewed design.**
+
+Do not use an Argo CD `PreSync` hook for the first-ever synchronization. The
+migration needs `arcana-backend-config` and the KSOPS-generated
+`arcana-backend-secrets`, but those resources do not exist until Argo CD first
+synchronizes the namespace and baseline desired state. Hook phase ordering
+would otherwise allow the migration to start before its dependencies exist.
+
+Use two explicit gates instead:
+
+#### Gate A: inert Kubernetes baseline
+
+Before the first manual synchronization:
+
+- Override the Kubernetes backend command to execute Uvicorn directly, never
+  `/app/start.sh`.
+- Set the production overlay replica count to zero for `arcana-backend`,
+  `arcana-frontend`, `arcana-celery-worker`, and `arcana-celery-beat`.
+- Author and validate the migration Job file, but do not register it in the
+  base Kustomization yet.
+- Leave Redis at one replica so its retained storage and internal Service can
+  be verified independently.
+- Keep Argo CD automated synchronization disabled.
+
+The first carefully reviewed manual sync may then create the namespace,
+ConfigMap, encrypted Secret, Services, retained claims, Redis, and zero-replica
+Deployment objects. It must not run Alembic, serve Kubernetes application
+traffic, consume queues, or start a second Beat scheduler.
+
+#### Gate B: explicitly authorized migration
+
+Only after Gate A is healthy, a current database backup or provider recovery
+point is confirmed, and the migration set has been reviewed:
+
+- Register the migration Job in Kustomize in a dedicated commit.
+- Run it as an Argo CD `Sync` hook at sync wave `-1`.
+- Keep every application Deployment at zero replicas during that sync.
+- Use `BeforeHookCreation,HookSucceeded` cleanup policy. A successful Job is
+  removed; a failed Job remains available for diagnosis and is deleted only
+  before an explicitly requested retry.
+- Set `backoffLimit: 1` and `activeDeadlineSeconds: 900`. A migration failure
+  blocks later waves and requires diagnosis; it must not retry indefinitely.
+
+The Job command will be `/app/.venv/bin/alembic upgrade head`, with
+`workingDir: /app`, the SHA-pinned backend image, and the same ConfigMap and
+Secret references as the backend. It will not contain credentials, invoke a
+shell, start Uvicorn, or depend on Redis.
+
+#### Activation after migration
+
+Scaling is a separate post-migration operation:
+
+1. Scale the Kubernetes backend, frontend, and worker only after the migration
+   Job has succeeded and compatibility with the still-running Docker version
+   has been confirmed.
+2. Keep Kubernetes Beat at zero while Docker Beat runs.
+3. At the scheduler cutover, stop Docker Beat through the existing Compose
+   project, verify it is stopped, and only then scale Kubernetes Beat to one.
+4. Public ingress migration remains a later phase. Docker Traefik continues to
+   own ports 80 and 443 throughout these gates.
+
+Never activate both Beat schedulers simultaneously. Do not infer migration
+rollback from Argo CD rollback: reverting Git does not reverse database schema
+changes. Any database downgrade must be separately reviewed against the exact
+Alembic revision and recovery point.
+
+### 27.4 Stop before writing the gated manifests
+
+**Run on: no machine; this is a review checkpoint.**
+
+The selected design is intentionally more conservative than one whole-stack
+sync. The next subsection will implement only Gate A desired state: direct
+backend Uvicorn startup, production zero-replica overrides, and an unregistered
+migration Job file for offline validation. It will not commit, push, apply, or
+synchronize anything until the rendered diff is reviewed.
+
+### 27.5 Implement the inert Gate A desired state
+
+This subsection changes Git working files only. It does not contact the
+cluster or database.
+
+#### Override backend startup
+
+**Run on: current administration workstation (this Ubuntu machine), from the
+root of `~/Personal/arcana-deployment`.**
+
+Open `apps/arcana/base/backend-deployment.yaml`. In the existing `backend`
+container, add `workingDir`, `command`, and `args` immediately after
+`imagePullPolicy`:
+
+```yaml
+          workingDir: /app
+          command:
+            - /app/.venv/bin/uvicorn
+          args:
+            - app:app
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8000"
+```
+
+The resulting container fragment must begin like this:
+
+```yaml
+      containers:
+        - name: backend
+          image: vanloc1808/tarot-backend:latest
+          imagePullPolicy: IfNotPresent
+          workingDir: /app
+          command:
+            - /app/.venv/bin/uvicorn
+          args:
+            - app:app
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8000"
+          ports:
+```
+
+Do not remove its probes, resources, ConfigMap, Secret, or security context.
+This explicit command is the control that prevents backend Pods from invoking
+`/app/start.sh` and rerunning Alembic.
+
+Validate the edited Deployment:
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+
+kubeconform -strict -summary -exit-on-error \
+  apps/arcana/base/backend-deployment.yaml
+
+rg -n '/app/start\.sh|alembic|/app/\.venv/bin/uvicorn' \
+  apps/arcana/base/backend-deployment.yaml
+```
+
+Expected results are one valid resource and exactly the Uvicorn command. The
+search must not find `/app/start.sh` or `alembic`.
+
+#### Add production zero-replica gates
+
+**Run on: current administration workstation (this Ubuntu machine), from the
+root of `~/Personal/arcana-deployment`.**
+
+In `apps/arcana/overlays/production/kustomization.yaml`, add this top-level
+block after `images` and before `generators`:
+
+```yaml
+replicas:
+  - name: arcana-backend
+    count: 0
+  - name: arcana-frontend
+    count: 0
+  - name: arcana-celery-worker
+    count: 0
+  - name: arcana-celery-beat
+    count: 0
+```
+
+Do not add `arcana-redis` to this list. Redis remains at one replica for the
+inert infrastructure baseline. These production-only overrides preserve the
+base manifests' ordinary one-replica defaults while preventing application
+Pods from starting during staging.
+
+#### Author the unregistered migration Job
+
+**Run on: current administration workstation (this Ubuntu machine), from the
+root of `~/Personal/arcana-deployment`.**
+
+Create `apps/arcana/base/backend-migration-job.yaml` with this content:
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: arcana-backend-migration
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: arcana-backend-migration
+        app.kubernetes.io/component: database-migration
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: vanloc1808/tarot-backend:latest
+          imagePullPolicy: IfNotPresent
+          workingDir: /app
+          command:
+            - /app/.venv/bin/alembic
+          args:
+            - upgrade
+            - head
+          envFrom:
+            - configMapRef:
+                name: arcana-backend-config
+            - secretRef:
+                name: arcana-backend-secrets
+          env:
+            - name: PYTHONPATH
+              value: /app
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+```
+
+Do **not** add this file to `apps/arcana/base/kustomization.yaml`. Its hook
+annotations describe Gate B behavior, but leaving it unregistered guarantees
+that Gate A rendering and synchronization cannot run it.
+
+Validate the Job directly and confirm that it is still absent from the base
+resource list:
+
+```bash
+kubeconform -strict -summary -exit-on-error \
+  apps/arcana/base/backend-migration-job.yaml
+
+if rg -n 'backend-migration-job\.yaml' \
+  apps/arcana/base/kustomization.yaml; then
+  echo 'STOP: migration Job is registered too early' >&2
+  exit 1
+else
+  echo 'Confirmed: migration Job is not registered'
+fi
+```
+
+#### Render Gate A without decrypting Secrets
+
+**Run on: current administration workstation (this Ubuntu machine), from the
+root of `~/Personal/arcana-deployment`.**
+
+Build a temporary non-secret copy of the production overlay. The command
+deliberately removes the KSOPS `generators` block, so it cannot decrypt or
+print the backend Secret:
+
+```bash
+render_gate_a() {
+  GATE_A_RENDER_PARENT="$HOME/.cache/arcana-deployment-renders"
+  mkdir -p "$GATE_A_RENDER_PARENT" || return 1
+  chmod 700 "$GATE_A_RENDER_PARENT" || return 1
+
+  GATE_A_RENDER_TMP="$(
+    mktemp -d "$GATE_A_RENDER_PARENT/gate-a.XXXXXX"
+  )" || return 1
+  test -n "$GATE_A_RENDER_TMP" || return 1
+  test -d "$GATE_A_RENDER_TMP" || {
+    echo 'STOP: Gate A temporary directory does not exist' >&2
+    return 1
+  }
+  printf 'Gate A temporary directory: %s\n' "$GATE_A_RENDER_TMP"
+
+  mkdir -p "$GATE_A_RENDER_TMP/apps/arcana/overlays/production" || return 1
+  cp -R apps/arcana/base "$GATE_A_RENDER_TMP/apps/arcana/base" || return 1
+
+  sed '/^generators:/,$d' \
+    apps/arcana/overlays/production/kustomization.yaml \
+    >"$GATE_A_RENDER_TMP/apps/arcana/overlays/production/kustomization.yaml" \
+    || return 1
+
+  test -d "$GATE_A_RENDER_TMP/apps/arcana/overlays/production" || {
+    echo 'STOP: temporary production overlay does not exist' >&2
+    return 1
+  }
+
+  if ! kubectl kustomize \
+    "$GATE_A_RENDER_TMP/apps/arcana/overlays/production" \
+    >"$GATE_A_RENDER_TMP/gate-a.yaml"; then
+    echo 'STOP: Gate A render failed' >&2
+    return 1
+  fi
+
+  test -s "$GATE_A_RENDER_TMP/gate-a.yaml" || {
+    echo 'STOP: Gate A render is empty' >&2
+    return 1
+  }
+
+  kubeconform -strict -summary -exit-on-error \
+    "$GATE_A_RENDER_TMP/gate-a.yaml"
+}
+
+render_gate_a
+```
+
+The render uses Kubernetes's embedded Kustomize through `kubectl kustomize`,
+so it does not depend on a separately installed or confined `kustomize`
+executable. Its protected cache contains only a copy of the base manifests and
+a production overlay with the Secret generator removed; it does not contain
+decrypted credentials.
+
+The summary must report 14 valid resources because the Secret generator is omitted and
+the unregistered Job must not render. Inspect only the non-secret workload
+gates, commands, and images:
+
+```bash
+rg -n \
+  'name: arcana-(backend|frontend|celery-worker|celery-beat)$|replicas:|/app/\.venv/bin/(uvicorn|alembic)|image:' \
+  "$GATE_A_RENDER_TMP/gate-a.yaml"
+
+if rg -n 'name: arcana-backend-migration|/app/\.venv/bin/alembic' \
+  "$GATE_A_RENDER_TMP/gate-a.yaml"; then
+  echo 'STOP: migration Job unexpectedly rendered during Gate A' >&2
+  exit 1
+else
+  echo 'Confirmed: migration Job is absent from Gate A'
+fi
+```
+
+Review the first search carefully:
+
+- Backend, frontend, worker, and Beat each render `replicas: 0`.
+- Backend renders `/app/.venv/bin/uvicorn`.
+- No rendered workload invokes Alembic.
+- Backend, worker, and Beat use the immutable backend SHA.
+- Frontend uses the immutable frontend SHA.
+- Redis references remain `redis:7.4.10-alpine`.
+
+Finally inspect the intended Git-only scope:
+
+```bash
+git diff --check
+git status --short
+git diff -- \
+  apps/arcana/base/backend-deployment.yaml \
+  apps/arcana/overlays/production/kustomization.yaml
+```
+
+Expected status contains only:
+
+```text
+ M apps/arcana/base/backend-deployment.yaml
+ M apps/arcana/overlays/production/kustomization.yaml
+?? apps/arcana/base/backend-migration-job.yaml
+```
+
+Stop here and provide the validation, render inspection, and status output for
+review. Do not add the Job to Kustomize, stage files, commit, push, apply, or
+synchronize the Argo CD Application.
+
+## 28. Commit and verify the inert Gate A revision
+
+This section records the reviewed Gate A desired state in Git and asks Argo CD
+to render it without synchronizing. The migration Job remains unregistered,
+all database-using Kubernetes workloads remain at zero replicas, and the
+existing Docker production stack remains unchanged.
+
+### 28.1 Verify and push the exact Gate A scope
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`.**
+
+If the Gate A commit has not already been created, stage only the three
+reviewed files:
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+
+git add \
+  apps/arcana/base/backend-deployment.yaml \
+  apps/arcana/base/backend-migration-job.yaml \
+  apps/arcana/overlays/production/kustomization.yaml
+
+git diff --cached --check
+git diff --cached --stat
+git status --short
+```
+
+The staged scope must contain exactly those three files. The Job file is
+committed for reviewability but remains absent from
+`apps/arcana/base/kustomization.yaml`.
+
+Commit and push only when the scope is exact:
+
+```bash
+git commit -m "feat: stage gated database migration"
+git push origin main
+```
+
+If the commit was already pushed, do not create a duplicate commit. Verify the
+current state instead:
+
+```bash
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+if rg -n 'backend-migration-job\.yaml' \
+  apps/arcana/base/kustomization.yaml; then
+  echo 'STOP: migration Job is registered during Gate A' >&2
+  false
+else
+  echo 'Confirmed: migration Job remains unregistered'
+fi
+```
+
+Expected results are a clean status, matching local and remote revisions, and
+the unregistered-Job confirmation. For this rollout, the reviewed Gate A
+deployment commit is:
+
+```text
+57847592cce9fbbce1be696ead745fe95fe06df0
+```
+
+If either revision differs, use the actual matching pushed revision for the
+remaining checks and review why it differs before continuing.
+
+### 28.2 Refresh Argo CD without synchronizing
+
+**Run on: current administration workstation (the company Ubuntu machine),
+with the Section 19 SSH tunnel running. These commands contact K3s through the
+dedicated local kubeconfig but do not synchronize the Application.**
+
+Use a function so an unexpected result returns to the interactive prompt
+without closing the terminal:
+
+```bash
+verify_gate_a_observation() {
+  export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+  EXPECTED_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+  )" || return 1
+
+  REMOTE_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+  )" || return 1
+
+  if test "$EXPECTED_REVISION" != "$REMOTE_REVISION"; then
+    echo 'STOP: deployment HEAD does not match origin/main' >&2
+    return 1
+  fi
+
+  kubectl annotate application -n argocd arcana-production \
+    argocd.argoproj.io/refresh=hard \
+    --overwrite || return 1
+
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    OBSERVED_REVISION="$(
+      kubectl get application -n argocd arcana-production \
+        -o jsonpath='{.status.sync.revision}'
+    )" || return 1
+
+    if test "$OBSERVED_REVISION" = "$EXPECTED_REVISION"; then
+      break
+    fi
+
+    printf 'Waiting for Argo CD to render %s; currently %s\n' \
+      "$EXPECTED_REVISION" "$OBSERVED_REVISION"
+    sleep 5
+  done
+
+  if test "$OBSERVED_REVISION" != "$EXPECTED_REVISION"; then
+    echo 'STOP: Argo CD did not render the pushed Gate A revision' >&2
+    return 1
+  fi
+
+  kubectl get application -n argocd arcana-production \
+    -o custom-columns='NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status,REVISION:.status.sync.revision' \
+    || return 1
+
+  CONDITIONS="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{range .status.conditions[*]}{.type}{": "}{.message}{"\n"}{end}'
+  )" || return 1
+
+  if test -n "$CONDITIONS"; then
+    printf '%s\n' "$CONDITIONS" >&2
+    echo 'STOP: Argo CD reports Application conditions' >&2
+    return 1
+  fi
+
+  INVENTORY="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{range .status.resources[*]}{.kind}{"\t"}{.namespace}{"\t"}{.name}{"\t"}{.status}{"\n"}{end}'
+  )" || return 1
+
+  printf '%s\n' "$INVENTORY" | sort
+
+  RESOURCE_COUNT="$(
+    printf '%s\n' "$INVENTORY" \
+      | awk 'NF { count++ } END { print count + 0 }'
+  )"
+
+  if test "$RESOURCE_COUNT" != 15; then
+    printf 'STOP: expected 15 resources, found %s\n' \
+      "$RESOURCE_COUNT" >&2
+    return 1
+  fi
+
+  if printf '%s\n' "$INVENTORY" \
+    | awk -F '\t' '$1 == "Job" || $3 == "arcana-backend-migration" { found=1 } END { exit !found }'; then
+    echo 'STOP: migration Job unexpectedly appears in Gate A' >&2
+    return 1
+  fi
+
+  echo 'Confirmed: Argo CD renders 15 resources and no migration Job'
+
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+
+  if test "$AUTOMATED_ENABLED" != false; then
+    printf 'STOP: automated synchronization is %s, not false\n' \
+      "$AUTOMATED_ENABLED" >&2
+    return 1
+  fi
+
+  ARCANA_NAMESPACE="$(
+    kubectl get namespace arcana --ignore-not-found -o name
+  )" || return 1
+
+  if test -n "$ARCANA_NAMESPACE"; then
+    echo 'STOP: arcana namespace already exists' >&2
+    return 1
+  fi
+
+  echo 'Confirmed: automated synchronization is disabled'
+  echo 'Confirmed: arcana namespace has not been created'
+}
+
+verify_gate_a_observation
+```
+
+Expected results:
+
+- Argo CD observes the pushed Gate A revision.
+- Sync remains `OutOfSync` and health remains `Missing`.
+- No Application conditions are printed.
+- The inventory remains 15 resources because the unregistered Job is absent.
+- Automated synchronization is `false`.
+- The `arcana` namespace remains absent.
+
+The Application status inventory does not expose desired replica counts or
+container commands. Section 27.5's successful non-secret render is the proof
+that the four application Deployments are gated at zero and the backend uses
+Uvicorn directly.
+
+### 28.3 Stop before the first manual Gate A synchronization
+
+**Run on: no machine; this is a review checkpoint.**
+
+Do not synchronize yet. The next phase must define and review the exact manual
+Gate A sync command, resource-wave behavior, Redis/PVC health checks, rollback
+boundary, and proof that no application Pod or migration Job starts. Docker
+Traefik and all existing Docker Arcana services remain untouched.
+
+## 29. Perform the first inert Gate A synchronization
+
+This is the first phase that creates Arcana resources in K3s. It is deliberately
+limited to inert infrastructure: the namespace, non-secret configuration,
+encrypted-at-rest Secret, internal Services, retained claims, Redis, and four
+zero-replica Deployment objects. It must not run Alembic, start an application
+Pod, start Kubernetes Celery Beat, expose public traffic, or alter Docker.
+
+The sync is manually requested at the exact reviewed Git revision. Automated
+synchronization remains disabled, and pruning is disabled for this operation.
+
+### 29.1 Recheck the synchronization boundary
+
+**Run on: current administration workstation (the company Ubuntu machine),
+with the Section 19 SSH tunnel running. Commands beginning with `ssh vps` run
+read-only checks on the VPS.**
+
+Reconfirm repository and cluster inputs:
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+kubectl get application -n argocd arcana-production \
+  -o custom-columns='NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status,REVISION:.status.sync.revision'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='automated={.spec.syncPolicy.automated}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.resources[*]}{.kind}{"\t"}{.namespace}{"\t"}{.name}{"\n"}{end}' \
+  | sort
+```
+
+Required results:
+
+- Git status is clean and `HEAD` equals `origin/main`.
+- The revision is the reviewed Gate A commit
+  `57847592cce9fbbce1be696ead745fe95fe06df0`.
+- Automated synchronization explicitly reports `enabled:false`.
+- `operation=` is empty; do not replace an active or pending operation.
+- The desired inventory contains 15 resources and no Job.
+
+Reconfirm the live namespace is still absent with a fail-closed function:
+
+```bash
+verify_gate_a_namespace_absent() {
+  ARCANA_NAMESPACE="$(
+    kubectl get namespace arcana --ignore-not-found -o name
+  )" || return 1
+
+  if test -n "$ARCANA_NAMESPACE"; then
+    echo 'STOP: arcana namespace already exists before Gate A sync' >&2
+    return 1
+  fi
+
+  echo 'Confirmed: arcana namespace is absent before Gate A sync'
+}
+
+verify_gate_a_namespace_absent
+```
+
+Verify current production and capacity without changing them:
+
+```bash
+ssh vps '
+  docker ps \
+    --filter name=tarot-backend \
+    --filter name=tarot-frontend \
+    --filter name=tarot-celery-worker \
+    --filter name=tarot-celery-beat \
+    --filter name=tarot-redis \
+    --filter name=traefik \
+    --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  uptime
+  free -h
+  df -h /
+  sudo du -sh /var/lib/rancher
+'
+
+kubectl top node myvps
+kubectl get pods -A
+```
+
+Continue only when all five existing Docker Arcana containers and Docker
+Traefik are running, Docker Traefik still publishes ports 80 and 443, disk has
+at least 10 GiB available, the node has no capacity pressure, and all K3s and
+Argo CD Pods are healthy.
+
+### 29.2 Request the revision-pinned manual sync
+
+**Run on: current administration workstation (the company Ubuntu machine).
+This command changes K3s through Argo CD. It does not change Docker.**
+
+Run the guarded synchronization function exactly once:
+
+```bash
+sync_gate_a() {
+  export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+  EXPECTED_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+  )" || return 1
+
+  REMOTE_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+  )" || return 1
+
+  OBSERVED_REVISION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.sync.revision}'
+  )" || return 1
+
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+
+  ACTIVE_OPERATION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.operation}'
+  )" || return 1
+
+  if test "$EXPECTED_REVISION" != "$REMOTE_REVISION" \
+    || test "$EXPECTED_REVISION" != "$OBSERVED_REVISION"; then
+    echo 'STOP: local, remote, and Argo CD revisions do not match' >&2
+    return 1
+  fi
+
+  if test "$AUTOMATED_ENABLED" != false; then
+    echo 'STOP: automated synchronization is not disabled' >&2
+    return 1
+  fi
+
+  if test -n "$ACTIVE_OPERATION"; then
+    echo 'STOP: an Argo CD operation is already active or pending' >&2
+    return 1
+  fi
+
+  INVENTORY="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{range .status.resources[*]}{.kind}{"\t"}{.name}{"\n"}{end}'
+  )" || return 1
+
+  RESOURCE_COUNT="$(
+    printf '%s\n' "$INVENTORY" \
+      | awk 'NF { count++ } END { print count + 0 }'
+  )"
+
+  if test "$RESOURCE_COUNT" != 15; then
+    printf 'STOP: expected 15 desired resources, found %s\n' \
+      "$RESOURCE_COUNT" >&2
+    return 1
+  fi
+
+  if printf '%s\n' "$INVENTORY" \
+    | awk -F '\t' '$1 == "Job" || $2 == "arcana-backend-migration" { found=1 } END { exit !found }'; then
+    echo 'STOP: migration Job is present in Gate A inventory' >&2
+    return 1
+  fi
+
+  ARCANA_NAMESPACE="$(
+    kubectl get namespace arcana --ignore-not-found -o name
+  )" || return 1
+
+  if test -n "$ARCANA_NAMESPACE"; then
+    echo 'STOP: arcana namespace already exists before first sync' >&2
+    return 1
+  fi
+
+  kubectl patch application -n argocd arcana-production \
+    --type=merge \
+    --patch "{\"operation\":{\"initiatedBy\":{\"username\":\"gate-a-guide\"},\"sync\":{\"revision\":\"$EXPECTED_REVISION\",\"prune\":false}}}" \
+    || return 1
+
+  printf 'Requested Gate A sync at revision %s with pruning disabled\n' \
+    "$EXPECTED_REVISION"
+}
+
+sync_gate_a
+```
+
+Do not run the function a second time. If it stops before `kubectl patch`, no
+sync was requested. Diagnose the failed guard instead of weakening or removing
+it.
+
+### 29.3 Wait for the Gate A operation
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+Wait for the one requested operation without starting another:
+
+```bash
+wait_for_gate_a() {
+  export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+  EXPECTED_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+  )" || return 1
+
+  OPERATION_PHASE=''
+
+  for attempt in $(seq 1 60); do
+    OPERATION_PHASE="$(
+      kubectl get application -n argocd arcana-production \
+        -o jsonpath='{.status.operationState.phase}'
+    )" || return 1
+
+    OPERATION_REVISION="$(
+      kubectl get application -n argocd arcana-production \
+        -o jsonpath='{.status.operationState.syncResult.revision}'
+    )" || return 1
+
+    printf 'Gate A phase=%s revision=%s\n' \
+      "$OPERATION_PHASE" "$OPERATION_REVISION"
+
+    case "$OPERATION_PHASE" in
+      Succeeded)
+        break
+        ;;
+      Failed|Error)
+        echo 'STOP: Gate A synchronization failed' >&2
+        return 1
+        ;;
+    esac
+
+    sleep 5
+  done
+
+  if test "$OPERATION_PHASE" != Succeeded; then
+    echo 'STOP: Gate A synchronization did not complete within five minutes' >&2
+    return 1
+  fi
+
+  if test "$OPERATION_REVISION" != "$EXPECTED_REVISION"; then
+    echo 'STOP: completed operation used an unexpected revision' >&2
+    return 1
+  fi
+
+  echo 'Gate A synchronization completed at the reviewed revision'
+}
+
+wait_for_gate_a
+```
+
+If the operation fails, do not delete the namespace, PVCs, Redis StatefulSet,
+or Argo CD Application, and do not retry automatically. Capture the operation
+message and resource results for diagnosis:
+
+```bash
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{.status.operationState.message}{"\n"}'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.operationState.syncResult.resources[*]}{.kind}{"\t"}{.namespace}{"\t"}{.name}{"\t"}{.status}{"\t"}{.message}{"\n"}{end}'
+```
+
+These outputs contain resource names and status messages, not Secret values.
+
+### 29.4 Prove that Gate A is inert and healthy
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+Verify Application state and live resources:
+
+```bash
+kubectl get application -n argocd arcana-production \
+  -o custom-columns='NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status,REVISION:.status.sync.revision'
+
+kubectl get namespace arcana -o name
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas,AVAILABLE:.status.availableReplicas'
+
+kubectl get statefulset -n arcana
+kubectl get pods -n arcana -o wide
+kubectl get pvc -n arcana
+kubectl get svc -n arcana
+kubectl get ingress -n arcana
+kubectl get jobs -n arcana
+```
+
+Required results:
+
+- The Application becomes `Synced`. Health may remain `Progressing` solely
+  because the zero-replica Beat Deployment has not created a first consumer
+  for its claim.
+- All four Deployments show desired replicas `0` and have no Pods.
+- Only the `arcana-redis-0` application Pod exists and becomes `1/1 Running`.
+- Redis's StatefulSet claim is `Bound`.
+- `arcana-celery-beat-data` remains `Pending` during Gate A because this
+  cluster's `local-path` StorageClass uses `WaitForFirstConsumer` and Beat is
+  intentionally at zero replicas. It should bind only when Beat is activated
+  in a later controlled phase.
+- Every Service is `ClusterIP`.
+- No Ingress and no Job exists.
+
+Prove the Secret exists without printing its values, then test internal Redis:
+
+```bash
+kubectl get secret -n arcana arcana-backend-secrets \
+  -o go-template='{{range $key, $value := .data}}{{printf "%s\n" $key}}{{end}}' \
+  | sort
+
+kubectl exec -n arcana statefulset/arcana-redis \
+  -- redis-cli ping
+```
+
+The Secret command prints key names only. Redis must return `PONG`.
+
+Fail closed on any forbidden live workload:
+
+```bash
+verify_gate_a_is_inert() {
+  FORBIDDEN_PODS="$(
+    kubectl get pods -n arcana \
+      -l 'app.kubernetes.io/component in (backend,frontend,celery-worker,celery-beat,database-migration)' \
+      -o name
+  )" || return 1
+
+  if test -n "$FORBIDDEN_PODS"; then
+    printf 'STOP: forbidden Gate A Pods exist:\n%s\n' \
+      "$FORBIDDEN_PODS" >&2
+    return 1
+  fi
+
+  JOBS="$(kubectl get jobs -n arcana -o name)" || return 1
+  if test -n "$JOBS"; then
+    printf 'STOP: a Job exists during Gate A:\n%s\n' "$JOBS" >&2
+    return 1
+  fi
+
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+
+  if test "$AUTOMATED_ENABLED" != false; then
+    echo 'STOP: automated synchronization is no longer disabled' >&2
+    return 1
+  fi
+
+  echo 'Confirmed: Gate A has no application or migration Pods'
+  echo 'Confirmed: automated synchronization remains disabled'
+}
+
+verify_gate_a_is_inert
+```
+
+Finally prove Docker production and host ingress remain unchanged and recheck
+capacity:
+
+```bash
+ssh vps '
+  docker ps \
+    --filter name=tarot-backend \
+    --filter name=tarot-frontend \
+    --filter name=tarot-celery-worker \
+    --filter name=tarot-celery-beat \
+    --filter name=tarot-redis \
+    --filter name=traefik \
+    --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  sudo ss -lntup | grep -E ":(80|443|6443)\\b"
+  df -h /
+  sudo du -sh /var/lib/rancher
+'
+
+kubectl top node myvps
+```
+
+Docker Traefik must still own ports 80 and 443, every Docker Arcana service
+must remain running, disk must remain above the 10 GiB floor, and node capacity
+must remain healthy.
+
+### 29.5 Gate A rollback boundary and stop point
+
+**Run on: no machine; this is a review checkpoint.**
+
+Gate A creates no application traffic and makes no database schema change. If
+Redis or storage is unhealthy, diagnose the specific resource in place. Do not
+delete retained claims, the namespace, or the Application as an automatic
+rollback. Git rollback plus another explicitly reviewed manual sync may revert
+ordinary manifests, but retained storage requires a separate data-aware
+decision.
+
+The `local-path` StorageClass has reclaim policy `Delete`. The Beat claim's
+Argo CD `Prune=false` annotation prevents ordinary Git pruning, but it does not
+protect data from a deliberate PVC deletion. Never delete either claim merely
+to change Application health from `Progressing` to `Healthy`.
+
+Do not register or run the migration Job yet. The next phase must confirm a
+current database recovery point, review the exact packaged migration path to
+`20260723_reset_token_hash`, register the Job in a dedicated commit, and run a
+second revision-pinned manual sync while all application Deployments remain at
+zero replicas.
+
+## 30. Verify the Gate B database recovery boundary
+
+Gate B transfers migration ownership from Docker backend startup to a dedicated
+Kubernetes Job. Before registering that Job, identify the database provider,
+confirm a usable recovery point, and read the production Alembic revision with
+the exact pinned image. These checks do not change the schema.
+
+The existing Docker backend has already started through `/app/start.sh`, which
+runs `alembic upgrade head`. Production may therefore already be at
+`20260723_reset_token_hash`; if so, the first dedicated Job should be a no-op.
+That result is acceptable and establishes the safer migration mechanism for
+future releases.
+
+### 30.1 Identify the provider without exposing the database URL
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`.**
+
+Decrypt only into a pipe, classify the hostname in memory, and print neither
+the URL nor hostname:
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+test -r "$SOPS_AGE_KEY_FILE"
+test "$(stat -c '%a' "$SOPS_AGE_KEY_FILE")" = 600
+
+sops --decrypt \
+  --extract '["stringData"]["SQLALCHEMY_DATABASE_URL"]' \
+  apps/arcana/overlays/production/backend-secret.sops.yaml \
+  | python3 -c '
+import sys
+from urllib.parse import urlparse
+
+value = sys.stdin.read().strip()
+parsed = urlparse(value)
+host = (parsed.hostname or "").lower()
+
+is_postgres = parsed.scheme in {"postgres", "postgresql"} or parsed.scheme.startswith("postgresql+")
+if not is_postgres or not host:
+    raise SystemExit("STOP: database URL is not a valid PostgreSQL URL")
+
+if host == "supabase.com" or host.endswith(".supabase.com"):
+    print("Database provider: Supabase")
+else:
+    print("Database provider: non-Supabase or unrecognized")
+    raise SystemExit(1)
+'
+```
+
+Expected output is only `Database provider: Supabase`. Stop if the provider is
+unrecognized; do not print the URL to diagnose it.
+
+### 30.2 Confirm a recoverable Supabase backup
+
+**Run on: current administration workstation (the company Ubuntu machine), in
+the Supabase Dashboard. No terminal command is required.**
+
+Open the production Supabase project, then open **Database > Backups**. Before
+continuing, verify all of the following:
+
+- The project identity is the one used by Arcana production.
+- A successful daily backup or PITR recovery window exists.
+- Its timestamp is recent enough for the accepted recovery-point objective.
+- The restore action is available to the current administrator.
+- The recovery timestamp and backup type are recorded in private operations
+  notes, not Git and not chat.
+
+Supabase documents automatic daily backups for Pro, Team, and Enterprise
+projects, while PITR is a separately enabled option. Do not infer backup
+coverage from the existence of the project or from its plan name; verify the
+actual Backups page. If no usable provider recovery point exists, stop Gate B
+and create and validate a separate logical backup procedure before any
+schema-changing migration. A narrowly scoped Free-tier exception may be
+accepted only after Sections 30.3 and 30.4 prove that production `current`
+already equals the pinned image `heads`, making the proposed `upgrade head` a
+no-op. Record that explicit risk acceptance privately. Any future revision gap
+immediately restores the backup requirement. Do not start a restore merely to
+perform this check.
+
+### 30.3 Read the production Alembic revision without migrating
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`.**
+
+Use a function so the decrypted URL exists only in the function environment
+and is unset immediately afterward. The URL is passed to Docker by environment
+name, never placed in a command-line argument or printed:
+
+```bash
+check_production_alembic_revision() {
+  local BACKEND_IMAGE_TAG SQLALCHEMY_DATABASE_URL RESULT
+  export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+
+  BACKEND_IMAGE_TAG="$(
+    awk '
+      $1 == "-" && $2 == "name:" && $3 == "vanloc1808/tarot-backend" { in_backend=1; next }
+      in_backend && $1 == "newTag:" { print $2; exit }
+    ' apps/arcana/overlays/production/kustomization.yaml
+  )" || return 1
+
+  printf '%s\n' "$BACKEND_IMAGE_TAG" \
+    | rg -x '[0-9a-f]{40}' >/dev/null || return 1
+
+  SQLALCHEMY_DATABASE_URL="$(
+    sops --decrypt \
+      --extract '["stringData"]["SQLALCHEMY_DATABASE_URL"]' \
+      apps/arcana/overlays/production/backend-secret.sops.yaml
+  )" || return 1
+
+  export SQLALCHEMY_DATABASE_URL
+
+  docker run --rm \
+    --platform linux/amd64 \
+    -e SQLALCHEMY_DATABASE_URL \
+    --entrypoint /app/.venv/bin/alembic \
+    "vanloc1808/tarot-backend:$BACKEND_IMAGE_TAG" \
+    -c /app/alembic.ini current
+  RESULT=$?
+
+  unset SQLALCHEMY_DATABASE_URL
+  return "$RESULT"
+}
+
+check_production_alembic_revision
+unset -f check_production_alembic_revision
+```
+
+`alembic current` reads the `alembic_version` table and migration files; it
+does not execute `upgrade` or `downgrade`. Expected output is a revision ID,
+normally:
+
+```text
+20260723_reset_token_hash (head)
+```
+
+If no revision, more than one current revision, a connection error, or any
+other output appears, stop and retain the non-secret error text for diagnosis.
+Do not test connectivity with a migration command.
+
+### 30.4 Compare current and packaged heads
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+Reconfirm the packaged head without database credentials:
+
+```bash
+BACKEND_IMAGE_TAG="$(
+  awk '
+    $1 == "-" && $2 == "name:" && $3 == "vanloc1808/tarot-backend" { in_backend=1; next }
+    in_backend && $1 == "newTag:" { print $2; exit }
+  ' apps/arcana/overlays/production/kustomization.yaml
+)"
+
+printf '%s\n' "$BACKEND_IMAGE_TAG" \
+  | rg -x '[0-9a-f]{40}' >/dev/null
+
+docker run --rm \
+  --platform linux/amd64 \
+  --entrypoint /app/.venv/bin/alembic \
+  "vanloc1808/tarot-backend:$BACKEND_IMAGE_TAG" \
+  -c /app/alembic.ini heads
+```
+
+Interpret the result:
+
+- If `current` and `heads` both report `20260723_reset_token_hash`, the
+  dedicated Gate B Job is expected to succeed as a no-op. For this rollout,
+  both commands produced that exact revision. The operator explicitly accepted
+  proceeding on Supabase Free without a provider backup only for this no-op
+  ownership-transfer run.
+- If `current` is an earlier single revision, do not proceed until every
+  intervening migration has been reviewed for locking, runtime, backward
+  compatibility with the still-running Docker backend, and RLS on every newly
+  created Postgres table.
+- If current is ahead of the packaged head or belongs to a different branch,
+  stop. The pinned image is not authorized to migrate that database.
+
+### 30.5 Stop before registering the Job
+
+**Run on: no machine; this is a review checkpoint.**
+
+Do not edit `apps/arcana/base/kustomization.yaml` yet. Provide the provider
+classification, private confirmation of either a usable recovery point or the
+narrow no-op Free-tier exception above, and the non-secret `current` and
+`heads` output for review. Do not provide the database URL, hostname,
+password, project reference, or backup identifiers.
+
+The next section will register the already validated Job in a dedicated Git
+commit, verify that the four application Deployments still render at zero,
+and refresh Argo CD without synchronizing. The migration itself remains a
+later, separately authorized revision-pinned operation.
+
+## 31. Register the Gate B migration Job without running it
+
+Register the already validated migration Job in desired state through a
+dedicated Git commit. This phase proves that Kustomize and Argo CD can render
+the hook with the immutable backend image while all application Deployments
+remain at zero replicas. It must not request a sync operation.
+
+### 31.1 Recheck the live Gate A boundary
+
+**Run on: current administration workstation (the company Ubuntu machine),
+with the Section 19 SSH tunnel running.**
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='sync={.status.sync.status}{"\n"}health={.status.health.status}{"\n"}revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+
+kubectl get jobs -n arcana
+kubectl get pods -n arcana -o wide
+```
+
+Required results before editing Git:
+
+- Both Git revisions equal Gate A commit
+  `57847592cce9fbbce1be696ead745fe95fe06df0` and the worktree is clean.
+- Automated synchronization is `false` and `operation=` is empty.
+- All four Deployments remain at zero replicas.
+- No Job exists.
+- Redis is the only Arcana Pod and is healthy.
+
+Stop on any difference. Do not reconcile it by deleting or scaling a live
+resource.
+
+### 31.2 Register the reviewed Job
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+
+In `apps/arcana/base/kustomization.yaml`, add the already committed Job file to
+the `resources` list immediately after `backend-deployment.yaml`:
+
+```yaml
+resources:
+  - namespace.yaml
+  - backend-service.yaml
+  - backend-configmap.yaml
+  - backend-deployment.yaml
+  - backend-migration-job.yaml
+  - redis-service.yaml
+  - redis-statefulset.yaml
+  - redis-networkpolicy.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
+  - celery-worker-deployment.yaml
+  - celery-worker-service.yaml
+  - celery-beat-pvc.yaml
+  - celery-beat-deployment.yaml
+  - celery-beat-service.yaml
+```
+
+Do not edit the Job, production replica gates, images, Secret generator, or
+Argo CD Application in this subsection.
+
+### 31.3 Validate the registered Gate B render
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`. These are offline Git checks.**
+
+Validate the source Job and complete base:
+
+```bash
+kubeconform -strict -summary -exit-on-error \
+  apps/arcana/base/backend-migration-job.yaml
+
+kubectl kustomize apps/arcana/base \
+  | kubeconform -strict -summary -exit-on-error
+```
+
+Expected results are one valid Job and 15 valid base resources.
+
+Render a non-secret production copy. This uses the protected Ubuntu cache and
+removes the KSOPS generator before rendering:
+
+```bash
+render_gate_b_registration() {
+  GATE_B_RENDER_PARENT="$HOME/.cache/arcana-deployment-renders"
+  mkdir -p "$GATE_B_RENDER_PARENT" || return 1
+  chmod 700 "$GATE_B_RENDER_PARENT" || return 1
+
+  GATE_B_RENDER_TMP="$(
+    mktemp -d "$GATE_B_RENDER_PARENT/gate-b-registration.XXXXXX"
+  )" || return 1
+
+  test -d "$GATE_B_RENDER_TMP" || return 1
+  printf 'Gate B temporary directory: %s\n' "$GATE_B_RENDER_TMP"
+
+  mkdir -p "$GATE_B_RENDER_TMP/apps/arcana/overlays/production" \
+    || return 1
+  cp -R apps/arcana/base "$GATE_B_RENDER_TMP/apps/arcana/base" \
+    || return 1
+
+  sed '/^generators:/,$d' \
+    apps/arcana/overlays/production/kustomization.yaml \
+    >"$GATE_B_RENDER_TMP/apps/arcana/overlays/production/kustomization.yaml" \
+    || return 1
+
+  if ! kubectl kustomize \
+    "$GATE_B_RENDER_TMP/apps/arcana/overlays/production" \
+    >"$GATE_B_RENDER_TMP/gate-b-registration.yaml"; then
+    echo 'STOP: Gate B registration render failed' >&2
+    return 1
+  fi
+
+  test -s "$GATE_B_RENDER_TMP/gate-b-registration.yaml" || {
+    echo 'STOP: Gate B registration render is empty' >&2
+    return 1
+  }
+
+  kubeconform -strict -summary -exit-on-error \
+    "$GATE_B_RENDER_TMP/gate-b-registration.yaml"
+}
+
+render_gate_b_registration
+```
+
+The non-secret production render must contain 15 valid resources: the prior 14
+non-secret resources plus the newly registered Job. The KSOPS-generated Secret
+is intentionally absent from this temporary render.
+
+Inspect the Job contract and workload gates without printing Secret data:
+
+```bash
+rg -n \
+  'kind: Job|name: arcana-backend-migration|argocd.argoproj.io/(hook|sync-wave|hook-delete-policy)|replicas:|/app/\.venv/bin/(alembic|uvicorn)|image:' \
+  "$GATE_B_RENDER_TMP/gate-b-registration.yaml"
+
+git diff --check
+git status --short
+git diff -- apps/arcana/base/kustomization.yaml
+```
+
+Required render evidence:
+
+- Exactly one Job named `arcana-backend-migration` exists.
+- It is a `Sync` hook at wave `-1` with
+  `BeforeHookCreation,HookSucceeded` cleanup.
+- It executes `/app/.venv/bin/alembic upgrade head`.
+- Its image is the immutable backend SHA, not `latest`.
+- Backend executes Uvicorn directly.
+- Backend, frontend, worker, and Beat still render `replicas: 0`.
+- Git shows only `apps/arcana/base/kustomization.yaml` modified.
+
+Stop if any requirement differs. Do not stage or push until the output has
+been reviewed.
+
+### 31.4 Commit and push registration only
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`.**
+
+Stage only the Kustomization change:
+
+```bash
+git add apps/arcana/base/kustomization.yaml
+git diff --cached --check
+git diff --cached --stat
+git status --short
+```
+
+The only staged path must be:
+
+```text
+apps/arcana/base/kustomization.yaml
+```
+
+Commit and push:
+
+```bash
+git commit -m "feat: register database migration job"
+git push origin main
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+```
+
+The status must be clean and the revisions must match. Pushing changes desired
+state only; automated synchronization remains disabled, so the Job must not
+start.
+
+### 31.5 Refresh Argo CD without starting Gate B
+
+**Run on: current administration workstation (the company Ubuntu machine),
+with the Section 19 SSH tunnel running.**
+
+Request only a hard refresh:
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+```
+
+Wait until `.status.sync.revision` equals the pushed registration commit, then
+verify that rendering succeeded without an operation:
+
+```bash
+verify_gate_b_registration() {
+  EXPECTED_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+  )" || return 1
+
+  OBSERVED_REVISION=''
+  for attempt in $(seq 1 12); do
+    OBSERVED_REVISION="$(
+      kubectl get application -n argocd arcana-production \
+        -o jsonpath='{.status.sync.revision}'
+    )" || return 1
+
+    test "$OBSERVED_REVISION" = "$EXPECTED_REVISION" && break
+    printf 'Waiting for registration render; currently %s\n' \
+      "$OBSERVED_REVISION"
+    sleep 5
+  done
+
+  if test "$OBSERVED_REVISION" != "$EXPECTED_REVISION"; then
+    echo 'STOP: Argo CD did not render the registration commit' >&2
+    return 1
+  fi
+
+  CONDITIONS="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{range .status.conditions[*]}{.type}{": "}{.message}{"\n"}{end}'
+  )" || return 1
+
+  if test -n "$CONDITIONS"; then
+    printf '%s\n' "$CONDITIONS" >&2
+    echo 'STOP: Argo CD reports render conditions' >&2
+    return 1
+  fi
+
+  ACTIVE_OPERATION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.operation}'
+  )" || return 1
+
+  if test -n "$ACTIVE_OPERATION"; then
+    echo 'STOP: an Argo CD operation unexpectedly exists' >&2
+    return 1
+  fi
+
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+
+  if test "$AUTOMATED_ENABLED" != false; then
+    echo 'STOP: automated synchronization is not disabled' >&2
+    return 1
+  fi
+
+  LIVE_JOBS="$(kubectl get jobs -n arcana -o name)" || return 1
+  if test -n "$LIVE_JOBS"; then
+    printf 'STOP: a Job started during registration:\n%s\n' \
+      "$LIVE_JOBS" >&2
+    return 1
+  fi
+
+  echo 'Confirmed: registration revision rendered without conditions'
+  echo 'Confirmed: no operation or live Job exists'
+  echo 'Confirmed: automated synchronization remains disabled'
+}
+
+verify_gate_b_registration
+```
+
+Argo CD may report the Application `Synced` or `OutOfSync` depending on how
+the current version accounts for an unexecuted hook in sync status. Do not use
+that field alone as proof. The required safety evidence is the matching
+revision, no render conditions, empty `.operation`, no live Job, and automated
+sync disabled.
+
+Reconfirm live workload gates:
+
+```bash
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+kubectl get pods -n arcana -o wide
+kubectl get jobs -n arcana
+```
+
+All Deployments must remain at zero, Redis must remain the only Pod, and no Job
+may exist.
+
+### 31.6 Stop before executing Gate B
+
+**Run on: no machine; this is a review checkpoint.**
+
+Do not request a sync operation yet. The next section must pin the exact
+registration revision, recheck that production `current` still equals
+`20260723_reset_token_hash`, execute the one no-op migration hook, retain any
+failed Job for diagnosis, and prove the database revision is unchanged after
+success. Docker production remains untouched throughout.
+
+## 32. Execute the no-op Gate B migration hook
+
+Run the registered migration Job exactly once at the reviewed registration
+revision. Production `current` and packaged `heads` already match, so
+`alembic upgrade head` is expected to connect, acquire the normal Alembic
+context, make no schema changes, and exit successfully.
+
+This section does not activate any application Deployment or change public
+traffic. All four Deployments remain at zero, Docker continues serving
+production, and automated synchronization remains disabled.
+
+### 32.1 Revalidate the no-op and live safety boundary
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`, with the Section 19 SSH tunnel
+running.**
+
+Recheck Git, Argo CD, and live workloads:
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+kubectl get pods -n arcana -o wide
+kubectl get jobs -n arcana
+```
+
+Required results:
+
+- The worktree is clean.
+- `HEAD`, `origin/main`, and Argo CD revision all equal
+  `9222b603f7675a948df58a64d2310913b8721ac3`.
+- Automated synchronization is `false` and `operation=` is empty.
+- Every application Deployment remains at zero.
+- Redis is the only Arcana Pod and no Job exists.
+
+Immediately re-read production `current` with the pinned image. The decrypted
+URL remains function-local and is never printed:
+
+```bash
+check_gate_b_is_still_noop() {
+  local BACKEND_IMAGE_TAG SQLALCHEMY_DATABASE_URL RESULT
+  local CURRENT_REVISION PACKAGED_HEAD
+  export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+
+  BACKEND_IMAGE_TAG="$(
+    awk '
+      $1 == "-" && $2 == "name:" && $3 == "vanloc1808/tarot-backend" { in_backend=1; next }
+      in_backend && $1 == "newTag:" { print $2; exit }
+    ' apps/arcana/overlays/production/kustomization.yaml
+  )" || return 1
+
+  printf '%s\n' "$BACKEND_IMAGE_TAG" \
+    | rg -x '[0-9a-f]{40}' >/dev/null || return 1
+
+  SQLALCHEMY_DATABASE_URL="$(
+    sops --decrypt \
+      --extract '["stringData"]["SQLALCHEMY_DATABASE_URL"]' \
+      apps/arcana/overlays/production/backend-secret.sops.yaml
+  )" || return 1
+  export SQLALCHEMY_DATABASE_URL
+
+  CURRENT_REVISION="$(
+    docker run --rm \
+      --platform linux/amd64 \
+      -e SQLALCHEMY_DATABASE_URL \
+      --entrypoint /app/.venv/bin/alembic \
+      "vanloc1808/tarot-backend:$BACKEND_IMAGE_TAG" \
+      -c /app/alembic.ini current
+  )"
+  RESULT=$?
+  unset SQLALCHEMY_DATABASE_URL
+  test "$RESULT" = 0 || return "$RESULT"
+
+  PACKAGED_HEAD="$(
+    docker run --rm \
+      --platform linux/amd64 \
+      --entrypoint /app/.venv/bin/alembic \
+      "vanloc1808/tarot-backend:$BACKEND_IMAGE_TAG" \
+      -c /app/alembic.ini heads
+  )" || return 1
+
+  printf 'current=%s\nheads=%s\n' \
+    "$CURRENT_REVISION" "$PACKAGED_HEAD"
+
+  if test "$CURRENT_REVISION" != '20260723_reset_token_hash (head)' \
+    || test "$PACKAGED_HEAD" != '20260723_reset_token_hash (head)'; then
+    echo 'STOP: Gate B is no longer a verified no-op' >&2
+    return 1
+  fi
+
+  echo 'Confirmed: Gate B remains a no-op'
+}
+
+check_gate_b_is_still_noop
+unset -f check_gate_b_is_still_noop
+```
+
+Stop if either revision differs by even one character.
+
+Recheck Docker production, disk, and node capacity:
+
+```bash
+ssh vps '
+  docker ps \
+    --filter name=tarot-backend \
+    --filter name=tarot-frontend \
+    --filter name=tarot-celery-worker \
+    --filter name=tarot-celery-beat \
+    --filter name=tarot-redis \
+    --filter name=traefik \
+    --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  df -h /
+  sudo du -sh /var/lib/rancher
+'
+
+kubectl top node myvps
+```
+
+Continue only with all Docker services healthy, Traefik still publishing ports
+80/443, at least 10 GiB free, and healthy node capacity.
+
+### 32.2 Validate and request the exact Gate B operation
+
+**Run on: current administration workstation (the company Ubuntu machine).
+The server-side dry-run does not change the Application. The final patch starts
+the one migration sync.**
+
+First validate the exact operation payload:
+
+```bash
+kubectl patch application -n argocd arcana-production \
+  --type=merge \
+  --patch '{"operation":{"initiatedBy":{"username":"gate-b-noop-guide"},"sync":{"revision":"9222b603f7675a948df58a64d2310913b8721ac3","prune":false}}}' \
+  --dry-run=server \
+  -o jsonpath='revision={.operation.sync.revision}{"\n"}prune={.operation.sync.prune}{"\n"}initiator={.operation.initiatedBy.username}{"\n"}'
+```
+
+Expected output:
+
+```text
+revision=9222b603f7675a948df58a64d2310913b8721ac3
+prune=false
+initiator=gate-b-noop-guide
+```
+
+Then run the guarded operation function once:
+
+```bash
+sync_gate_b_noop() {
+  local EXPECTED_REVISION REMOTE_REVISION OBSERVED_REVISION
+  local AUTOMATED_ENABLED ACTIVE_OPERATION LIVE_JOBS
+
+  EXPECTED_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+  )" || return 1
+  REMOTE_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+  )" || return 1
+  OBSERVED_REVISION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.sync.revision}'
+  )" || return 1
+
+  if test "$EXPECTED_REVISION" != '9222b603f7675a948df58a64d2310913b8721ac3' \
+    || test "$EXPECTED_REVISION" != "$REMOTE_REVISION" \
+    || test "$EXPECTED_REVISION" != "$OBSERVED_REVISION"; then
+    echo 'STOP: Gate B revisions do not match the reviewed commit' >&2
+    return 1
+  fi
+
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+  ACTIVE_OPERATION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.operation}'
+  )" || return 1
+  LIVE_JOBS="$(kubectl get jobs -n arcana -o name)" || return 1
+
+  test "$AUTOMATED_ENABLED" = false || {
+    echo 'STOP: automated synchronization is not disabled' >&2
+    return 1
+  }
+  test -z "$ACTIVE_OPERATION" || {
+    echo 'STOP: an Argo CD operation is already active or pending' >&2
+    return 1
+  }
+  test -z "$LIVE_JOBS" || {
+    printf 'STOP: a Job already exists:\n%s\n' "$LIVE_JOBS" >&2
+    return 1
+  }
+
+  NONZERO_DEPLOYMENTS="$(
+    kubectl get deployment -n arcana \
+      -o jsonpath='{range .items[?(@.spec.replicas!=0)]}{.metadata.name}{"\n"}{end}'
+  )" || return 1
+  test -z "$NONZERO_DEPLOYMENTS" || {
+    printf 'STOP: nonzero Deployments exist:\n%s\n' \
+      "$NONZERO_DEPLOYMENTS" >&2
+    return 1
+  }
+
+  kubectl patch application -n argocd arcana-production \
+    --type=merge \
+    --patch "{\"operation\":{\"initiatedBy\":{\"username\":\"gate-b-noop-guide\"},\"sync\":{\"revision\":\"$EXPECTED_REVISION\",\"prune\":false}}}" \
+    || return 1
+
+  printf 'Requested no-op Gate B sync at %s\n' "$EXPECTED_REVISION"
+}
+
+sync_gate_b_noop
+unset -f sync_gate_b_noop
+```
+
+Do not run the function twice.
+
+### 32.3 Wait for the migration hook result
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+The previous Gate A operation also succeeded, so do not accept a stale
+`Succeeded` phase. Require both the Gate B revision and successful phase:
+
+```bash
+wait_for_gate_b_noop() {
+  local EXPECTED_REVISION PHASE OPERATION_REVISION
+  EXPECTED_REVISION='9222b603f7675a948df58a64d2310913b8721ac3'
+  PHASE=''
+  OPERATION_REVISION=''
+
+  for attempt in $(seq 1 180); do
+    PHASE="$(
+      kubectl get application -n argocd arcana-production \
+        -o jsonpath='{.status.operationState.phase}'
+    )" || return 1
+    OPERATION_REVISION="$(
+      kubectl get application -n argocd arcana-production \
+        -o jsonpath='{.status.operationState.syncResult.revision}'
+    )" || return 1
+
+    printf 'Gate B phase=%s revision=%s\n' "$PHASE" "$OPERATION_REVISION"
+
+    if test "$OPERATION_REVISION" = "$EXPECTED_REVISION"; then
+      case "$PHASE" in
+        Succeeded)
+          break
+          ;;
+        Failed|Error)
+          echo 'STOP: Gate B migration operation failed' >&2
+          return 1
+          ;;
+      esac
+    fi
+
+    sleep 5
+  done
+
+  if test "$PHASE" != Succeeded \
+    || test "$OPERATION_REVISION" != "$EXPECTED_REVISION"; then
+    echo 'STOP: Gate B did not succeed within fifteen minutes' >&2
+    return 1
+  fi
+
+  echo 'Gate B migration operation succeeded at the reviewed revision'
+}
+
+wait_for_gate_b_noop
+unset -f wait_for_gate_b_noop
+```
+
+On failure, the `BeforeHookCreation,HookSucceeded` policy leaves the failed Job
+for diagnosis. Do not delete or retry it. Capture status and logs without
+printing Secret values:
+
+```bash
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{.status.operationState.message}{"\n"}'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.operationState.syncResult.resources[*]}{.kind}{"\t"}{.namespace}{"\t"}{.name}{"\t"}{.hookPhase}{"\t"}{.status}{"\t"}{.message}{"\n"}{end}'
+
+kubectl get jobs,pods -n arcana
+kubectl logs -n arcana job/arcana-backend-migration --all-containers
+```
+
+Stop for diagnosis after collecting this evidence.
+
+### 32.4 Verify success and unchanged database revision
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+Inspect the completed operation record. The successful Job may already be
+deleted by its hook policy, so Argo CD operation status is the durable evidence:
+
+```bash
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{.status.operationState.message}{"\n"}'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.operationState.syncResult.resources[*]}{.kind}{"\t"}{.namespace}{"\t"}{.name}{"\t"}{.hookPhase}{"\t"}{.status}{"\t"}{.message}{"\n"}{end}'
+```
+
+The operation message must report success. The resource results must include
+`Job/arcana-backend-migration` with successful hook status or phase and no
+failure message.
+
+Confirm cleanup and the inert workload boundary:
+
+```bash
+kubectl get jobs -n arcana
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+kubectl get pods -n arcana -o wide
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='sync={.status.sync.status}{"\n"}health={.status.health.status}{"\n"}revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+```
+
+Required results:
+
+- No live Job remains after successful hook cleanup.
+- All application Deployments remain at zero.
+- Redis remains the only Arcana Pod.
+- The revision remains the registration commit.
+- Automated synchronization remains `false` and `operation=` becomes empty.
+
+Repeat the read-only production revision check from Section 32.1. It must still
+print:
+
+```text
+current=20260723_reset_token_hash (head)
+heads=20260723_reset_token_hash (head)
+Confirmed: Gate B remains a no-op
+```
+
+This before-and-after equality is proof that the ownership-transfer run made
+no schema revision change.
+
+Finally recheck Docker and capacity:
+
+```bash
+ssh vps '
+  docker ps \
+    --filter name=tarot-backend \
+    --filter name=tarot-frontend \
+    --filter name=tarot-celery-worker \
+    --filter name=tarot-celery-beat \
+    --filter name=tarot-redis \
+    --filter name=traefik \
+    --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  df -h /
+  sudo du -sh /var/lib/rancher
+'
+
+kubectl top node myvps
+```
+
+Docker production must remain unchanged, disk must remain above 10 GiB, and
+node capacity must remain healthy.
+
+### 32.5 Gate B completion and stop point
+
+**Run on: no machine; this is a review checkpoint.**
+
+Gate B is complete only after the hook succeeds, its live Job is cleaned up,
+the production revision remains unchanged, all Kubernetes application
+Deployments remain at zero, and Docker production remains healthy.
+
+Do not activate backend, frontend, worker, or Beat yet. The next phase must
+design staged workload activation and internal smoke testing. Kubernetes Beat
+must remain at zero until Docker Beat is deliberately stopped and verified
+during its own cutover. Public ingress remains on Docker Traefik.
+
+## 33. Retire the completed migration hook
+
+The Gate B operation at revision
+`9222b603f7675a948df58a64d2310913b8721ac3` succeeded. Argo CD recorded
+`Job/arcana-backend-migration` with hook phase `Succeeded`, deleted the live
+Job according to `HookSucceeded`, and production remained at
+`20260723_reset_token_hash` before and after execution. All application
+Deployments stayed at zero and Docker remained production.
+
+A `Sync` hook registered in desired state runs again on later sync operations.
+Remove it from the active Kustomization now so ordinary backend/frontend/worker
+activation cannot rerun Alembic. Keep the reviewed Job file in Git as an
+unregistered template for a future, separately reviewed migration revision.
+
+### 33.1 Reconfirm Gate B completion
+
+**Run on: current administration workstation (the company Ubuntu machine),
+with the Section 19 SSH tunnel running.**
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='message={.status.operationState.message}{"\n"}phase={.status.operationState.phase}{"\n"}operationRevision={.status.operationState.syncResult.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.operationState.syncResult.resources[*]}{.kind}{"\t"}{.name}{"\t"}{.hookPhase}{"\t"}{.status}{"\t"}{.message}{"\n"}{end}' \
+  | awk -F '\t' '$1 == "Job" || $2 == "arcana-backend-migration"'
+
+kubectl get jobs -n arcana
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+kubectl get pods -n arcana -o wide
+```
+
+Required results:
+
+- Git is clean at registration revision
+  `9222b603f7675a948df58a64d2310913b8721ac3`.
+- The latest operation is `Succeeded` at that revision.
+- Its Job result is `Succeeded` and `Synced`.
+- Automated synchronization is `false` and `operation=` is empty.
+- No live Job exists.
+- All application Deployments remain at zero and Redis is the only Pod.
+
+Stop on any difference.
+
+### 33.2 Unregister only the completed hook
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+
+Remove only this line from the `resources` list in
+`apps/arcana/base/kustomization.yaml`:
+
+```yaml
+  - backend-migration-job.yaml
+```
+
+Do not delete or edit `apps/arcana/base/backend-migration-job.yaml`. Do not
+change replica counts, images, Secrets, Services, or the Argo CD Application.
+
+Validate that the file remains tracked but inactive:
+
+```bash
+test -f apps/arcana/base/backend-migration-job.yaml
+
+if rg -n 'backend-migration-job\.yaml' \
+  apps/arcana/base/kustomization.yaml; then
+  echo 'STOP: completed migration hook remains registered' >&2
+  false
+else
+  echo 'Confirmed: completed migration hook is unregistered'
+fi
+
+kubeconform -strict -summary -exit-on-error \
+  apps/arcana/base/backend-migration-job.yaml
+
+kubectl kustomize apps/arcana/base \
+  | kubeconform -strict -summary -exit-on-error
+```
+
+Expected results are one valid inactive Job template and 14 valid active base
+resources.
+
+### 33.3 Render the post-migration inactive state
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`.**
+
+```bash
+render_post_migration_baseline() {
+  POST_MIGRATION_PARENT="$HOME/.cache/arcana-deployment-renders"
+  mkdir -p "$POST_MIGRATION_PARENT" || return 1
+  chmod 700 "$POST_MIGRATION_PARENT" || return 1
+
+  POST_MIGRATION_TMP="$(
+    mktemp -d "$POST_MIGRATION_PARENT/post-migration.XXXXXX"
+  )" || return 1
+  test -d "$POST_MIGRATION_TMP" || return 1
+
+  mkdir -p "$POST_MIGRATION_TMP/apps/arcana/overlays/production" \
+    || return 1
+  cp -R apps/arcana/base "$POST_MIGRATION_TMP/apps/arcana/base" \
+    || return 1
+
+  sed '/^generators:/,$d' \
+    apps/arcana/overlays/production/kustomization.yaml \
+    >"$POST_MIGRATION_TMP/apps/arcana/overlays/production/kustomization.yaml" \
+    || return 1
+
+  if ! kubectl kustomize \
+    "$POST_MIGRATION_TMP/apps/arcana/overlays/production" \
+    >"$POST_MIGRATION_TMP/post-migration.yaml"; then
+    echo 'STOP: post-migration render failed' >&2
+    return 1
+  fi
+
+  test -s "$POST_MIGRATION_TMP/post-migration.yaml" || return 1
+  kubeconform -strict -summary -exit-on-error \
+    "$POST_MIGRATION_TMP/post-migration.yaml"
+}
+
+render_post_migration_baseline
+```
+
+Expected summary: 14 valid non-secret resources.
+
+Prove the Job is absent and workload gates remain intact:
+
+```bash
+if rg -n 'kind: Job|name: arcana-backend-migration|/app/\.venv/bin/alembic' \
+  "$POST_MIGRATION_TMP/post-migration.yaml"; then
+  echo 'STOP: migration hook remains in active desired state' >&2
+  false
+else
+  echo 'Confirmed: active desired state contains no migration hook'
+fi
+
+rg -n \
+  'name: arcana-(backend|frontend|celery-worker|celery-beat)$|replicas:|/app/\.venv/bin/uvicorn|image:' \
+  "$POST_MIGRATION_TMP/post-migration.yaml"
+
+git diff --check
+git status --short
+git diff -- apps/arcana/base/kustomization.yaml
+```
+
+Required evidence:
+
+- No Job or Alembic command renders.
+- Backend still uses Uvicorn directly.
+- Backend, frontend, worker, and Beat remain at zero replicas.
+- Redis remains at one replica.
+- Only `apps/arcana/base/kustomization.yaml` is modified.
+
+### 33.4 Commit and refresh without synchronizing
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+git add apps/arcana/base/kustomization.yaml
+git diff --cached --check
+git diff --cached --stat
+git status --short
+
+git commit -m "chore: retire completed database migration hook"
+git push origin main
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+```
+
+Only the Kustomization must be staged. After the clean matching revisions are
+confirmed, request a hard refresh only:
+
+```bash
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+```
+
+Wait for Argo CD to observe the retirement commit, then verify safety:
+
+```bash
+verify_hook_retirement() {
+  local EXPECTED_REVISION OBSERVED_REVISION CONDITIONS
+  local ACTIVE_OPERATION AUTOMATED_ENABLED LIVE_JOBS
+
+  EXPECTED_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+  )" || return 1
+
+  OBSERVED_REVISION=''
+  for attempt in $(seq 1 12); do
+    OBSERVED_REVISION="$(
+      kubectl get application -n argocd arcana-production \
+        -o jsonpath='{.status.sync.revision}'
+    )" || return 1
+    test "$OBSERVED_REVISION" = "$EXPECTED_REVISION" && break
+    sleep 5
+  done
+
+  test "$OBSERVED_REVISION" = "$EXPECTED_REVISION" || {
+    echo 'STOP: Argo CD did not render the hook-retirement commit' >&2
+    return 1
+  }
+
+  CONDITIONS="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{range .status.conditions[*]}{.type}{": "}{.message}{"\n"}{end}'
+  )" || return 1
+  test -z "$CONDITIONS" || {
+    printf '%s\n' "$CONDITIONS" >&2
+    return 1
+  }
+
+  ACTIVE_OPERATION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.operation}'
+  )" || return 1
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+  LIVE_JOBS="$(kubectl get jobs -n arcana -o name)" || return 1
+
+  test -z "$ACTIVE_OPERATION" || return 1
+  test "$AUTOMATED_ENABLED" = false || return 1
+  test -z "$LIVE_JOBS" || return 1
+
+  echo 'Confirmed: completed migration hook is retired'
+  echo 'Confirmed: no operation or Job started'
+  echo 'Confirmed: automated synchronization remains disabled'
+}
+
+verify_hook_retirement
+unset -f verify_hook_retirement
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+kubectl get pods -n arcana -o wide
+```
+
+All Deployments must remain at zero and Redis must remain the only Pod. Do not
+request a sync merely to remove the already-cleaned hook; no live Job exists to
+prune.
+
+### 33.5 Stop before backend activation
+
+**Run on: no machine; this is a review checkpoint.**
+
+The migration mechanism is now inactive, so later application syncs cannot
+rerun Alembic. The next section will activate only the Kubernetes backend,
+leave frontend, worker, and Beat at zero, keep public ingress on Docker, and
+perform internal `/api/health/` and `/api/health/db` checks before any other
+workload is activated.
+
+## 34. Activate and smoke-test only the Kubernetes backend
+
+Activate one backend Pod for internal testing while Docker continues serving
+all public traffic. Frontend, worker, and Beat remain at zero, no Ingress is
+created, and automated synchronization remains disabled.
+
+Before activation, correct two shared configuration issues:
+
+- Use a host-only authentication cookie by setting `AUTH_COOKIE_DOMAIN` to an
+  empty string. A `.nguyenvanloc.com` cookie cannot support the separate
+  `stacyn.io.vn` production domain family.
+- Remove `PROMETHEUS_MULTIPROC_DIR` from the shared ConfigMap. The FastAPI
+  backend uses the normal single-process Prometheus registry; worker and Beat
+  already define their own multiprocess directory explicitly.
+
+### 34.1 Recheck the retired-hook baseline
+
+**Run on: current administration workstation (the company Ubuntu machine),
+with the Section 19 SSH tunnel running.**
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+kubectl get jobs -n arcana
+kubectl get pods -n arcana -o wide
+```
+
+Required results:
+
+- Git is clean and local/remote revisions equal retirement commit
+  `4db71d8e1a1f1b696f4330eeee5c84ffbfa269cc`.
+- Argo CD observes the same revision, automated sync is `false`, and no
+  operation is pending.
+- All Deployments remain at zero, no Job exists, and Redis is the only Pod.
+
+### 34.2 Correct backend configuration and enable one replica
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+
+In `apps/arcana/base/backend-configmap.yaml`, replace:
+
+```yaml
+  AUTH_COOKIE_DOMAIN: .nguyenvanloc.com
+```
+
+with:
+
+```yaml
+  AUTH_COOKIE_DOMAIN: ""
+```
+
+Remove this line completely from the same ConfigMap:
+
+```yaml
+  PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus-multiproc
+```
+
+Do not remove the explicit `PROMETHEUS_MULTIPROC_DIR` environment entries from
+`celery-worker-deployment.yaml` or `celery-beat-deployment.yaml`.
+
+In `apps/arcana/overlays/production/kustomization.yaml`, change only the
+backend replica override from zero to one:
+
+```yaml
+replicas:
+  - name: arcana-backend
+    count: 1
+  - name: arcana-frontend
+    count: 0
+  - name: arcana-celery-worker
+    count: 0
+  - name: arcana-celery-beat
+    count: 0
+```
+
+Do not change images, register the migration Job, or alter another replica.
+
+### 34.3 Validate the backend-only render
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubeconform -strict -summary -exit-on-error \
+  apps/arcana/base/backend-configmap.yaml \
+  apps/arcana/base/backend-deployment.yaml
+
+rg -n 'AUTH_COOKIE_DOMAIN|PROMETHEUS_MULTIPROC_DIR' \
+  apps/arcana/base/backend-configmap.yaml \
+  apps/arcana/base/celery-worker-deployment.yaml \
+  apps/arcana/base/celery-beat-deployment.yaml
+```
+
+Expected search evidence:
+
+- The ConfigMap contains `AUTH_COOKIE_DOMAIN: ""`.
+- The ConfigMap has no `PROMETHEUS_MULTIPROC_DIR`.
+- Worker and Beat each retain their explicit multiprocess setting.
+
+Render without the Secret generator:
+
+```bash
+render_backend_activation() {
+  BACKEND_RENDER_PARENT="$HOME/.cache/arcana-deployment-renders"
+  mkdir -p "$BACKEND_RENDER_PARENT" || return 1
+  chmod 700 "$BACKEND_RENDER_PARENT" || return 1
+
+  BACKEND_RENDER_TMP="$(
+    mktemp -d "$BACKEND_RENDER_PARENT/backend-activation.XXXXXX"
+  )" || return 1
+  test -d "$BACKEND_RENDER_TMP" || return 1
+
+  mkdir -p "$BACKEND_RENDER_TMP/apps/arcana/overlays/production" \
+    || return 1
+  cp -R apps/arcana/base "$BACKEND_RENDER_TMP/apps/arcana/base" \
+    || return 1
+
+  sed '/^generators:/,$d' \
+    apps/arcana/overlays/production/kustomization.yaml \
+    >"$BACKEND_RENDER_TMP/apps/arcana/overlays/production/kustomization.yaml" \
+    || return 1
+
+  kubectl kustomize \
+    "$BACKEND_RENDER_TMP/apps/arcana/overlays/production" \
+    >"$BACKEND_RENDER_TMP/backend-activation.yaml" || return 1
+
+  test -s "$BACKEND_RENDER_TMP/backend-activation.yaml" || return 1
+  kubeconform -strict -summary -exit-on-error \
+    "$BACKEND_RENDER_TMP/backend-activation.yaml"
+}
+
+render_backend_activation
+```
+
+Expected summary: 14 valid non-secret resources.
+
+Inspect replicas, commands, and images:
+
+```bash
+rg -n \
+  'name: arcana-(backend|frontend|celery-worker|celery-beat)$|replicas:|/app/\.venv/bin/(uvicorn|alembic)|image:' \
+  "$BACKEND_RENDER_TMP/backend-activation.yaml"
+
+if rg -n 'kind: Job|name: arcana-backend-migration|/app/\.venv/bin/alembic' \
+  "$BACKEND_RENDER_TMP/backend-activation.yaml"; then
+  echo 'STOP: migration hook rendered during backend activation' >&2
+  false
+else
+  echo 'Confirmed: backend activation contains no migration hook'
+fi
+
+git diff --check
+git status --short
+git diff -- \
+  apps/arcana/base/backend-configmap.yaml \
+  apps/arcana/overlays/production/kustomization.yaml
+```
+
+Required evidence:
+
+- Backend renders one replica and direct Uvicorn startup.
+- Frontend, worker, and Beat render zero replicas.
+- No Job or Alembic command renders.
+- All images remain immutable.
+- Git lists only the ConfigMap and production Kustomization changes.
+
+### 34.4 Commit and render without synchronizing
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+git add \
+  apps/arcana/base/backend-configmap.yaml \
+  apps/arcana/overlays/production/kustomization.yaml
+
+git diff --cached --check
+git diff --cached --stat
+git status --short
+
+git commit -m "feat: stage Kubernetes backend activation"
+git push origin main
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+```
+
+Only those two files may be staged. Then hard-refresh Argo CD without starting
+an operation:
+
+```bash
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+```
+
+Wait for Argo CD to observe the pushed commit and confirm no render conditions,
+no operation, no Job, and automated sync disabled using the same fail-closed
+pattern from Section 33.4. Live Deployments must still remain at zero because
+no sync has been requested yet.
+
+### 34.5 Request the backend-only manual sync
+
+**Run on: current administration workstation (the company Ubuntu machine).
+This starts one internal Kubernetes backend Pod but does not expose it
+publicly.**
+
+Use a revision-pinned guarded function:
+
+```bash
+sync_backend_activation() {
+  local EXPECTED_REVISION REMOTE_REVISION OBSERVED_REVISION
+  local AUTOMATED_ENABLED ACTIVE_OPERATION LIVE_JOBS
+
+  EXPECTED_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+  )" || return 1
+  REMOTE_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+  )" || return 1
+  OBSERVED_REVISION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.sync.revision}'
+  )" || return 1
+
+  test "$EXPECTED_REVISION" = "$REMOTE_REVISION" \
+    && test "$EXPECTED_REVISION" = "$OBSERVED_REVISION" || {
+      echo 'STOP: backend activation revisions do not match' >&2
+      return 1
+    }
+
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+  ACTIVE_OPERATION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.operation}'
+  )" || return 1
+  LIVE_JOBS="$(kubectl get jobs -n arcana -o name)" || return 1
+
+  test "$AUTOMATED_ENABLED" = false || return 1
+  test -z "$ACTIVE_OPERATION" || return 1
+  test -z "$LIVE_JOBS" || return 1
+
+  CURRENT_BACKEND_REPLICAS="$(
+    kubectl get deployment -n arcana arcana-backend \
+      -o jsonpath='{.spec.replicas}'
+  )" || return 1
+  test "$CURRENT_BACKEND_REPLICAS" = 0 || {
+    echo 'STOP: live backend is not at zero before activation' >&2
+    return 1
+  }
+
+  kubectl patch application -n argocd arcana-production \
+    --type=merge \
+    --patch "{\"operation\":{\"initiatedBy\":{\"username\":\"backend-activation-guide\"},\"sync\":{\"revision\":\"$EXPECTED_REVISION\",\"prune\":false}}}" \
+    || return 1
+
+  printf 'Requested backend activation at %s\n' "$EXPECTED_REVISION"
+}
+
+sync_backend_activation
+unset -f sync_backend_activation
+```
+
+Do not run it twice. Wait for the operation using the revision-aware polling
+pattern from Section 32.3. Require `Succeeded` at the exact backend activation
+revision.
+
+### 34.6 Verify rollout and configuration
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubectl rollout status -n arcana deployment/arcana-backend --timeout=5m
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas,AVAILABLE:.status.availableReplicas'
+kubectl get pods -n arcana -o wide
+kubectl get jobs -n arcana
+kubectl get ingress -n arcana
+```
+
+Required results:
+
+- Backend is `1/1` ready and available.
+- Frontend, worker, and Beat remain at zero.
+- Redis and backend are the only Arcana Pods.
+- No Job and no Ingress exists.
+
+Verify the live backend command and safe non-secret environment behavior:
+
+```bash
+kubectl get deployment -n arcana arcana-backend \
+  -o jsonpath='command={.spec.template.spec.containers[0].command}{"\n"}args={.spec.template.spec.containers[0].args}{"\n"}'
+
+kubectl exec -n arcana deployment/arcana-backend -- /bin/sh -ec '
+  test -z "$AUTH_COOKIE_DOMAIN"
+  test -z "${PROMETHEUS_MULTIPROC_DIR+x}"
+  printf "Backend cookie and Prometheus environment are correct\n"
+'
+```
+
+Expected command is `/app/.venv/bin/uvicorn`; arguments start `app:app`, and
+the environment check prints its confirmation. This does not print Secret
+values.
+
+Inspect recent logs for startup failures without dumping environment:
+
+```bash
+kubectl logs -n arcana deployment/arcana-backend \
+  --tail=100
+```
+
+Do not paste log lines containing tokens, URLs, email addresses, or other user
+data into chat. Redact unexpected sensitive fields before sharing an error.
+
+### 34.7 Perform internal HTTP and database smoke tests
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+Open a dedicated terminal and keep this port-forward running:
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+kubectl port-forward -n arcana service/arcana-backend \
+  18000:8000
+```
+
+In a second terminal on the same Ubuntu machine:
+
+```bash
+curl --proto '=http' -fsS \
+  http://127.0.0.1:18000/api/health/
+
+curl --proto '=http' -fsS \
+  http://127.0.0.1:18000/api/health/db
+```
+
+Expected JSON:
+
+```json
+{"status":"ok","message":"Application is healthy"}
+{"status":"healthy","database":"connected"}
+```
+
+The database endpoint always returns HTTP 200 even when unhealthy, so the JSON
+body must explicitly say `"status":"healthy"` and
+`"database":"connected"`. Stop the port-forward with `Ctrl-C` afterward.
+
+Reconfirm isolation and capacity:
+
+```bash
+kubectl get svc -n arcana
+kubectl get ingress -n arcana
+kubectl top pods -n arcana
+kubectl top node myvps
+
+ssh vps '
+  docker ps \
+    --filter name=tarot-backend \
+    --filter name=tarot-frontend \
+    --filter name=tarot-celery-worker \
+    --filter name=tarot-celery-beat \
+    --filter name=tarot-redis \
+    --filter name=traefik \
+    --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  df -h /
+  sudo du -sh /var/lib/rancher
+'
+```
+
+All Kubernetes Services remain internal, no Ingress exists, Docker production
+remains running, and disk must stay above 10 GiB.
+
+### 34.8 Stop before frontend or worker activation
+
+**Run on: no machine; this is a review checkpoint.**
+
+The Kubernetes backend is internal-only and receives no public traffic. Do not
+activate frontend, worker, or Beat yet. Before public backend cutover, add and
+review persistent avatar storage; the current backend image's `/avatar` path is
+not yet backed by a Kubernetes volume. The next phase will activate and smoke-
+test the frontend internally while leaving worker and Beat at zero.
+
+## 35. Activate and smoke-test only the Kubernetes frontend
+
+Activate one frontend Pod behind its internal ClusterIP Service. The Kubernetes
+backend remains internally healthy, worker and Beat remain at zero, and Docker
+Traefik continues serving every public request. This phase verifies the
+frontend server and static application rendering only; it does not change DNS,
+Ingress, or browser traffic.
+
+### 35.1 Recheck the backend-only boundary
+
+**Run on: current administration workstation (the company Ubuntu machine),
+with the Section 19 SSH tunnel running.**
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+kubectl get pods -n arcana -o wide
+kubectl get jobs -n arcana
+kubectl get ingress -n arcana
+```
+
+Continue only when:
+
+- Git is clean and `HEAD`, `origin/main`, and Argo CD revision match.
+- Automated synchronization is `false` and `operation=` is empty.
+- Backend is `1/1`; frontend, worker, and Beat are zero.
+- Backend and Redis are the only Arcana Pods.
+- No Job or Ingress exists.
+
+Recheck the internal backend endpoints through a temporary port-forward if the
+previous successful check is no longer recent. Do not proceed with a degraded
+backend.
+
+### 35.2 Enable one frontend replica in Git
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+
+In `apps/arcana/overlays/production/kustomization.yaml`, change only the
+frontend count from zero to one:
+
+```yaml
+replicas:
+  - name: arcana-backend
+    count: 1
+  - name: arcana-frontend
+    count: 1
+  - name: arcana-celery-worker
+    count: 0
+  - name: arcana-celery-beat
+    count: 0
+```
+
+Do not change any image, register the migration Job, enable worker or Beat, or
+add an Ingress.
+
+### 35.3 Validate the frontend activation render
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubeconform -strict -summary -exit-on-error \
+  apps/arcana/base/frontend-deployment.yaml \
+  apps/arcana/base/frontend-service.yaml
+
+render_frontend_activation() {
+  FRONTEND_RENDER_PARENT="$HOME/.cache/arcana-deployment-renders"
+  mkdir -p "$FRONTEND_RENDER_PARENT" || return 1
+  chmod 700 "$FRONTEND_RENDER_PARENT" || return 1
+
+  FRONTEND_RENDER_TMP="$(
+    mktemp -d "$FRONTEND_RENDER_PARENT/frontend-activation.XXXXXX"
+  )" || return 1
+  test -d "$FRONTEND_RENDER_TMP" || return 1
+
+  mkdir -p "$FRONTEND_RENDER_TMP/apps/arcana/overlays/production" \
+    || return 1
+  cp -R apps/arcana/base "$FRONTEND_RENDER_TMP/apps/arcana/base" \
+    || return 1
+
+  sed '/^generators:/,$d' \
+    apps/arcana/overlays/production/kustomization.yaml \
+    >"$FRONTEND_RENDER_TMP/apps/arcana/overlays/production/kustomization.yaml" \
+    || return 1
+
+  kubectl kustomize \
+    "$FRONTEND_RENDER_TMP/apps/arcana/overlays/production" \
+    >"$FRONTEND_RENDER_TMP/frontend-activation.yaml" || return 1
+
+  test -s "$FRONTEND_RENDER_TMP/frontend-activation.yaml" || return 1
+  kubeconform -strict -summary -exit-on-error \
+    "$FRONTEND_RENDER_TMP/frontend-activation.yaml"
+}
+
+render_frontend_activation
+```
+
+Expected results are two valid frontend resources and 14 valid non-secret
+production resources.
+
+Inspect gates, images, and forbidden exposure:
+
+```bash
+rg -n \
+  'name: arcana-(backend|frontend|celery-worker|celery-beat)$|replicas:|image:|type: (NodePort|LoadBalancer)' \
+  "$FRONTEND_RENDER_TMP/frontend-activation.yaml"
+
+if rg -n \
+  'kind: Job|name: arcana-backend-migration|/app/\.venv/bin/alembic|kind: Ingress|type: (NodePort|LoadBalancer)' \
+  "$FRONTEND_RENDER_TMP/frontend-activation.yaml"; then
+  echo 'STOP: forbidden migration or public exposure rendered' >&2
+  false
+else
+  echo 'Confirmed: frontend activation is internal and migration-free'
+fi
+
+git diff --check
+git status --short
+git diff -- apps/arcana/overlays/production/kustomization.yaml
+```
+
+Required evidence:
+
+- Backend and frontend render one replica each.
+- Worker and Beat render zero.
+- Backend and frontend images retain the immutable SHA.
+- No Job, Alembic command, Ingress, NodePort, or LoadBalancer renders.
+- Only the production Kustomization is modified.
+
+### 35.4 Commit, push, and refresh without synchronizing
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+git add apps/arcana/overlays/production/kustomization.yaml
+git diff --cached --check
+git diff --cached --stat
+git status --short
+
+git commit -m "feat: stage Kubernetes frontend activation"
+git push origin main
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+```
+
+Only the production Kustomization may be staged. Hard-refresh without starting
+an operation:
+
+```bash
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+```
+
+Wait for Argo CD to observe the pushed revision. Require no render conditions,
+no `.operation`, no Job, and automated synchronization `false`. The live
+frontend must remain at zero until the manual sync is requested.
+
+### 35.5 Request the frontend-only manual sync
+
+**Run on: current administration workstation (the company Ubuntu machine).
+This starts one internal frontend Pod but creates no public route.**
+
+```bash
+sync_frontend_activation() {
+  local EXPECTED_REVISION REMOTE_REVISION OBSERVED_REVISION
+  local AUTOMATED_ENABLED ACTIVE_OPERATION LIVE_JOBS
+  local BACKEND_REPLICAS FRONTEND_REPLICAS WORKER_REPLICAS BEAT_REPLICAS
+
+  EXPECTED_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+  )" || return 1
+  REMOTE_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+  )" || return 1
+  OBSERVED_REVISION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.sync.revision}'
+  )" || return 1
+
+  test "$EXPECTED_REVISION" = "$REMOTE_REVISION" \
+    && test "$EXPECTED_REVISION" = "$OBSERVED_REVISION" || {
+      echo 'STOP: frontend activation revisions do not match' >&2
+      return 1
+    }
+
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+  ACTIVE_OPERATION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.operation}'
+  )" || return 1
+  LIVE_JOBS="$(kubectl get jobs -n arcana -o name)" || return 1
+
+  test "$AUTOMATED_ENABLED" = false || return 1
+  test -z "$ACTIVE_OPERATION" || return 1
+  test -z "$LIVE_JOBS" || return 1
+
+  BACKEND_REPLICAS="$(kubectl get deployment -n arcana arcana-backend -o jsonpath='{.spec.replicas}')" || return 1
+  FRONTEND_REPLICAS="$(kubectl get deployment -n arcana arcana-frontend -o jsonpath='{.spec.replicas}')" || return 1
+  WORKER_REPLICAS="$(kubectl get deployment -n arcana arcana-celery-worker -o jsonpath='{.spec.replicas}')" || return 1
+  BEAT_REPLICAS="$(kubectl get deployment -n arcana arcana-celery-beat -o jsonpath='{.spec.replicas}')" || return 1
+
+  test "$BACKEND_REPLICAS" = 1 \
+    && test "$FRONTEND_REPLICAS" = 0 \
+    && test "$WORKER_REPLICAS" = 0 \
+    && test "$BEAT_REPLICAS" = 0 || {
+      echo 'STOP: live workload boundary is not backend-only' >&2
+      return 1
+    }
+
+  kubectl patch application -n argocd arcana-production \
+    --type=merge \
+    --patch "{\"operation\":{\"initiatedBy\":{\"username\":\"frontend-activation-guide\"},\"sync\":{\"revision\":\"$EXPECTED_REVISION\",\"prune\":false}}}" \
+    || return 1
+
+  printf 'Requested frontend activation at %s\n' "$EXPECTED_REVISION"
+}
+
+sync_frontend_activation
+unset -f sync_frontend_activation
+```
+
+Run it once. Wait for `Succeeded` at the exact frontend activation revision
+using the revision-aware polling pattern from Section 32.3.
+
+### 35.6 Verify frontend rollout and isolation
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubectl rollout status -n arcana deployment/arcana-frontend --timeout=5m
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas,AVAILABLE:.status.availableReplicas'
+kubectl get pods -n arcana -o wide
+kubectl get jobs -n arcana
+kubectl get ingress -n arcana
+kubectl get svc -n arcana
+```
+
+Required results:
+
+- Backend and frontend are each `1/1` ready.
+- Worker and Beat remain zero.
+- Redis, backend, and frontend are the only Arcana Pods.
+- No Job or Ingress exists and every Service remains internal.
+
+Verify the frontend security and writable-volume contract without printing
+environment values:
+
+```bash
+kubectl get deployment -n arcana arcana-frontend \
+  -o jsonpath='runAsUser={.spec.template.spec.securityContext.runAsUser}{"\n"}readOnlyRoot={.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem}{"\n"}{range .spec.template.spec.containers[0].volumeMounts[*]}mount={.mountPath}{"\n"}{end}'
+```
+
+Expected values are UID `1000`, `readOnlyRoot=true`, and mounts at
+`/app/.next/cache` and `/tmp`.
+
+Review recent logs without posting user data or unexpected tokens:
+
+```bash
+kubectl logs -n arcana deployment/arcana-frontend --tail=100
+```
+
+### 35.7 Smoke-test frontend rendering through a local port-forward
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+In a dedicated terminal:
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+kubectl port-forward -n arcana service/arcana-frontend \
+  13000:3000
+```
+
+In a second terminal while the port-forward remains running:
+
+```bash
+curl --proto '=http' -sS \
+  -D - \
+  -o /dev/null \
+  http://127.0.0.1:13000/
+
+curl --proto '=http' -L --max-redirs 5 -fsS \
+  -o /dev/null \
+  -w 'final_status=%{http_code} final_url=%{url_effective} content_type=%{content_type}\n' \
+  http://127.0.0.1:13000/
+
+curl --proto '=http' -L --max-redirs 5 -fsS \
+  http://127.0.0.1:13000/ \
+  | rg -i -m1 '<!doctype html|<html'
+```
+
+The initial request may return the application's expected HTTP 307 redirect;
+record and inspect its `Location` header. The followed request must end at an
+expected application route with HTTP 200, an HTML content type, and an HTML
+document marker. Kubernetes HTTP probes treat status codes from 200 through
+399 as successful, so the expected redirect does not make the Pod unhealthy.
+Stop the port-forward with `Ctrl-C` afterward.
+
+This localhost smoke test proves the Next.js server renders; it does not prove
+browser API routing for production hostnames. That will be tested later with
+explicit host routing before public cutover.
+
+Reconfirm capacity and Docker production:
+
+```bash
+kubectl top pods -n arcana
+kubectl top node myvps
+
+ssh vps '
+  docker ps \
+    --filter name=tarot-backend \
+    --filter name=tarot-frontend \
+    --filter name=tarot-celery-worker \
+    --filter name=tarot-celery-beat \
+    --filter name=tarot-redis \
+    --filter name=traefik \
+    --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  df -h /
+  sudo du -sh /var/lib/rancher
+'
+```
+
+### 35.8 Stop before worker activation
+
+**Run on: no machine; this is a review checkpoint.**
+
+The Kubernetes frontend and backend remain internal-only. Do not activate
+worker or Beat yet. The next phase will activate only one concurrency-one
+worker, confirm Redis broker connectivity and registered task queues, and avoid
+submitting production tasks during the smoke test. Kubernetes Beat remains at
+zero until the Docker Beat cutover.
+
+## 36. Activate and smoke-test one Kubernetes Celery worker
+
+Activate one concurrency-one worker against the Kubernetes Redis broker. The
+worker uses the production database credentials but receives no public API
+traffic and has no Kubernetes Beat scheduler producing periodic tasks. The
+smoke test uses Celery control commands only and must not enqueue an application
+task.
+
+The existing Docker worker continues serving the Docker Redis broker. Because
+the Docker and Kubernetes brokers are separate Redis instances, the two workers
+do not compete for the same queues during this internal staging phase.
+
+### 36.1 Recheck the frontend/backend boundary
+
+**Run on: current administration workstation (the company Ubuntu machine),
+with the Section 19 SSH tunnel running.**
+
+```bash
+cd "$HOME/Personal/arcana-deployment"
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+kubectl get pods -n arcana -o wide
+kubectl get jobs -n arcana
+kubectl get ingress -n arcana
+```
+
+Continue only when Git and Argo CD revisions match, automated sync is `false`,
+no operation or Job exists, backend and frontend are each `1/1`, worker and
+Beat are zero, Redis/backend/frontend are the only Pods, and no Ingress exists.
+
+Recheck capacity and Docker production:
+
+```bash
+kubectl top node myvps
+
+ssh vps '
+  docker ps \
+    --filter name=tarot-backend \
+    --filter name=tarot-frontend \
+    --filter name=tarot-celery-worker \
+    --filter name=tarot-celery-beat \
+    --filter name=tarot-redis \
+    --filter name=traefik \
+    --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  df -h /
+  sudo du -sh /var/lib/rancher
+'
+```
+
+Disk must remain above 10 GiB and Docker production must be unchanged.
+
+### 36.2 Enable one worker replica in Git
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+
+In `apps/arcana/overlays/production/kustomization.yaml`, change only the worker
+count from zero to one:
+
+```yaml
+replicas:
+  - name: arcana-backend
+    count: 1
+  - name: arcana-frontend
+    count: 1
+  - name: arcana-celery-worker
+    count: 1
+  - name: arcana-celery-beat
+    count: 0
+```
+
+Do not change images, register the migration Job, activate Beat, or add public
+exposure.
+
+### 36.3 Validate the worker activation render
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubeconform -strict -summary -exit-on-error \
+  apps/arcana/base/celery-worker-deployment.yaml \
+  apps/arcana/base/celery-worker-service.yaml
+
+render_worker_activation() {
+  WORKER_RENDER_PARENT="$HOME/.cache/arcana-deployment-renders"
+  mkdir -p "$WORKER_RENDER_PARENT" || return 1
+  chmod 700 "$WORKER_RENDER_PARENT" || return 1
+
+  WORKER_RENDER_TMP="$(
+    mktemp -d "$WORKER_RENDER_PARENT/worker-activation.XXXXXX"
+  )" || return 1
+  test -d "$WORKER_RENDER_TMP" || return 1
+
+  mkdir -p "$WORKER_RENDER_TMP/apps/arcana/overlays/production" \
+    || return 1
+  cp -R apps/arcana/base "$WORKER_RENDER_TMP/apps/arcana/base" \
+    || return 1
+
+  sed '/^generators:/,$d' \
+    apps/arcana/overlays/production/kustomization.yaml \
+    >"$WORKER_RENDER_TMP/apps/arcana/overlays/production/kustomization.yaml" \
+    || return 1
+
+  kubectl kustomize \
+    "$WORKER_RENDER_TMP/apps/arcana/overlays/production" \
+    >"$WORKER_RENDER_TMP/worker-activation.yaml" || return 1
+
+  test -s "$WORKER_RENDER_TMP/worker-activation.yaml" || return 1
+  kubeconform -strict -summary -exit-on-error \
+    "$WORKER_RENDER_TMP/worker-activation.yaml"
+}
+
+render_worker_activation
+```
+
+Expected results are two valid worker resources and 14 valid non-secret
+production resources.
+
+Inspect the worker contract and workload gates:
+
+```bash
+rg -n \
+  'name: arcana-(backend|frontend|celery-worker|celery-beat)$|replicas:|/app/\.venv/bin/(celery|alembic|uvicorn)|--queues=|--concurrency=|PROMETHEUS_MULTIPROC_DIR|image:' \
+  "$WORKER_RENDER_TMP/worker-activation.yaml"
+
+if rg -n \
+  'kind: Job|name: arcana-backend-migration|/app/\.venv/bin/alembic|kind: Ingress|type: (NodePort|LoadBalancer)' \
+  "$WORKER_RENDER_TMP/worker-activation.yaml"; then
+  echo 'STOP: forbidden migration or public exposure rendered' >&2
+  false
+else
+  echo 'Confirmed: worker activation is internal and migration-free'
+fi
+
+git diff --check
+git status --short
+git diff -- apps/arcana/overlays/production/kustomization.yaml
+```
+
+Required evidence:
+
+- Backend, frontend, and worker render one replica; Beat renders zero.
+- Worker uses the immutable backend image.
+- Worker command is `/app/.venv/bin/celery` with queues
+  `email,notifications,celery,dead_letter` and concurrency one.
+- Its multiprocess metrics directory remains explicit.
+- No Job, Alembic command, Ingress, NodePort, or LoadBalancer renders.
+- Only the production Kustomization is modified.
+
+### 36.4 Commit, push, and refresh without synchronizing
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+git add apps/arcana/overlays/production/kustomization.yaml
+git diff --cached --check
+git diff --cached --stat
+git status --short
+
+git commit -m "feat: stage Kubernetes Celery worker activation"
+git push origin main
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+```
+
+Only the production Kustomization may be staged. Hard-refresh Argo CD without
+starting an operation:
+
+```bash
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+```
+
+Wait for Argo CD to observe the pushed revision. Require no render conditions,
+no `.operation`, no Job, and automated synchronization `false`. The live
+worker must remain at zero until the manual sync.
+
+### 36.5 Request the worker-only manual sync
+
+**Run on: current administration workstation (the company Ubuntu machine).
+This starts one internal worker and does not submit a task.**
+
+```bash
+sync_worker_activation() {
+  local EXPECTED_REVISION REMOTE_REVISION OBSERVED_REVISION
+  local AUTOMATED_ENABLED ACTIVE_OPERATION LIVE_JOBS
+  local BACKEND_REPLICAS FRONTEND_REPLICAS WORKER_REPLICAS BEAT_REPLICAS
+
+  EXPECTED_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+  )" || return 1
+  REMOTE_REVISION="$(
+    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+  )" || return 1
+  OBSERVED_REVISION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.sync.revision}'
+  )" || return 1
+
+  test "$EXPECTED_REVISION" = "$REMOTE_REVISION" \
+    && test "$EXPECTED_REVISION" = "$OBSERVED_REVISION" || {
+      echo 'STOP: worker activation revisions do not match' >&2
+      return 1
+    }
+
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+  ACTIVE_OPERATION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.operation}'
+  )" || return 1
+  LIVE_JOBS="$(kubectl get jobs -n arcana -o name)" || return 1
+
+  test "$AUTOMATED_ENABLED" = false || return 1
+  test -z "$ACTIVE_OPERATION" || return 1
+  test -z "$LIVE_JOBS" || return 1
+
+  BACKEND_REPLICAS="$(kubectl get deployment -n arcana arcana-backend -o jsonpath='{.spec.replicas}')" || return 1
+  FRONTEND_REPLICAS="$(kubectl get deployment -n arcana arcana-frontend -o jsonpath='{.spec.replicas}')" || return 1
+  WORKER_REPLICAS="$(kubectl get deployment -n arcana arcana-celery-worker -o jsonpath='{.spec.replicas}')" || return 1
+  BEAT_REPLICAS="$(kubectl get deployment -n arcana arcana-celery-beat -o jsonpath='{.spec.replicas}')" || return 1
+
+  test "$BACKEND_REPLICAS" = 1 \
+    && test "$FRONTEND_REPLICAS" = 1 \
+    && test "$WORKER_REPLICAS" = 0 \
+    && test "$BEAT_REPLICAS" = 0 || {
+      echo 'STOP: live boundary is not ready for worker activation' >&2
+      return 1
+    }
+
+  kubectl patch application -n argocd arcana-production \
+    --type=merge \
+    --patch "{\"operation\":{\"initiatedBy\":{\"username\":\"worker-activation-guide\"},\"sync\":{\"revision\":\"$EXPECTED_REVISION\",\"prune\":false}}}" \
+    || return 1
+
+  printf 'Requested worker activation at %s\n' "$EXPECTED_REVISION"
+}
+
+sync_worker_activation
+unset -f sync_worker_activation
+```
+
+Run it once. Wait for `Succeeded` at the exact worker activation revision using
+the revision-aware polling pattern from Section 32.3.
+
+### 36.6 Verify rollout and broker connectivity
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubectl rollout status -n arcana \
+  deployment/arcana-celery-worker \
+  --timeout=5m
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas,AVAILABLE:.status.availableReplicas'
+kubectl get pods -n arcana -o wide
+kubectl get jobs -n arcana
+kubectl get ingress -n arcana
+```
+
+Required results:
+
+- Backend, frontend, and worker are each `1/1` ready.
+- Beat remains zero.
+- Redis, backend, frontend, and worker are the only Arcana Pods.
+- No Job or Ingress exists.
+
+Verify the worker command and init-container completion:
+
+```bash
+kubectl get deployment -n arcana arcana-celery-worker \
+  -o jsonpath='command={.spec.template.spec.containers[0].command}{"\n"}args={.spec.template.spec.containers[0].args}{"\n"}'
+
+kubectl get pod -n arcana \
+  -l app.kubernetes.io/name=arcana-celery-worker \
+  -o jsonpath='{range .items[*]}pod={.metadata.name}{"\n"}{range .status.initContainerStatuses[*]}init={.name} terminated={.state.terminated.reason} exit={.state.terminated.exitCode}{"\n"}{end}{end}'
+```
+
+Expected command is Celery with the four reviewed queues and concurrency one;
+`wait-for-redis` must show `Completed` and exit zero.
+
+Use Celery control commands only. They exchange worker-control messages but do
+not enqueue application tasks:
+
+```bash
+kubectl exec -n arcana deployment/arcana-celery-worker -- \
+  /app/.venv/bin/celery -A celery_app inspect ping --timeout=10
+
+kubectl exec -n arcana deployment/arcana-celery-worker -- \
+  /app/.venv/bin/celery -A celery_app inspect registered --timeout=10
+
+kubectl exec -n arcana deployment/arcana-celery-worker -- \
+  /app/.venv/bin/celery -A celery_app inspect active --timeout=10
+
+kubectl exec -n arcana deployment/arcana-celery-worker -- \
+  /app/.venv/bin/celery -A celery_app inspect reserved --timeout=10
+
+kubectl exec -n arcana deployment/arcana-celery-worker -- \
+  /app/.venv/bin/celery -A celery_app inspect scheduled --timeout=10
+```
+
+Required evidence:
+
+- `ping` receives one `pong` from the Kubernetes worker.
+- Registered output includes the expected email, notification, journal, web
+  push, and dead-letter task modules.
+- Active, reserved, and scheduled contain no application tasks.
+
+Do not run `celery call`, `delay`, `apply_async`, or an API action that submits
+a task during this smoke test.
+
+### 36.7 Verify internal metrics and steady state
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+In a dedicated terminal:
+
+```bash
+kubectl port-forward -n arcana \
+  service/arcana-celery-worker-metrics \
+  18001:8001
+```
+
+In a second terminal while the port-forward remains active:
+
+```bash
+curl --proto '=http' -fsS -o /dev/null \
+  -w 'status=%{http_code} content_type=%{content_type}\n' \
+  http://127.0.0.1:18001/metrics
+```
+
+Expected result is HTTP 200 with a Prometheus text content type. Stop the
+port-forward with `Ctrl-C` afterward.
+
+Review recent logs, then recheck capacity and Docker production:
+
+```bash
+kubectl logs -n arcana deployment/arcana-celery-worker \
+  --tail=150
+
+kubectl top pods -n arcana
+kubectl top node myvps
+
+ssh vps '
+  docker ps \
+    --filter name=tarot-backend \
+    --filter name=tarot-frontend \
+    --filter name=tarot-celery-worker \
+    --filter name=tarot-celery-beat \
+    --filter name=tarot-redis \
+    --filter name=traefik \
+    --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  df -h /
+  sudo du -sh /var/lib/rancher
+'
+```
+
+Redact unexpected sensitive log fields before sharing them. Disk must remain
+above 10 GiB, node capacity must remain healthy, and Docker must remain
+unchanged.
+
+### 36.8 Remediate the worker's root execution
+
+The first worker rollout was functionally healthy but Celery emitted:
+
+```text
+SecurityWarning: You're running the worker with superuser privileges
+uid=0 euid=0 gid=0 egid=0
+```
+
+Do not accept that warning for the Kubernetes workload. The pinned backend
+image has no passwd/group entry for numeric UID/GID 1000, so Celery treats that
+unresolvable identity as potentially privileged. Run the worker as the image's
+existing `nobody:nogroup` UID/GID 65534 and use Pod `fsGroup` ownership for its
+writable Prometheus multiprocess `emptyDir`. A future backend image should
+replace this generic account with a dedicated named application account.
+
+#### Update and validate the worker security context
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+
+In `apps/arcana/base/celery-worker-deployment.yaml`, add this Pod-level
+`securityContext` immediately under the Pod template's `spec`, before
+`initContainers`:
+
+```yaml
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+      initContainers:
+```
+
+Keep the existing container-level capability drop and seccomp controls. The
+Pod setting also applies to `wait-for-redis`; the Redis image's `redis-cli`
+does not require root.
+
+Validate source and rendered security:
+
+```bash
+kubeconform -strict -summary -exit-on-error \
+  apps/arcana/base/celery-worker-deployment.yaml
+
+kubectl kustomize apps/arcana/base \
+  | kubeconform -strict -summary -exit-on-error
+
+rg -n \
+  'runAsNonRoot|runAsUser|runAsGroup|fsGroup|fsGroupChangePolicy|allowPrivilegeEscalation|drop:|seccompProfile' \
+  apps/arcana/base/celery-worker-deployment.yaml
+
+git diff --check
+git status --short
+git diff -- apps/arcana/base/celery-worker-deployment.yaml
+```
+
+Only the worker Deployment may be modified. Required values are UID/GID/fsGroup
+65534, non-root enabled, `OnRootMismatch`, privilege escalation disabled, all
+capabilities dropped, and RuntimeDefault seccomp.
+
+#### Commit, refresh, and synchronize the remediation
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+git add apps/arcana/base/celery-worker-deployment.yaml
+git diff --cached --check
+git diff --cached --stat
+git status --short
+
+git commit -m "fix: run Kubernetes Celery worker as non-root"
+git push origin main
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+```
+
+Hard-refresh Argo CD and wait for the pushed revision without synchronizing:
+
+```bash
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+```
+
+Require the matching revision, no render conditions, no operation, no Job, and
+automated synchronization `false`. Then request one revision-pinned manual sync
+using the same guards as Section 36.5, except the live boundary must now be
+backend/frontend/worker at one and Beat at zero. Keep pruning disabled.
+
+Wait for `Succeeded` at the exact remediation revision, then:
+
+```bash
+kubectl rollout status -n arcana \
+  deployment/arcana-celery-worker \
+  --timeout=5m
+
+kubectl exec -n arcana deployment/arcana-celery-worker -- id
+
+kubectl get pod -n arcana \
+  -l app.kubernetes.io/name=arcana-celery-worker \
+  -o jsonpath='{range .items[*]}pod={.metadata.name}{"\n"}{range .status.initContainerStatuses[*]}init={.name} reason={.state.terminated.reason} exit={.state.terminated.exitCode}{"\n"}{end}{end}'
+
+kubectl logs -n arcana deployment/arcana-celery-worker \
+  --tail=150
+```
+
+Required evidence:
+
+- `id` reports `uid=65534(nobody) gid=65534(nogroup)`.
+- `wait-for-redis` completes with exit zero.
+- Worker reaches the ready state and no superuser warning appears in the new
+  Pod's logs.
+
+Repeat the Section 36.6 `inspect ping`, `registered`, `active`, `reserved`, and
+`scheduled` commands. Require one pong, expected registered tasks, and no
+active/reserved/scheduled tasks. Repeat the metrics HTTP 200 check and capacity
+checks from Section 36.7.
+
+### 36.9 Stop before Beat or public cutover
+
+**Run on: no machine; this is a review checkpoint.**
+
+The worker is connected to the isolated Kubernetes broker but has processed no
+application tasks. Do not activate Kubernetes Beat while Docker Beat runs.
+Before any public cutover, add persistent avatar storage and decide how existing
+avatar data will be migrated. The next phase should address that data path
+before scheduler or ingress changes.
+
+## 37. Inventory persistent avatar data before storage staging
+
+The production backend writes avatar files to `/avatar`, while the `users`
+table stores only their filenames. Docker Compose bind-mounts the same host
+directory into the backend, worker, and Beat containers. The Kubernetes
+backend currently has no `/avatar` mount, so uploads through it would be written
+into ephemeral container storage and lost when the Pod is replaced.
+
+This section is observation-only. Do not upload or delete an avatar through the
+Kubernetes backend, create a PVC, copy data, or change public routing yet.
+
+### 37.1 Reconfirm the migration boundary
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+kubectl get deployment -n arcana \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas'
+kubectl get jobs -n arcana
+kubectl get ingress -n arcana
+
+kubectl exec -n arcana deployment/arcana-celery-worker -- id
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+```
+
+Require backend, frontend, and worker at one replica; Beat at zero; no Job; no
+Ingress; worker identity `nobody:nogroup`; automated synchronization `false`;
+and no active operation.
+
+### 37.2 Resolve and inventory the Docker avatar source
+
+**Run on: VPS, through `ssh vps` from the current administration workstation.**
+
+The following block resolves the bind-mount source from Docker metadata. It
+refuses an empty path, a non-directory, or a symbolic link and prints only
+aggregate file information—not avatar filenames:
+
+```bash
+ssh vps '
+  set -eu
+
+  AVATAR_SOURCE="$(
+    docker inspect tarot-backend \
+      --format "{{range .Mounts}}{{if eq .Destination \"/avatar\"}}{{.Source}}{{end}}{{end}}"
+  )"
+
+  test -n "$AVATAR_SOURCE" || {
+    echo "STOP: Docker backend has no /avatar mount" >&2
+    exit 1
+  }
+  test "${AVATAR_SOURCE#/}" != "$AVATAR_SOURCE" || {
+    echo "STOP: avatar source is not absolute" >&2
+    exit 1
+  }
+  test -d "$AVATAR_SOURCE" || {
+    echo "STOP: avatar source is not a directory" >&2
+    exit 1
+  }
+  test ! -L "$AVATAR_SOURCE" || {
+    echo "STOP: avatar source is a symbolic link" >&2
+    exit 1
+  }
+
+  printf "source=%s\n" "$AVATAR_SOURCE"
+  stat -c "owner=%u:%g mode=%a filesystem=%m" "$AVATAR_SOURCE"
+  printf "regular_files="
+  find "$AVATAR_SOURCE" -xdev -type f -printf . | wc -c
+  printf "bytes="
+  find "$AVATAR_SOURCE" -xdev -type f -printf "%s\n" \
+    | awk "{ total += \$1 } END { print total + 0 }"
+
+  for CONTAINER in tarot-backend tarot-celery-worker tarot-celery-beat; do
+    SOURCE="$(
+      docker inspect "$CONTAINER" \
+        --format "{{range .Mounts}}{{if eq .Destination \"/avatar\"}}{{.Source}}{{end}}{{end}}"
+    )"
+    test "$SOURCE" = "$AVATAR_SOURCE" || {
+      echo "STOP: $CONTAINER uses a different avatar source" >&2
+      exit 1
+    }
+    printf "%s=/avatar<-same-source\n" "$CONTAINER"
+  done
+'
+```
+
+Record the source path, owner/mode, regular-file count, and byte total. Do not
+change its permissions or ownership.
+
+### 37.3 Count database references without exposing filenames
+
+**Run on: VPS, through `ssh vps` from the current administration workstation.**
+
+Use the already-running Docker backend and its existing database environment.
+This query prints only a count:
+
+```bash
+ssh vps 'docker exec tarot-backend /app/.venv/bin/python -c \
+"from database import SessionLocal; from models import User; db = SessionLocal(); print(\"avatar_database_references=%d\" % db.query(User).filter(User.avatar_filename.isnot(None)).count()); db.close()"'
+```
+
+Do not print `avatar_filename`, user records, environment variables, or the
+database URL. Record only `avatar_database_references`.
+
+The file count and database-reference count need not be equal: old files may
+be orphaned, and missing files may still be referenced. Any mismatch is a
+reconciliation input, not permission to delete anything.
+
+### 37.4 Confirm Kubernetes has no persistent avatar mount
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubectl get deployment -n arcana arcana-backend \
+  -o jsonpath='{range .spec.template.spec.containers[0].volumeMounts[*]}{.name}{"\t"}{.mountPath}{"\n"}{end}'
+
+kubectl get pvc -n arcana
+```
+
+Require no `/avatar` mount on the backend. Existing Redis and Beat claims are
+unrelated and must not be reused for avatars.
+
+### 37.5 Stop before creating or populating avatar storage
+
+**Run on: no machine; this is a review checkpoint.**
+
+Keep Docker as the sole public writer. The next section should create a
+dedicated retained `local-path` PVC, mount it only into the Kubernetes backend,
+verify UID/GID write access without exposing it publicly, and copy a snapshot
+of the Docker avatar directory into the claim without deleting or modifying the
+source. A final short delta copy is still required immediately before public
+cutover because Docker users may upload avatars after the initial snapshot.
+
+Do not mount the avatar claim into the Kubernetes worker or Beat unless code
+inspection identifies a task that actually reads or writes avatar files.
+
+## 38. Stage dedicated persistent avatar storage
+
+This section creates a dedicated 1 GiB `local-path` claim and mounts it only at
+the Kubernetes backend's `/avatar` path. It does not copy production data or
+change public routing. The claim is protected from Argo CD pruning, but that
+annotation is not a backup: manually deleting the PVC can still delete its
+local-path volume.
+
+### 38.1 Author the avatar claim and backend mount
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+
+Create `apps/arcana/base/backend-avatar-pvc.yaml`:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arcana-backend-avatars
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+Register it in `apps/arcana/base/kustomization.yaml` immediately before
+`backend-deployment.yaml`:
+
+```yaml
+  - backend-avatar-pvc.yaml
+  - backend-deployment.yaml
+```
+
+In `apps/arcana/base/backend-deployment.yaml`, add this mount to the `backend`
+container before its probes:
+
+```yaml
+          volumeMounts:
+            - name: avatars
+              mountPath: /avatar
+```
+
+Add the corresponding Pod volume after the `containers` list and before
+`terminationGracePeriodSeconds`:
+
+```yaml
+      volumes:
+        - name: avatars
+          persistentVolumeClaim:
+            claimName: arcana-backend-avatars
+
+      terminationGracePeriodSeconds: 30
+```
+
+Do not mount this claim into worker, Beat, frontend, migration Job, or Redis.
+
+### 38.2 Validate the storage-only desired state
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubeconform -strict -summary -exit-on-error \
+  apps/arcana/base/backend-avatar-pvc.yaml \
+  apps/arcana/base/backend-deployment.yaml
+
+kubectl kustomize apps/arcana/base \
+  | kubeconform -strict -summary -exit-on-error
+
+rg -n \
+  'arcana-backend-avatars|mountPath: /avatar|Prune=false|storage: 1Gi' \
+  apps/arcana/base/backend-avatar-pvc.yaml \
+  apps/arcana/base/backend-deployment.yaml \
+  apps/arcana/base/kustomization.yaml
+
+if rg -n 'arcana-backend-avatars|mountPath: /avatar' \
+  apps/arcana/base/celery-worker-deployment.yaml \
+  apps/arcana/base/celery-beat-deployment.yaml \
+  apps/arcana/base/frontend-deployment.yaml \
+  apps/arcana/base/backend-migration-job.yaml; then
+  echo 'STOP: avatar storage is mounted outside the backend' >&2
+  false
+else
+  echo 'Confirmed: only the backend declares avatar storage'
+fi
+
+git diff --check
+git status --short
+git diff -- \
+  apps/arcana/base/backend-avatar-pvc.yaml \
+  apps/arcana/base/backend-deployment.yaml \
+  apps/arcana/base/kustomization.yaml
+```
+
+Require exactly those three intended files, a valid render, one 1 GiB claim,
+one `/avatar` mount, and no migration Job.
+
+### 38.3 Commit, push, and refresh without synchronizing
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+git add \
+  apps/arcana/base/backend-avatar-pvc.yaml \
+  apps/arcana/base/backend-deployment.yaml \
+  apps/arcana/base/kustomization.yaml
+
+git diff --cached --check
+git diff --cached --stat
+git status --short
+
+git commit -m "feat: add persistent Kubernetes avatar storage"
+git push origin main
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+```
+
+Wait for Argo CD to observe the pushed revision. Require no conditions, no
+active operation, automated synchronization `false`, and `OutOfSync` resources
+limited to the new PVC and backend Deployment. Confirm the live claim is still
+absent before authorizing synchronization:
+
+```bash
+kubectl get pvc -n arcana arcana-backend-avatars --ignore-not-found -o name
+```
+
+An empty result is required.
+
+### 38.4 Request the revision-pinned storage sync
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+Use the guarded manual-sync function from Section 36.5 with a distinct
+initiator, `avatar-storage-guide`. Its live boundary must require backend,
+frontend, and worker at one replica and Beat at zero. It must additionally
+require the avatar PVC to be absent before issuing the operation. Keep pruning
+disabled and synchronize the exact matching `HEAD`, `origin/main`, and rendered
+Argo CD revision.
+
+Do not reuse the original worker-activation guard: that obsolete guard expects
+the worker at zero.
+
+After the operation reports `Succeeded`, verify the rollout and empty claim:
+
+```bash
+verify_avatar_storage() {
+  local PVC_PHASE MOUNTS CLAIM_NAME LIVE_JOBS LIVE_INGRESSES
+
+  kubectl rollout status -n arcana deployment/arcana-backend \
+    --timeout=5m || return 1
+
+  PVC_PHASE="$(
+    kubectl get pvc -n arcana arcana-backend-avatars \
+      -o jsonpath='{.status.phase}'
+  )" || {
+    echo 'STOP: avatar PVC does not exist' >&2
+    return 1
+  }
+  test "$PVC_PHASE" = Bound || {
+    printf 'STOP: avatar PVC phase is %s, not Bound\n' "$PVC_PHASE" >&2
+    return 1
+  }
+
+  MOUNTS="$(
+    kubectl get deployment -n arcana arcana-backend \
+      -o jsonpath='{range .spec.template.spec.containers[0].volumeMounts[*]}{.name}{"="}{.mountPath}{"\n"}{end}'
+  )" || return 1
+  printf '%s\n' "$MOUNTS"
+  test "$MOUNTS" = 'avatars=/avatar' || {
+    echo 'STOP: live backend does not have exactly the expected avatar mount' >&2
+    return 1
+  }
+
+  CLAIM_NAME="$(
+    kubectl get deployment -n arcana arcana-backend \
+      -o jsonpath='{.spec.template.spec.volumes[?(@.name=="avatars")].persistentVolumeClaim.claimName}'
+  )" || return 1
+  test "$CLAIM_NAME" = arcana-backend-avatars || {
+    echo 'STOP: avatar mount is not backed by the expected PVC' >&2
+    return 1
+  }
+
+  kubectl exec -n arcana deployment/arcana-backend -- \
+    /bin/sh -ec '
+      COUNT="$(find /avatar -xdev -type f -printf . | wc -c)"
+      test "$COUNT" = 0 || {
+        echo "STOP: new avatar claim is not empty" >&2
+        exit 1
+      }
+      printf "avatar_files=%s\n" "$COUNT"
+      touch /avatar/.write-test
+      rm /avatar/.write-test
+      echo "Avatar claim is writable"
+    ' || return 1
+
+  curl --proto '=http' -fsS http://127.0.0.1:18000/api/health/ \
+    || return 1
+  curl --proto '=http' -fsS http://127.0.0.1:18000/api/health/db \
+    || return 1
+
+  LIVE_JOBS="$(kubectl get jobs -n arcana -o name)" || return 1
+  LIVE_INGRESSES="$(kubectl get ingress -n arcana -o name)" || return 1
+  test -z "$LIVE_JOBS" || {
+    echo 'STOP: an unexpected Job exists' >&2
+    return 1
+  }
+  test -z "$LIVE_INGRESSES" || {
+    echo 'STOP: an unexpected Ingress exists' >&2
+    return 1
+  }
+
+  kubectl get pvc -n arcana arcana-backend-avatars -o wide
+  echo 'Confirmed: empty persistent avatar storage is mounted and writable'
+}
+
+verify_avatar_storage
+unset -f verify_avatar_storage
+```
+
+Require the PVC `Bound`, mount `avatars /avatar`, zero avatar files before the
+write test, successful write/remove, healthy application/database responses,
+and no Job or Ingress. Docker remains public and untouched.
+
+### 38.5 Stop before copying production avatar data
+
+**Run on: no machine; this is a review checkpoint.**
+
+The empty Kubernetes claim is now durable and internally mounted, but it is not
+ready for cutover until the two inventoried Docker avatar files are copied and
+verified. Do not test avatar upload against Kubernetes: doing so would make the
+destination non-empty and invalidate the fail-closed initial copy.
+
+## 39. Back up and seed the avatar claim
+
+This section first creates a private compressed backup on the VPS, then streams
+a read-only snapshot from the Docker bind mount into the empty Kubernetes
+claim. It neither deletes nor modifies Docker source files. Docker remains the
+public writer, so this is only an initial seed; a final delta reconciliation is
+required at cutover.
+
+### 39.1 Create a recoverable source snapshot
+
+**Run on: VPS, through `ssh vps` from the current administration workstation.**
+
+```bash
+ssh vps '
+  set -eu
+  umask 077
+
+  AVATAR_SOURCE="$(
+    docker inspect tarot-backend \
+      --format "{{range .Mounts}}{{if eq .Destination \"/avatar\"}}{{.Source}}{{end}}{{end}}"
+  )"
+  test -n "$AVATAR_SOURCE"
+  test -d "$AVATAR_SOURCE"
+  test ! -L "$AVATAR_SOURCE"
+
+  SNAPSHOT_DIR="$HOME/arcana-avatar-snapshots"
+  mkdir -p "$SNAPSHOT_DIR"
+  chmod 700 "$SNAPSHOT_DIR"
+
+  SNAPSHOT="$SNAPSHOT_DIR/avatars-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+  test ! -e "$SNAPSHOT" || {
+    echo "STOP: snapshot path already exists" >&2
+    exit 1
+  }
+
+  tar -C "$AVATAR_SOURCE" -czf "$SNAPSHOT" .
+  test -s "$SNAPSHOT"
+  chmod 600 "$SNAPSHOT"
+
+  printf "snapshot=%s\n" "$SNAPSHOT"
+  sha256sum "$SNAPSHOT"
+  printf "regular_files="
+  find "$AVATAR_SOURCE" -xdev -type f -printf . | wc -c
+  printf "bytes="
+  find "$AVATAR_SOURCE" -xdev -type f -printf "%s\n" \
+    | awk "{ total += \$1 } END { print total + 0 }"
+'
+```
+
+Record the snapshot path and SHA-256 digest. Require mode 600 implicitly from
+the successful block and the same source aggregates observed in Section 37:
+two regular files and 105162 bytes. If production changed, record the new
+values and use those as the seed baseline; do not assume data loss.
+
+### 39.2 Reconfirm the destination is empty and isolated
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubectl exec -n arcana deployment/arcana-backend -- \
+  /bin/sh -ec '
+    COUNT="$(find /avatar -xdev -type f -printf . | wc -c)"
+    test "$COUNT" = 0 || {
+      echo "STOP: avatar destination is not empty" >&2
+      exit 1
+    }
+    echo "Confirmed: avatar destination is empty"
+  '
+
+kubectl get ingress -n arcana
+kubectl get jobs -n arcana
+```
+
+Require an empty destination and no Ingress or Job. If the destination is not
+empty, stop; do not overwrite or delete it.
+
+### 39.3 Stream the initial snapshot into the claim
+
+**Run on: current administration workstation (the company Ubuntu machine).
+The left side reads through `ssh vps`; the right side writes only to the
+Kubernetes avatar claim.**
+
+```bash
+set -o pipefail
+
+ssh vps '
+  set -eu
+  AVATAR_SOURCE="$(
+    docker inspect tarot-backend \
+      --format "{{range .Mounts}}{{if eq .Destination \"/avatar\"}}{{.Source}}{{end}}{{end}}"
+  )"
+  test -n "$AVATAR_SOURCE"
+  test -d "$AVATAR_SOURCE"
+  test ! -L "$AVATAR_SOURCE"
+  tar -C "$AVATAR_SOURCE" -cpf - .
+' | kubectl exec -i -n arcana deployment/arcana-backend -- \
+  tar -C /avatar --no-same-owner -xpf -
+```
+
+The source command performs no writes. `--no-same-owner` is required because
+the hardened backend container drops `CHOWN`; destination files retain the
+extracting process's ownership rather than Docker's numeric UID/GID metadata.
+If either side fails, stop and inspect the destination without retrying or
+deleting files.
+
+### 39.4 Verify aggregate content and integrity
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+Compute source and destination content-set digests. Filenames participate in
+the digest but are never printed:
+
+```bash
+SOURCE_CONTENT_DIGEST="$(
+  ssh vps '
+    set -eu
+    AVATAR_SOURCE="$(
+      docker inspect tarot-backend \
+        --format "{{range .Mounts}}{{if eq .Destination \"/avatar\"}}{{.Source}}{{end}}{{end}}"
+    )"
+    test -d "$AVATAR_SOURCE"
+    cd "$AVATAR_SOURCE"
+    find . -xdev -type f -exec sha256sum {} + \
+      | LC_ALL=C sort \
+      | sha256sum \
+      | awk "{print \$1}"
+  '
+)" || false
+
+DESTINATION_CONTENT_DIGEST="$(
+  kubectl exec -n arcana deployment/arcana-backend -- \
+    /bin/sh -ec '
+      cd /avatar
+      find . -xdev -type f -exec sha256sum {} + \
+        | LC_ALL=C sort \
+        | sha256sum \
+        | awk "{print \$1}"
+    '
+)" || false
+
+test -n "$SOURCE_CONTENT_DIGEST"
+test "$SOURCE_CONTENT_DIGEST" = "$DESTINATION_CONTENT_DIGEST" || {
+  echo 'STOP: avatar content digests differ' >&2
+  false
+}
+
+printf 'content_digest=%s\n' "$SOURCE_CONTENT_DIGEST"
+
+kubectl exec -n arcana deployment/arcana-backend -- \
+  /bin/sh -ec '
+    printf "regular_files="
+    find /avatar -xdev -type f -printf . | wc -c
+    printf "bytes="
+    find /avatar -xdev -type f -printf "%s\n" \
+      | awk "{ total += \$1 } END { print total + 0 }"
+  '
+```
+
+Require matching non-empty digests and destination aggregates equal to the
+snapshot baseline. Do not print file names.
+
+### 39.5 Verify persistence across one controlled backend rollout
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+Capture the current Pod name, restart only the internal Kubernetes backend,
+and confirm the same digest afterward:
+
+```bash
+verify_avatar_persistence() {
+  local OLD_BACKEND_POD NEW_BACKEND_POD
+  local PRE_RESTART_DIGEST POST_RESTART_DIGEST
+
+  OLD_BACKEND_POD="$(
+    kubectl get pod -n arcana \
+      -l app.kubernetes.io/name=arcana-backend \
+      -o jsonpath='{.items[0].metadata.name}'
+  )" || return 1
+  test -n "$OLD_BACKEND_POD" || return 1
+
+  PRE_RESTART_DIGEST="$(
+    kubectl exec -n arcana deployment/arcana-backend -- \
+      /bin/sh -ec '
+        cd /avatar
+        find . -xdev -type f -exec sha256sum {} + \
+          | LC_ALL=C sort \
+          | sha256sum \
+          | awk "{print \$1}"
+      '
+  )" || return 1
+  test -n "$PRE_RESTART_DIGEST" || return 1
+
+  kubectl rollout restart -n arcana deployment/arcana-backend || return 1
+  kubectl rollout status -n arcana deployment/arcana-backend \
+    --timeout=5m || return 1
+
+  NEW_BACKEND_POD="$(
+    kubectl get pod -n arcana \
+      -l app.kubernetes.io/name=arcana-backend \
+      -o jsonpath='{.items[0].metadata.name}'
+  )" || return 1
+  test -n "$NEW_BACKEND_POD" || return 1
+  test "$NEW_BACKEND_POD" != "$OLD_BACKEND_POD" || {
+    echo 'STOP: backend Pod name did not change' >&2
+    return 1
+  }
+
+  POST_RESTART_DIGEST="$(
+    kubectl exec -n arcana deployment/arcana-backend -- \
+      /bin/sh -ec '
+        cd /avatar
+        find . -xdev -type f -exec sha256sum {} + \
+          | LC_ALL=C sort \
+          | sha256sum \
+          | awk "{print \$1}"
+      '
+  )" || return 1
+
+  test "$POST_RESTART_DIGEST" = "$PRE_RESTART_DIGEST" || {
+    echo 'STOP: avatar data did not persist across rollout' >&2
+    return 1
+  }
+
+  curl --proto '=http' -fsS http://127.0.0.1:18000/api/health/ \
+    || return 1
+  curl --proto '=http' -fsS http://127.0.0.1:18000/api/health/db \
+    || return 1
+
+  printf 'persisted_content_digest=%s\n' "$POST_RESTART_DIGEST"
+  echo 'Confirmed: avatar data persisted across the backend rollout'
+}
+
+verify_avatar_persistence
+unset -f verify_avatar_persistence
+```
+
+`kubectl rollout restart` changes only the live Pod-template annotation. Argo CD
+may report the Deployment `OutOfSync`; hard-refreshing or the next guarded sync
+will restore the Git-rendered template without affecting the PVC.
+
+### 39.6 Stop before Beat or public cutover
+
+**Run on: no machine; this is a review checkpoint.**
+
+The initial avatar snapshot is now durable in Kubernetes, while Docker remains
+the public source of truth and may continue receiving avatar changes. Preserve
+the private VPS snapshot. Do not delete Docker files, activate Kubernetes Beat,
+create an Ingress, or stop Docker.
+
+Before public cutover, perform a short write-freeze or maintenance window,
+reconcile a final avatar delta, verify matching content digests again, and only
+then route traffic. The final-delta procedure must be authored separately; do
+not improvise deletion semantics with `rsync --delete`.
+
+## 40. Restore Git convergence and inventory the traffic cutover
+
+The controlled persistence test added a live
+`kubectl.kubernetes.io/restartedAt` Pod-template annotation that is absent from
+Git. Reconcile that intentional drift through Argo CD before designing public
+routing. This section does not activate Beat, copy another avatar snapshot,
+change Traefik, expose a NodePort, or take over ports 80/443.
+
+### 40.1 Prove the restart annotation is the only expected drift
+
+**Run on: current administration workstation (the company Ubuntu machine),
+from the root of `~/Personal/arcana-deployment`.**
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+git status --short
+git rev-parse HEAD
+git rev-parse origin/main
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='revision={.status.sync.revision}{"\n"}sync={.status.sync.status}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.conditions[*]}{.type}{": "}{.message}{"\n"}{end}'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.resources[*]}{.kind}{"\t"}{.namespace}{"\t"}{.name}{"\t"}{.status}{"\n"}{end}' \
+  | sort
+
+kubectl get deployment -n arcana arcana-backend \
+  -o jsonpath='restartedAt={.spec.template.metadata.annotations.kubectl\.kubernetes\.io/restartedAt}{"\n"}'
+
+kubectl get jobs -n arcana
+kubectl get ingress -n arcana
+```
+
+Require matching Git/remote/rendered revisions, automated synchronization
+`false`, no operation or condition, no Job or Ingress, and only the backend
+Deployment `OutOfSync`. The live `restartedAt` value must be non-empty. If any
+other resource is `OutOfSync`, stop and inspect it before synchronizing.
+
+### 40.2 Reconcile the exact revision through Argo CD
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+reconcile_backend_restart_drift() {
+  local EXPECTED_REVISION REMOTE_REVISION OBSERVED_REVISION
+  local AUTOMATED_ENABLED ACTIVE_OPERATION LIVE_JOBS LIVE_INGRESSES
+  local BACKEND_REPLICAS FRONTEND_REPLICAS WORKER_REPLICAS BEAT_REPLICAS
+  local PVC_PHASE AVATAR_DIGEST
+
+  EXPECTED_REVISION="$(git rev-parse HEAD)" || return 1
+  REMOTE_REVISION="$(git rev-parse origin/main)" || return 1
+  OBSERVED_REVISION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.sync.revision}'
+  )" || return 1
+
+  test "$EXPECTED_REVISION" = "$REMOTE_REVISION" \
+    && test "$EXPECTED_REVISION" = "$OBSERVED_REVISION" || {
+      echo 'STOP: reconciliation revisions do not match' >&2
+      return 1
+    }
+
+  AUTOMATED_ENABLED="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.spec.syncPolicy.automated.enabled}'
+  )" || return 1
+  ACTIVE_OPERATION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.operation}'
+  )" || return 1
+  LIVE_JOBS="$(kubectl get jobs -n arcana -o name)" || return 1
+  LIVE_INGRESSES="$(kubectl get ingress -n arcana -o name)" || return 1
+
+  test "$AUTOMATED_ENABLED" = false || return 1
+  test -z "$ACTIVE_OPERATION" || return 1
+  test -z "$LIVE_JOBS" || return 1
+  test -z "$LIVE_INGRESSES" || return 1
+
+  BACKEND_REPLICAS="$(kubectl get deployment -n arcana arcana-backend -o jsonpath='{.spec.replicas}')" || return 1
+  FRONTEND_REPLICAS="$(kubectl get deployment -n arcana arcana-frontend -o jsonpath='{.spec.replicas}')" || return 1
+  WORKER_REPLICAS="$(kubectl get deployment -n arcana arcana-celery-worker -o jsonpath='{.spec.replicas}')" || return 1
+  BEAT_REPLICAS="$(kubectl get deployment -n arcana arcana-celery-beat -o jsonpath='{.spec.replicas}')" || return 1
+
+  test "$BACKEND_REPLICAS" = 1 \
+    && test "$FRONTEND_REPLICAS" = 1 \
+    && test "$WORKER_REPLICAS" = 1 \
+    && test "$BEAT_REPLICAS" = 0 || {
+      echo 'STOP: live workload boundary is unexpected' >&2
+      return 1
+    }
+
+  PVC_PHASE="$(
+    kubectl get pvc -n arcana arcana-backend-avatars \
+      -o jsonpath='{.status.phase}'
+  )" || return 1
+  test "$PVC_PHASE" = Bound || return 1
+
+  AVATAR_DIGEST="$(
+    kubectl exec -n arcana deployment/arcana-backend -- \
+      /bin/sh -ec '
+        cd /avatar
+        find . -xdev -type f -exec sha256sum {} + \
+          | LC_ALL=C sort \
+          | sha256sum \
+          | awk "{print \$1}"
+      '
+  )" || return 1
+  test "$AVATAR_DIGEST" = \
+    76fd8d51b20469f96abadacf64105e1ce80da810a92a4bd41d53b02501f7ce16 || {
+      echo 'STOP: Kubernetes avatar digest changed' >&2
+      return 1
+    }
+
+  kubectl patch application -n argocd arcana-production \
+    --type=merge \
+    --patch "{\"operation\":{\"initiatedBy\":{\"username\":\"restart-drift-reconciliation-guide\"},\"sync\":{\"revision\":\"$EXPECTED_REVISION\",\"prune\":false}}}" \
+    || return 1
+
+  printf 'Requested restart-drift reconciliation at %s\n' \
+    "$EXPECTED_REVISION"
+}
+
+reconcile_backend_restart_drift
+unset -f reconcile_backend_restart_drift
+```
+
+Use the bounded operation poll from Section 36.5 and require `Succeeded` at the
+exact revision. This reconciliation may replace the backend Pod once more as
+the live-only annotation is removed.
+
+### 40.3 Verify convergence and persistent data again
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubectl rollout status -n arcana deployment/arcana-backend --timeout=5m
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='sync={.status.sync.status}{"\n"}health={.status.health.status}{"\n"}revision={.status.sync.revision}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get deployment -n arcana arcana-backend \
+  -o jsonpath='restartedAt={.spec.template.metadata.annotations.kubectl\.kubernetes\.io/restartedAt}{"\n"}'
+
+kubectl exec -n arcana deployment/arcana-backend -- \
+  /bin/sh -ec '
+    cd /avatar
+    printf "regular_files="
+    find . -xdev -type f -printf . | wc -c
+    printf "bytes="
+    find . -xdev -type f -printf "%s\n" \
+      | awk "{total += \$1} END {print total + 0}"
+    printf "content_digest="
+    find . -xdev -type f -exec sha256sum {} + \
+      | LC_ALL=C sort \
+      | sha256sum \
+      | awk "{print \$1}"
+  '
+
+kubectl get pvc -n arcana arcana-backend-avatars -o wide
+kubectl get jobs -n arcana
+kubectl get ingress -n arcana
+```
+
+Require `Synced`, the expected revision, no active operation, an empty
+`restartedAt`, two files, 105162 bytes, the recorded digest, a `Bound` claim,
+and no Job or Ingress. Restart the backend Service port-forward if its
+connection crossed the rollout, then repeat both health checks.
+
+### 40.4 Inventory the existing Docker Traefik boundary
+
+**Run on: VPS, through `ssh vps` from the current administration workstation.**
+
+This block prints runtime topology and routing labels but no environment
+variables or certificate material:
+
+```bash
+ssh vps '
+  set -eu
+
+  docker ps --filter name=traefik \
+    --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+  for CONTAINER in traefik tarot-backend tarot-frontend; do
+    docker inspect "$CONTAINER" \
+      --format "container={{.Name}} networks={{range \$name, \$_ := .NetworkSettings.Networks}}{{\$name}} {{end}}"
+  done
+
+  for CONTAINER in tarot-backend tarot-frontend; do
+    docker inspect "$CONTAINER" \
+      --format "container={{.Name}}{{range \$key, \$value := .Config.Labels}}{{if or (eq \$key \"traefik.enable\") (eq \$key \"traefik.http.routers.tarot-backend.rule\") (eq \$key \"traefik.http.routers.tarot-frontend.rule\") (eq \$key \"traefik.http.services.tarot-backend.loadbalancer.server.port\") (eq \$key \"traefik.http.services.tarot-frontend.loadbalancer.server.port\")}}{{printf \"\\n%s=%s\" \$key \$value}}{{end}}{{end}}"
+  done
+
+  sudo ss -lntup | grep -E ":(80|443|6443)\\b"
+'
+```
+
+Record the shared Docker networks, current host rules, service ports, Traefik
+image, and listeners. Do not inspect environment variables, TLS files, or
+secret stores.
+
+### 40.5 Inventory the Kubernetes side of the boundary
+
+**Run on: current administration workstation (the company Ubuntu machine).**
+
+```bash
+kubectl get svc -n arcana -o wide
+kubectl get ingress -n arcana
+kubectl get pods -n kube-system
+
+ssh vps '
+  sudo test -f /etc/rancher/k3s/config.yaml
+  sudo grep -E "^(disable:|  - traefik|  - servicelb)" \
+    /etc/rancher/k3s/config.yaml
+'
+```
+
+Require application Services to remain `ClusterIP`, no Ingress, and no K3s
+Traefik or ServiceLB workload. The K3s configuration must still disable both
+packaged components.
+
+### 40.6 Stop before selecting or implementing the traffic bridge
+
+**Run on: no machine; this is a review checkpoint.**
+
+Do not add a NodePort, change Docker Traefik labels/configuration, stop a
+Docker container, activate Beat, alter DNS, or open a firewall port. Use the
+inventory to select one explicit cutover architecture in the next section.
+
+The architecture must preserve Docker Traefik on ports 80/443 until the actual
+switch, expose Kubernetes only through a narrowly scoped bridge, support both
+frontend and backend host families, include a rollback target, and coordinate
+the final avatar delta with the moment Docker stops being the public writer.
+
+## 41. Company-laptop continuation prompt
 
 After both repositories and the Age identity are available on the company
 laptop, paste the following prompt into the new assistant session:
@@ -4029,20 +8453,20 @@ Current state:
   dedicated GitHub deploy key.
 - KSOPS v4.5.1 is installed as an isolated repo-server sidecar with the Age
   identity mounted from an encrypted-at-rest Kubernetes Secret.
-- The `arcana-production` Application exists in observation-only mode with
-  automated synchronization disabled; private Git and KSOPS rendering are
-  verified, and no `arcana` namespace or workload has been created.
-- Argo CD renders deployment commit
-  `100674f883cd3144a7f622e21ee91e06dc6cc5f7` as 15 desired resources with no
-  conditions, but none has been synchronized.
+- The `arcana-production` Application has automated synchronization disabled;
+  private Git and KSOPS rendering are verified.
+- Gate A revision `57847592cce9fbbce1be696ead745fe95fe06df0` was manually
+  synchronized successfully as inert infrastructure.
+- The `arcana` namespace exists. Redis, backend, frontend, and one non-root
+  concurrency-one worker are healthy; Beat remains at zero. No migration Job
+  or Ingress exists.
 - Desired state contains the backend, persistent Redis, frontend, one
   concurrency-one Celery worker, one Celery Beat scheduler, retained Beat
   schedule storage, and internal Services. Production Kustomize replacement
   was verified offline: backend and frontend use the pinned commit SHA, Redis
   uses `redis:7.4.10-alpine`, and no rendered image uses `:latest`.
-- A transient Docker workload owned by another VPS user was consuming most of
-  the six-core server. Do not modify it. Recheck capacity after it ends before
-  considering any synchronization.
+- The existing Docker Arcana stack and Docker Traefik remain production. Do
+  not stop or modify them during migration staging.
 - K3s packaged Traefik and ServiceLB must remain disabled during staging.
 - TCP 6443 is not open publicly; workstation kubectl access uses an SSH
   local-forward and a dedicated kubeconfig at `~/.kube/arcana-k3s.yaml`.
@@ -4057,9 +8481,22 @@ export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 test -r "$SOPS_AGE_KEY_FILE"
 age-keygen -y "$SOPS_AGE_KEY_FILE"
 
-Resume after Section 26.12. First reconcile both repositories and recheck the
-transient VPS CPU load. Then guide me through designing a dedicated Argo CD
-migration Job before any synchronization. Give me one subsection at a time.
+Resume after Section 40.6. Internal-only Kubernetes backend, frontend, and one
+non-root concurrency-one worker are healthy. The worker runs as
+`nobody:nogroup` UID/GID 65534,
+reached Kubernetes Redis, reported expected registered tasks, had no
+active/reserved/scheduled work, and served internal metrics. Beat remains at
+zero, no Ingress exists, automated synchronization is disabled, and Docker
+still serves production. Section 37 inventoried two Docker avatar files and two
+database references. Sections 38-39 create a dedicated pruning-protected 1 GiB
+avatar PVC, mount it only into the Kubernetes backend, create a private VPS
+source backup, seed the empty claim, compare content-set digests, and verify
+persistence across a backend rollout. Section 40 restores Argo CD convergence
+after the controlled restart and inventories both sides of the Docker
+Traefik/Kubernetes traffic boundary without changing it. Docker remains the
+sole public writer, so an explicit bridge design plus final write-freeze and
+delta reconciliation are still required before Beat or public cutover. Give me
+one subsection at a time.
 Whenever you add instructions to this Markdown guide, put an explicit
 `Run on: VPS` or `Run on: current administration workstation` line before the
 commands. Do not use ambiguous locations such as `local machine`; clearly say
@@ -4106,3 +8543,4 @@ git -C /path/to/arcana-deployment pull --ff-only origin main
 - [Argo CD: Automated sync policy](https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/)
 - [GitHub: Managing deploy keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys)
 - [Docker Hub: Redis official image](https://hub.docker.com/_/redis)
+- [Supabase: Database backups](https://supabase.com/docs/guides/platform/backups)
