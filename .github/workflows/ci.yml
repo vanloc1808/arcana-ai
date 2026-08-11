@@ -203,3 +203,117 @@ jobs:
             vanloc1808/tarot-frontend:${{ github.sha }}
           cache-from: type=registry,ref=vanloc1808/tarot-frontend:buildcache
           cache-to: type=registry,ref=vanloc1808/tarot-frontend:buildcache,mode=max
+
+  update-gitops:
+    name: Promote images to production GitOps
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: arcana-production-gitops
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out deployment repository
+        uses: actions/checkout@v4
+        with:
+          repository: vanloc1808/arcana-deployment
+          ref: main
+          path: arcana-deployment
+          fetch-depth: 0
+          ssh-key: ${{ secrets.ARCANA_GITOPS_SSH_KEY }}
+
+      - name: Check whether this is still the newest application revision
+        id: revision
+        env:
+          APPLICATION_REPOSITORY: ${{ github.repository }}
+          IMAGE_TAG: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest_revision="$(gh api "repos/${APPLICATION_REPOSITORY}/commits/main" --jq .sha)"
+
+          if test "$latest_revision" = "$IMAGE_TAG"; then
+            echo 'promote=true' >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping superseded revision $IMAGE_TAG"
+            echo "Current main revision is $latest_revision"
+            echo 'promote=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update production image tags
+        if: steps.revision.outputs.promote == 'true'
+        working-directory: arcana-deployment
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          kustomization='apps/arcana/overlays/production/kustomization.yaml'
+          updated_kustomization="$(mktemp)"
+
+          awk -v image_tag="$IMAGE_TAG" '
+            $1 == "-" && $2 == "name:" {
+              selected = (
+                $3 == "vanloc1808/tarot-backend" ||
+                $3 == "vanloc1808/tarot-frontend"
+              )
+            }
+            selected && $1 == "newTag:" {
+              sub(/newTag:.*/, "newTag: " image_tag)
+              selected = 0
+            }
+            { print }
+          ' "$kustomization" > "$updated_kustomization"
+
+          mv "$updated_kustomization" "$kustomization"
+
+          backend_tag="$(
+            awk '
+              $1 == "-" && $2 == "name:" && $3 == "vanloc1808/tarot-backend" {
+                selected=1
+                next
+              }
+              selected && $1 == "newTag:" { print $2; exit }
+            ' apps/arcana/overlays/production/kustomization.yaml
+          )"
+          frontend_tag="$(
+            awk '
+              $1 == "-" && $2 == "name:" && $3 == "vanloc1808/tarot-frontend" {
+                selected=1
+                next
+              }
+              selected && $1 == "newTag:" { print $2; exit }
+            ' apps/arcana/overlays/production/kustomization.yaml
+          )"
+
+          test "$backend_tag" = "$IMAGE_TAG"
+          test "$frontend_tag" = "$IMAGE_TAG"
+          git diff --check
+
+      - name: Commit and push production image tags
+        if: steps.revision.outputs.promote == 'true'
+        working-directory: arcana-deployment
+        env:
+          APPLICATION_REPOSITORY: ${{ github.repository }}
+          IMAGE_TAG: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest_revision="$(gh api "repos/${APPLICATION_REPOSITORY}/commits/main" --jq .sha)"
+
+          if test "$latest_revision" != "$IMAGE_TAG"; then
+            echo "Skipping superseded revision $IMAGE_TAG before push"
+            exit 0
+          fi
+
+          if git diff --quiet; then
+            echo "Production already references $IMAGE_TAG"
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/arcana/overlays/production/kustomization.yaml
+          git diff --cached --check
+          git commit -m "deploy: promote Arcana images to $IMAGE_TAG"
+          git push origin HEAD:main
