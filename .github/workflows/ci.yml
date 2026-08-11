@@ -254,10 +254,7 @@ jobs:
 
           awk -v image_tag="$IMAGE_TAG" '
             $1 == "-" && $2 == "name:" {
-              selected = (
-                $3 == "vanloc1808/tarot-backend" ||
-                $3 == "vanloc1808/tarot-frontend"
-              )
+              selected = ($3 == "vanloc1808/tarot-backend" || $3 == "vanloc1808/tarot-frontend")
             }
             selected && $1 == "newTag:" {
               sub(/newTag:.*/, "newTag: " image_tag)
