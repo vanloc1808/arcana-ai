@@ -8428,7 +8428,1447 @@ switch, expose Kubernetes only through a narrowly scoped bridge, support both
 frontend and backend host families, include a rollback target, and coordinate
 the final avatar delta with the moment Docker stops being the public writer.
 
-## 41. Company-laptop continuation prompt
+## 41. Select the Docker Traefik to Kubernetes traffic bridge
+
+The boundary inventory established:
+
+- Docker Traefik `v3.7.1` exclusively owns host ports 80 and 443 for IPv4 and
+  IPv6 and remains the production TLS edge.
+- Docker Traefik, `tarot-backend`, and `tarot-frontend` share Docker network
+  `localnet`.
+- The existing backend router serves three backend hostnames on container port
+  8000; the frontend router serves three frontend hostnames on container port
+  3000.
+- Kubernetes backend and frontend Services remain internal `ClusterIP`
+  Services. No Ingress exists.
+- K3s listens on TCP 6443, while packaged Traefik and ServiceLB remain disabled
+  in `/etc/rancher/k3s/config.yaml`.
+
+Do not replace the edge, add NodePorts, or alter routing yet. First determine
+whether the existing edge can support a narrowly scoped reversible bridge.
+
+### 41.1 Inspect provider support and test cross-runtime reachability
+
+**Run on: VPS.**
+
+Inspect only Traefik's command and mount topology; do not inspect environment
+variables or certificate content:
+
+```bash
+docker inspect traefik \
+  --format 'command={{json .Config.Cmd}}'
+
+docker inspect traefik \
+  --format '{{range .Mounts}}source={{.Source}} destination={{.Destination}} read_write={{.RW}}{{"\n"}}{{end}}'
+```
+
+Test whether the existing Docker `localnet` path can reach the current
+Kubernetes ClusterIPs. The commands use the existing backend container because
+its image already contains `curl`; they do not print credentials or modify
+either application:
+
+```bash
+docker exec tarot-backend \
+  curl -fsS -o /dev/null \
+  -w 'kubernetes_backend_http=%{http_code}\n' \
+  http://10.43.63.108:8000/api/health/
+
+docker exec tarot-backend \
+  curl -fsS -o /dev/null \
+  -w 'kubernetes_frontend_http=%{http_code}\n' \
+  http://10.43.179.193:3000/
+```
+
+Require successful HTTP responses from both Services. A backend `200` and a
+frontend `200` or intentional redirect prove network reachability; they do not
+yet authorize routing production traffic to Kubernetes.
+
+The inspection found no file provider or dynamic-configuration mount. Docker
+`localnet` nevertheless reached the Kubernetes backend with HTTP 200 and the
+frontend with its expected HTTP 307 redirect. Traefik's Docker-provider
+`loadbalancer.server.url` label can define an explicit upstream URL, so the
+preferred bridge is a small routing-only Docker Compose service whose labels
+target the two reachable ClusterIPs. It requires no NodePort and no Traefik
+restart.
+
+Do not edit Traefik configuration, labels, DNS, firewall rules, or Kubernetes
+Services in this subsection. Retain the command output for architecture review.
+
+### 41.2 Locate the Compose source that owns Traefik
+
+**Run on: VPS.**
+
+Read only the Docker Compose provenance labels and resolved service list. Do
+not print the Compose file, environment, ACME storage, or certificate data:
+
+```bash
+docker inspect traefik \
+  --format 'project={{index .Config.Labels "com.docker.compose.project"}} working_dir={{index .Config.Labels "com.docker.compose.project.working_dir"}} config_files={{index .Config.Labels "com.docker.compose.project.config_files"}} service={{index .Config.Labels "com.docker.compose.service"}}'
+```
+
+The provenance output identified Compose project `traefik`, working directory
+`/root/traefik`, service `traefik`, and authoritative file
+`/root/traefik/docker-compose.yaml`. Verify that exact file and list only the
+resolved service and network names:
+
+```bash
+sudo test -f /root/traefik/docker-compose.yaml
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  config --services
+
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  config --networks
+
+sudo sha256sum /root/traefik/docker-compose.yaml
+
+sudo git -C /root/traefik status --short --branch 2>/dev/null \
+  || echo 'Traefik directory is not a Git working tree'
+```
+
+Require the file to exist, the resolved service list to contain the current
+Traefik service, and the network list to contain `localnet`. Record the
+SHA-256 digest as the pre-change identity. Do not edit, copy, restart, or
+recreate anything yet.
+
+The next subsection will add a reviewed routing-only service to this same
+Compose project. Its canary routers will require both an existing production
+hostname and a private `X-Arcana-Canary: k3s` request header, giving them higher
+specificity than the existing host-only routers. Ordinary requests will remain
+on the Docker backend and frontend. The canary services will use explicit
+Kubernetes ClusterIP URLs and health checks. Only after canary verification
+will a separate, reversible production-switch procedure be considered.
+
+The authoritative Compose file is not version-controlled. Its pre-change
+SHA-256 is
+`d479e516f13111e7e93fc6c6807b277f927d92db76f001e218410ddf212d058e`.
+Do not edit that file for the canary. Use a separate
+`/root/traefik/arcana-k3s-canary.yaml` Compose file so the routing carrier can
+be managed and rolled back independently.
+
+### 41.3 Preflight the routing-only carrier
+
+**Run on: VPS.**
+
+The carrier will reuse the already present `redis:7-alpine` image only for its
+small Alpine userspace and long-running `sleep` process; it will not start a
+Redis server, mount data, or expose a port. Confirm the required executable is
+present in the existing Redis container without changing it:
+
+```bash
+docker exec tarot-redis \
+  /bin/sh -ec 'command -v sleep; id'
+```
+
+Refuse collisions with an earlier file, container, service, or router label:
+
+```bash
+sudo test ! -e /root/traefik/arcana-k3s-canary.yaml \
+  && echo 'Canary Compose path is available'
+
+test -z "$(docker ps -a --filter name='^/arcana-k3s-router$' -q)" \
+  && echo 'Canary container name is available'
+
+docker ps --format '{{.Names}} {{.Labels}}' \
+  | grep -E 'arcana-k3s-(backend|frontend)-canary' \
+  && echo 'STOP: canary router/service label already exists' \
+  || echo 'Canary router/service labels are available'
+```
+
+Confirm `localnet` is an existing external bridge and the two Kubernetes
+Services remain reachable at the exact targets that the labels will use:
+
+```bash
+docker network inspect localnet \
+  --format 'name={{.Name}} driver={{.Driver}} scope={{.Scope}}'
+
+docker exec tarot-backend \
+  curl -fsS -o /dev/null \
+  -w 'kubernetes_backend_http=%{http_code}\n' \
+  http://10.43.63.108:8000/api/health/
+
+docker exec tarot-backend \
+  curl -fsS -o /dev/null \
+  -w 'kubernetes_frontend_http=%{http_code}\n' \
+  http://10.43.179.193:3000/
+```
+
+Require an available path/name/label namespace, `localnet` with driver
+`bridge`, backend HTTP 200, and frontend HTTP 200 or its intentional 307.
+Do not create the canary file or container yet.
+
+### 41.4 Define and validate the inert canary carrier
+
+**Run on: VPS.**
+
+Create a separate Compose file without modifying the authoritative Traefik
+file:
+
+```bash
+sudoedit /root/traefik/arcana-k3s-canary.yaml
+```
+
+Enter exactly:
+
+```yaml
+services:
+  arcana-k3s-router:
+    image: redis:7-alpine
+    container_name: arcana-k3s-router
+    restart: unless-stopped
+    entrypoint:
+      - /bin/sleep
+    command:
+      - "2147483647"
+    user: "65534:65534"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - localnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=localnet"
+
+      - "traefik.http.routers.arcana-k3s-backend-canary.rule=(Host(`backend-tarotreader.nguyenvanloc.com`) || Host(`backend-arcanaai.nguyenvanloc.com`) || Host(`backend.stacyn.io.vn`)) && Header(`X-Arcana-Canary`, `k3s`)"
+      - "traefik.http.routers.arcana-k3s-backend-canary.entrypoints=websecure"
+      - "traefik.http.routers.arcana-k3s-backend-canary.tls=true"
+      - "traefik.http.routers.arcana-k3s-backend-canary.tls.certresolver=le"
+      - "traefik.http.routers.arcana-k3s-backend-canary.priority=10000"
+      - "traefik.http.routers.arcana-k3s-backend-canary.service=arcana-k3s-backend-canary"
+      - "traefik.http.services.arcana-k3s-backend-canary.loadbalancer.server.url=http://10.43.63.108:8000"
+      - "traefik.http.services.arcana-k3s-backend-canary.loadbalancer.passhostheader=true"
+      - "traefik.http.services.arcana-k3s-backend-canary.loadbalancer.healthcheck.path=/api/health/"
+      - "traefik.http.services.arcana-k3s-backend-canary.loadbalancer.healthcheck.interval=10s"
+      - "traefik.http.services.arcana-k3s-backend-canary.loadbalancer.healthcheck.timeout=3s"
+
+      - "traefik.http.routers.arcana-k3s-frontend-canary.rule=(Host(`tarot-reader.nguyenvanloc.com`) || Host(`arcanaai.nguyenvanloc.com`) || Host(`stacyn.io.vn`)) && Header(`X-Arcana-Canary`, `k3s`)"
+      - "traefik.http.routers.arcana-k3s-frontend-canary.entrypoints=websecure"
+      - "traefik.http.routers.arcana-k3s-frontend-canary.tls=true"
+      - "traefik.http.routers.arcana-k3s-frontend-canary.tls.certresolver=le"
+      - "traefik.http.routers.arcana-k3s-frontend-canary.priority=10000"
+      - "traefik.http.routers.arcana-k3s-frontend-canary.service=arcana-k3s-frontend-canary"
+      - "traefik.http.services.arcana-k3s-frontend-canary.loadbalancer.server.url=http://10.43.179.193:3000"
+      - "traefik.http.services.arcana-k3s-frontend-canary.loadbalancer.passhostheader=true"
+      - "traefik.http.services.arcana-k3s-frontend-canary.loadbalancer.healthcheck.path=/"
+      - "traefik.http.services.arcana-k3s-frontend-canary.loadbalancer.healthcheck.interval=10s"
+      - "traefik.http.services.arcana-k3s-frontend-canary.loadbalancer.healthcheck.timeout=3s"
+
+networks:
+  localnet:
+    external: true
+```
+
+The container runs no Redis server and exposes no port. UID/GID 65534,
+read-only root storage, all capabilities dropped, and `no-new-privileges`
+reduce the carrier's runtime authority. The explicit service URLs bypass the
+carrier and send canary traffic directly from Traefik to the reachable
+Kubernetes ClusterIPs.
+
+Validate the combined Compose model without creating or recreating anything:
+
+```bash
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  config -q
+
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  config --services
+
+sudo sha256sum /root/traefik/docker-compose.yaml
+sudo sha256sum /root/traefik/arcana-k3s-canary.yaml
+
+test -z "$(docker ps -a --filter name='^/arcana-k3s-router$' -q)" \
+  && echo 'Canary remains inert'
+```
+
+Require a valid Compose model containing services `traefik` and
+`arcana-k3s-router`, the unchanged authoritative-file digest
+`d479e516f13111e7e93fc6c6807b277f927d92db76f001e218410ddf212d058e`,
+a recorded canary-file digest, and no canary container. Do not run `compose
+up`, restart Traefik, or send a canary request yet.
+
+The validated canary-file SHA-256 is
+`b78310ca5dae4cedbaac95bc942c6abaf75e25f89084368128a8d8fa6c8a6281`.
+
+### 41.5 Preview creation of only the canary carrier
+
+**Run on: VPS.**
+
+Record the production edge identity before any activation:
+
+```bash
+docker inspect traefik \
+  --format 'traefik_id={{.Id}} started={{.State.StartedAt}} status={{.State.Status}}'
+```
+
+Ask Compose for a dry-run of the targeted, dependency-free creation:
+
+```bash
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  --dry-run up -d --no-deps arcana-k3s-router
+```
+
+Require the preview to mention only pulling if necessary and creating/starting
+`arcana-k3s-router`. It must not propose recreating, restarting, stopping, or
+removing `traefik` or any other container. If the installed Compose version
+does not support `--dry-run`, stop; do not substitute a real `up` command.
+
+Do not activate the carrier in this subsection. Retain the Traefik identity and
+dry-run output for review.
+
+The dry run proposed starting only `arcana-k3s-router`. The production Traefik
+identity before activation was container
+`1a0aea78ea0718cb7463266d7d9a80843750f19fdb7fee73823fe681e1d0159b`,
+started at `2026-08-06T07:26:54.581700352Z`.
+
+### 41.6 Activate only the routing carrier
+
+**Run on: VPS.**
+
+Capture the production edge identity in shell variables, create only the
+dependency-free carrier, and require the edge identity to remain unchanged:
+
+```bash
+TRAEFIK_ID_BEFORE="$(docker inspect traefik --format '{{.Id}}')" || exit 1
+TRAEFIK_STARTED_BEFORE="$(docker inspect traefik --format '{{.State.StartedAt}}')" || exit 1
+
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  up -d --no-deps arcana-k3s-router
+
+TRAEFIK_ID_AFTER="$(docker inspect traefik --format '{{.Id}}')" || exit 1
+TRAEFIK_STARTED_AFTER="$(docker inspect traefik --format '{{.State.StartedAt}}')" || exit 1
+
+test "$TRAEFIK_ID_BEFORE" = "$TRAEFIK_ID_AFTER" \
+  && test "$TRAEFIK_STARTED_BEFORE" = "$TRAEFIK_STARTED_AFTER" \
+  && echo 'Production Traefik was not recreated or restarted'
+```
+
+Inspect only the carrier's runtime and security posture:
+
+```bash
+docker inspect arcana-k3s-router \
+  --format 'status={{.State.Status}} started={{.State.StartedAt}} user={{.Config.User}} read_only={{.HostConfig.ReadonlyRootfs}} cap_drop={{json .HostConfig.CapDrop}} security_opt={{json .HostConfig.SecurityOpt}} entrypoint={{json .Config.Entrypoint}} command={{json .Config.Cmd}} networks={{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}'
+
+docker ps \
+  --filter name='^/arcana-k3s-router$' \
+  --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+
+sudo sha256sum /root/traefik/docker-compose.yaml
+sudo sha256sum /root/traefik/arcana-k3s-canary.yaml
+```
+
+Require a running carrier with user `65534:65534`, read-only root storage,
+`ALL` capabilities dropped, `no-new-privileges:true`, the long-running sleep
+command, only `localnet`, and no published ports. Both Compose file digests must
+remain identical to their validated values.
+
+If the targeted `up` command fails or Traefik's identity changes, stop and
+report the output. Do not retry, recreate Traefik, or send canary traffic. If
+all checks pass, ordinary traffic is still unchanged because the new routers
+require the canary header.
+
+Activation created only `arcana-k3s-router`; production Traefik retained its
+container ID and start time. The carrier runs as `65534:65534`, has read-only
+root storage, drops all capabilities, enables `no-new-privileges`, runs only
+the long sleep command, and joins only `localnet`. Both Compose digests remained
+unchanged. Docker lists `6379/tcp` because the reused Redis image declares that
+container port, but there is no host mapping and the carrier does not run a
+Redis server.
+
+### 41.7 Verify loaded canary routes and header-gated HTTPS
+
+**Run on: VPS.**
+
+Query Traefik's internal API through the existing backend container and print
+only the canary router names, rules, services, and status:
+
+```bash
+docker exec tarot-backend \
+  curl -fsS http://traefik:8080/api/http/routers \
+  | python3 -c '
+import json, sys
+for item in json.load(sys.stdin):
+    if item.get("name", "").startswith("arcana-k3s-"):
+        print(
+            f"name={item.get('"'"'name'"'"')} "
+            f"status={item.get('"'"'status'"'"')} "
+            f"service={item.get('"'"'service'"'"')} "
+            f"rule={item.get('"'"'rule'"'"')}"
+        )
+'
+```
+
+Print only the canary service names, status, and configured upstream URLs:
+
+```bash
+docker exec tarot-backend \
+  curl -fsS http://traefik:8080/api/http/services \
+  | python3 -c '
+import json, sys
+for item in json.load(sys.stdin):
+    if item.get("name", "").startswith("arcana-k3s-"):
+        urls = [
+            server.get("url")
+            for server in item.get("loadBalancer", {}).get("servers", [])
+        ]
+        print(
+            f"name={item.get('"'"'name'"'"')} "
+            f"status={item.get('"'"'status'"'"')} "
+            f"urls={'"'"','"'"'.join(filter(None, urls))}"
+        )
+'
+```
+
+Require two enabled routers with the header matcher and the expected explicit
+backend/frontend ClusterIP URLs. The current Docker Traefik serves its default
+self-signed certificate when contacted directly at the origin, including for
+the pre-existing host-only routers. Therefore, use `-k` only for this local
+origin routing test; it deliberately bypasses certificate verification while
+still preserving the production hostname and canary header:
+
+```bash
+curl --resolve backend-arcanaai.nguyenvanloc.com:443:127.0.0.1 \
+  -H 'X-Arcana-Canary: k3s' \
+  -kfsS -o /dev/null \
+  -w 'backend_canary_http=%{http_code}\n' \
+  https://backend-arcanaai.nguyenvanloc.com/api/health/
+
+curl --resolve arcanaai.nguyenvanloc.com:443:127.0.0.1 \
+  -H 'X-Arcana-Canary: k3s' \
+  -kfsS -o /dev/null \
+  -w 'frontend_canary_http=%{http_code} redirect=%{redirect_url}\n' \
+  https://arcanaai.nguyenvanloc.com/
+```
+
+Require backend HTTP 200 and frontend HTTP 200 or its intentional redirect.
+The observed canary results were backend HTTP 200 and frontend HTTP 307 to
+`/login`; Traefik's access log identified the canary routers and explicit K3s
+ClusterIP upstreams. This proves the Docker-to-Kubernetes routing path.
+
+Validate the user-facing TLS path separately through public DNS and its normal
+TLS termination. Do not use `--resolve` or `-k` for these requests:
+
+```bash
+curl -H 'X-Arcana-Canary: k3s' \
+  -fsS -o /dev/null \
+  -w 'backend_public_canary_http=%{http_code}\n' \
+  https://backend-arcanaai.nguyenvanloc.com/api/health/
+
+curl -H 'X-Arcana-Canary: k3s' \
+  -fsS -o /dev/null \
+  -w 'frontend_public_canary_http=%{http_code} redirect=%{redirect_url}\n' \
+  https://arcanaai.nguyenvanloc.com/
+```
+
+Require successful certificate verification, backend HTTP 200, and frontend
+HTTP 200 or its intentional redirect. Do not change the production host-only
+routers, activate Beat, or stop any Docker application.
+
+The public canary check passed with strict certificate verification: backend
+returned HTTP 200 and frontend returned HTTP 307 to
+`https://arcanaai.nguyenvanloc.com/login`. At this checkpoint, both public
+canary requests traverse the existing edge and reach the K3s services while
+ordinary host-only traffic remains on Docker.
+
+### 41.8 Check workloads after public canary traffic
+
+**Run on: VPS.**
+
+Confirm the deployed workloads remain available and have not restarted after
+the public canary requests:
+
+```bash
+sudo k3s kubectl get pods -n arcana \
+  -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,STATUS:.status.phase,RESTARTS:.status.containerStatuses[*].restartCount,STARTED:.status.startTime'
+
+sudo k3s kubectl rollout status \
+  deployment/arcana-backend \
+  deployment/arcana-frontend \
+  deployment/arcana-celery-worker \
+  -n arcana \
+  --timeout=60s
+```
+
+Inspect recent namespace events and confirm Traefik recorded real requests on
+the canary routers:
+
+```bash
+sudo k3s kubectl get events -n arcana \
+  --sort-by=.metadata.creationTimestamp \
+  | tail -n 30
+
+docker logs traefik \
+  --since 10m \
+  2>&1 \
+  | grep -E 'arcana-k3s-(backend|frontend)-canary@docker' \
+  | grep -E '"(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) ' \
+  | tail -n 20
+```
+
+Require every active Arcana pod to be ready with no new restart, all three
+Deployment rollouts to succeed, no warning event indicating a workload or
+storage failure, and access-log entries for both canary routers. Do not switch
+ordinary production traffic yet.
+
+This checkpoint passed: backend, frontend, Celery worker, and Redis were ready
+with zero restarts; all three Deployment rollouts completed; and Traefik logged
+Cloudflare-originated requests against both canary routers and their expected
+K3s ClusterIP upstreams. The only namespace event was the normal
+`WaitForFirstConsumer` state for `arcana-celery-beat-data`. Beat remains scaled
+to zero, so no consumer exists and the claim should remain unbound for now.
+
+### 41.9 Compare Docker and K3s HTTP behavior
+
+**Run on: VPS.**
+
+Before switching ordinary traffic, investigate the observed frontend behavior
+difference: an unauthenticated request to the Docker frontend root returned
+HTTP 200, while the K3s canary returned HTTP 307 to `/login`. Print response
+headers for the root and login routes without printing cookies or response
+bodies:
+
+```bash
+curl -sS -o /dev/null -D - \
+  https://arcanaai.nguyenvanloc.com/ \
+  | grep -Ei '^(HTTP/|location:|content-type:|content-length:|server:|cf-cache-status:|cache-control:)'
+
+curl -sS -o /dev/null -D - \
+  -H 'X-Arcana-Canary: k3s' \
+  https://arcanaai.nguyenvanloc.com/ \
+  | grep -Ei '^(HTTP/|location:|content-type:|content-length:|server:|cf-cache-status:|cache-control:)'
+
+curl -sS -o /dev/null -D - \
+  https://arcanaai.nguyenvanloc.com/login \
+  | grep -Ei '^(HTTP/|location:|content-type:|content-length:|server:|cf-cache-status:|cache-control:)'
+
+curl -sS -o /dev/null -D - \
+  -H 'X-Arcana-Canary: k3s' \
+  https://arcanaai.nguyenvanloc.com/login \
+  | grep -Ei '^(HTTP/|location:|content-type:|content-length:|server:|cf-cache-status:|cache-control:)'
+```
+
+Compare the public backend API description without printing its contents:
+
+```bash
+curl -fsS \
+  https://backend-arcanaai.nguyenvanloc.com/openapi.json \
+  | sha256sum
+
+curl -fsS \
+  -H 'X-Arcana-Canary: k3s' \
+  https://backend-arcanaai.nguyenvanloc.com/openapi.json \
+  | sha256sum
+```
+
+Matching OpenAPI digests prove API-surface parity for the deployed images.
+The frontend root difference must be understood as expected authentication or
+cache behavior before production routing changes. Do not send credentials,
+print cookies, or switch ordinary traffic during this check.
+
+The backend OpenAPI digests matched exactly. Both Docker and K3s returned HTTP
+200 for `/login`, but the root difference was reproducible: Docker returned
+HTTP 200 and K3s returned HTTP 307 to `/login`. The deployed K3s frontend is
+pinned to `47492873ca196bd21eb61a2e3996775fc56f90d5`; at that revision,
+frontend middleware tries to authenticate using a frontend-domain cookie and
+performs the server-side redirect. Commit
+`c126cda4d9da93a2ea058852be0fc20aec9bbdbb` later removed that check because
+the HttpOnly authentication cookies belong to the API domains. Current main
+`5c09c93c553373f6ada02f303004fb3e882adef1` contains the fix. Do not cut over
+the stale K3s frontend.
+
+### 41.10 Preflight the corrected frontend image
+
+**Run on: VPS.**
+
+Confirm CI published the current-main frontend image and refuse a container
+name collision:
+
+```bash
+docker manifest inspect \
+  vanloc1808/tarot-frontend:5c09c93c553373f6ada02f303004fb3e882adef1 \
+  >/dev/null \
+  && echo 'Corrected frontend image exists'
+
+test -z "$(docker ps -a --filter name='^/arcana-frontend-candidate$' -q)" \
+  && echo 'Frontend candidate container name is available'
+```
+
+Start only that candidate on the private Docker network. It has no published
+host port and no Traefik labels, so it cannot receive public traffic:
+
+```bash
+docker run --detach --rm \
+  --name arcana-frontend-candidate \
+  --network localnet \
+  vanloc1808/tarot-frontend:5c09c93c553373f6ada02f303004fb3e882adef1
+```
+
+Call its root and login routes from the existing backend container:
+
+```bash
+docker exec tarot-backend \
+  curl -fsS -o /dev/null \
+  -w 'candidate_root_http=%{http_code} redirect=%{redirect_url}\n' \
+  http://arcana-frontend-candidate:3000/
+
+docker exec tarot-backend \
+  curl -fsS -o /dev/null \
+  -w 'candidate_login_http=%{http_code} redirect=%{redirect_url}\n' \
+  http://arcana-frontend-candidate:3000/login
+```
+
+Require HTTP 200 for both routes. Remove only the temporary candidate; because
+it was created with `--rm`, stopping it also removes it:
+
+```bash
+docker stop arcana-frontend-candidate
+
+test -z "$(docker ps -a --filter name='^/arcana-frontend-candidate$' -q)" \
+  && echo 'Frontend candidate was removed'
+```
+
+If either request fails, inspect only the candidate logs with
+`docker logs arcana-frontend-candidate` before stopping it. Do not modify the
+GitOps image tag or production routing until both candidate requests pass.
+
+The candidate image existed, returned HTTP 200 for both `/` and `/login`, and
+was removed successfully. It is approved for a canary-only GitOps rollout.
+
+### 41.11 Roll out the corrected frontend to the K3s canary
+
+**Run on: current administration workstation (the MacBook).**
+
+In the clean deployment repository, update only the frontend image tag:
+
+```bash
+cd /Users/vanloc1808/Projects/arcana-deployment
+
+if test -n "$(git status --short)"; then
+  echo 'STOP: deployment repository is not clean' >&2
+else
+  cd apps/arcana/overlays/production
+  kustomize edit set image \
+    vanloc1808/tarot-frontend=vanloc1808/tarot-frontend:5c09c93c553373f6ada02f303004fb3e882adef1
+  cd ../../../..
+fi
+
+git diff -- apps/arcana/overlays/production/kustomization.yaml
+git diff --check
+```
+
+Require the diff to change only the frontend `newTag`; the backend must remain
+at `47492873ca196bd21eb61a2e3996775fc56f90d5`. Render with SOPS/KSOPS and
+validate all resources:
+
+```bash
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+
+command -v ksops
+
+RENDER_DIRECTORY="$(mktemp -d)"
+RENDER_FILE="$RENDER_DIRECTORY/production.yaml"
+
+if kustomize build \
+  --enable-alpha-plugins \
+  --enable-exec \
+  apps/arcana/overlays/production \
+  >"$RENDER_FILE"; then
+  RESOURCE_COUNT="$(rg -c '^apiVersion:' "$RENDER_FILE")"
+  printf 'Rendered resources: %s\n' "$RESOURCE_COUNT"
+
+  if test "$RESOURCE_COUNT" -gt 0; then
+    kubeconform -strict -summary -exit-on-error "$RENDER_FILE"
+    rg 'image:' "$RENDER_FILE" | sort -u
+  else
+    echo 'STOP: render produced zero resources' >&2
+  fi
+else
+  echo 'STOP: production render failed' >&2
+fi
+
+if test -n "$RENDER_FILE" && test -f "$RENDER_FILE"; then
+  rm -f -- "$RENDER_FILE"
+  echo 'Removed temporary decrypted render'
+fi
+
+if test -n "$RENDER_DIRECTORY" \
+  && test -d "$RENDER_DIRECTORY"; then
+  rmdir -- "$RENDER_DIRECTORY"
+fi
+```
+
+Do not pipe the renderer directly into validation. Without shell pipeline
+failure propagation, a missing `ksops` executable can be hidden by a
+downstream command that accepts empty input. The explicit executable check,
+render exit status, and positive resource count prevent that false success.
+
+Commit and push the single deployment change:
+
+```bash
+git add apps/arcana/overlays/production/kustomization.yaml
+git diff --cached --check
+git diff --cached --stat
+git commit -m 'deploy: update Arcana frontend authentication fix'
+git push origin main
+```
+
+Keep manual synchronization disabled and request reconciliation of exactly the
+new pushed revision:
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+EXPECTED_REVISION="$(git rev-parse HEAD)"
+
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+
+for attempt in {1..60}; do
+  OBSERVED_REVISION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.sync.revision}'
+  )"
+  test "$OBSERVED_REVISION" = "$EXPECTED_REVISION" && break
+  sleep 5
+done
+
+if test "$OBSERVED_REVISION" = "$EXPECTED_REVISION"; then
+  echo 'Argo CD observed the pushed revision'
+else
+  echo 'STOP: Argo CD did not observe the pushed revision' >&2
+fi
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='sync={.status.sync.status}{"\n"}health={.status.health.status}{"\n"}revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+if test "$OBSERVED_REVISION" = "$EXPECTED_REVISION"; then
+  kubectl patch application -n argocd arcana-production \
+    --type=merge \
+    --patch "{\"operation\":{\"initiatedBy\":{\"username\":\"frontend-auth-fix-guide\"},\"sync\":{\"revision\":\"$EXPECTED_REVISION\",\"prune\":false}}}"
+fi
+```
+
+Wait for that exact operation and the frontend rollout:
+
+```bash
+for attempt in {1..60}; do
+  PHASE="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.operationState.phase}'
+  )"
+  OPERATION_REVISION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.operationState.syncResult.revision}'
+  )"
+  test "$PHASE" = Succeeded \
+    && test "$OPERATION_REVISION" = "$EXPECTED_REVISION" \
+    && break
+  test "$PHASE" = Failed -o "$PHASE" = Error \
+    && { echo "STOP: Argo CD operation ended in $PHASE" >&2; break; }
+  sleep 5
+done
+
+if test "$PHASE" = Succeeded \
+  && test "$OPERATION_REVISION" = "$EXPECTED_REVISION"; then
+  echo 'Exact-revision sync succeeded'
+else
+  echo 'STOP: exact-revision sync did not succeed' >&2
+fi
+
+kubectl rollout status -n arcana deployment/arcana-frontend --timeout=5m
+
+kubectl get deployment -n arcana arcana-frontend \
+  -o jsonpath='desiredImage={.spec.template.spec.containers[0].image}{"\n"}'
+
+kubectl get pods -n arcana \
+  -l app.kubernetes.io/name=arcana-frontend \
+  -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,RESTARTS:.status.containerStatuses[*].restartCount,IMAGE:.spec.containers[*].image,IMAGE_ID:.status.containerStatuses[*].imageID'
+```
+
+Finally, re-run strict public canary checks:
+
+```bash
+curl -H 'X-Arcana-Canary: k3s' \
+  -fsS -o /dev/null \
+  -w 'backend_public_canary_http=%{http_code}\n' \
+  https://backend-arcanaai.nguyenvanloc.com/api/health/
+
+curl -H 'X-Arcana-Canary: k3s' \
+  -fsS -o /dev/null \
+  -w 'frontend_public_canary_http=%{http_code} redirect=%{redirect_url}\n' \
+  https://arcanaai.nguyenvanloc.com/
+```
+
+Require backend HTTP 200, frontend HTTP 200 with no redirect, the corrected
+frontend image tag, a ready Pod with zero restarts, and automated sync still
+`false`. Ordinary production traffic remains on Docker.
+
+The GitOps revision `3dc832c81324f22517c2674f1ac61521f12f2694`
+synchronized successfully. The corrected frontend Pod became ready with zero
+restarts, and strict public canary checks returned HTTP 200 for both backend
+and frontend with no frontend redirect. The previous frontend Pod was still
+visible immediately after rollout while terminating; confirm it disappears
+before production cutover. Local validation did not run because `ksops` was
+missing on the MacBook, but Argo CD's pinned KSOPS renderer succeeded. Install
+the matching local version and repeat the render before cutover.
+
+### 41.12 Install pinned local KSOPS and close the canary checkpoint
+
+**Run on: current administration workstation (the MacBook).**
+
+First check the existing KSOPS executable. The installed CLI does not expose a
+`--version` or `version` command; those arguments are interpreted as manifest
+paths, so do not use them as a version probe:
+
+```bash
+command -v ksops
+ls -l "$(command -v ksops)"
+file "$(command -v ksops)"
+```
+
+Repeat the render using an explicit temporary file so a renderer failure or
+zero-resource result cannot be hidden by a pipeline. Put the render in a file
+whose name ends in `.yaml`; `kubeconform` skips an extensionless file when it
+is passed as a filesystem argument:
+
+```bash
+cd /Users/vanloc1808/Projects/arcana-deployment
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+
+RENDER_DIRECTORY="$(mktemp -d)"
+RENDER_FILE="$RENDER_DIRECTORY/production.yaml"
+
+if kustomize build \
+  --enable-alpha-plugins \
+  --enable-exec \
+  apps/arcana/overlays/production \
+  >"$RENDER_FILE"; then
+  RESOURCE_COUNT="$(rg -c '^apiVersion:' "$RENDER_FILE")"
+  printf 'Rendered resources: %s\n' "$RESOURCE_COUNT"
+
+  if test "$RESOURCE_COUNT" -gt 0; then
+    kubeconform -strict -summary -exit-on-error "$RENDER_FILE"
+    rg 'image:' "$RENDER_FILE" | sort -u
+  else
+    echo 'STOP: render produced zero resources' >&2
+  fi
+else
+  echo 'STOP: production render failed' >&2
+fi
+
+if test -n "$RENDER_FILE" && test -f "$RENDER_FILE"; then
+  rm -f -- "$RENDER_FILE"
+  echo 'Removed temporary decrypted render'
+fi
+
+if test -n "$RENDER_DIRECTORY" \
+  && test -d "$RENDER_DIRECTORY"; then
+  rmdir -- "$RENDER_DIRECTORY"
+fi
+```
+
+Confirm the old frontend Pod has terminated and explain any remaining Argo CD
+`Progressing` state without changing it:
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+kubectl get pods -n arcana \
+  -l app.kubernetes.io/name=arcana-frontend \
+  -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,PHASE:.status.phase,DELETION:.metadata.deletionTimestamp,RESTARTS:.status.containerStatuses[*].restartCount,IMAGE:.spec.containers[*].image'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='sync={.status.sync.status}{"\n"}health={.status.health.status}{"\n"}revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='{range .status.resources[*]}{.kind}{"\t"}{.namespace}{"\t"}{.name}{"\t"}{.status}{"\t"}{.health.status}{"\t"}{.health.message}{"\n"}{end}' \
+  | sort
+```
+
+Require one corrected frontend Pod, ready with zero restarts; a non-empty valid
+render; `Synced`; automated sync `false`; and no active operation. A
+`Progressing` Application is acceptable only if the resource inventory proves
+it comes solely from the intentionally unbound Beat PVC.
+
+This checkpoint passed. The local KSOPS executable is an ARM64 Mach-O binary;
+the production overlay rendered 16 resources; kubeconform validated all 16;
+and the temporary decrypted render was removed. The cluster has exactly one
+corrected frontend Pod, ready with zero restarts. Argo CD is synced to
+`3dc832c81324f22517c2674f1ac61521f12f2694`, automated sync remains disabled,
+and no operation is active. The Application remains `Progressing`; close that
+last status question by checking the intentionally inactive Beat workload and
+its delayed-binding claim.
+
+### 41.13 Explain the remaining Argo CD Progressing state
+
+**Run on: current administration workstation (the MacBook).**
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+kubectl get deployment -n arcana arcana-celery-beat \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas,READY:.status.readyReplicas,AVAILABLE:.status.availableReplicas'
+
+kubectl get pvc -n arcana \
+  -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName,STORAGE_CLASS:.spec.storageClassName,CAPACITY:.status.capacity.storage'
+
+kubectl describe pvc -n arcana arcana-celery-beat-data \
+  | sed -n '/^Status:/p;/^StorageClass:/p;/^Used By:/p;/WaitForFirstConsumer/p'
+
+kubectl get pods -n arcana \
+  -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,PHASE:.status.phase,RESTARTS:.status.containerStatuses[*].restartCount'
+```
+
+Require Beat desired replicas `0`, its PVC `Pending` with
+`WaitForFirstConsumer`, the avatar PVC `Bound`, and every active Pod ready with
+zero restarts. That combination explains `Progressing` without indicating an
+application failure; the Beat claim will bind only after the Docker scheduler
+is retired and the Kubernetes scheduler is deliberately scaled to one.
+
+The observed state matched that boundary exactly: Beat desired replicas were
+zero, its delayed-binding PVC was Pending with no consumer, the avatar and
+Redis PVCs were Bound, and every active Pod was ready with zero restarts. The
+Application's `Progressing` state is therefore expected and does not block the
+reversible web-traffic cutover.
+
+### 41.14 Switch ordinary web traffic to K3s
+
+**Run on: VPS.**
+
+Keep the existing canary file unchanged. Create a separate production overlay
+that adds two higher-priority host-only routers to the same carrier. Those
+routers reuse the already healthy canary services and ClusterIP targets:
+
+```bash
+if sudo test -e /root/traefik/arcana-k3s-production.yaml; then
+  echo 'STOP: production routing overlay already exists' >&2
+else
+  sudo tee /root/traefik/arcana-k3s-production.yaml >/dev/null <<'YAML'
+services:
+  arcana-k3s-router:
+    labels:
+      traefik.http.routers.arcana-k3s-backend-production.rule: "Host(`backend-tarotreader.nguyenvanloc.com`) || Host(`backend-arcanaai.nguyenvanloc.com`) || Host(`backend.stacyn.io.vn`)"
+      traefik.http.routers.arcana-k3s-backend-production.entrypoints: websecure
+      traefik.http.routers.arcana-k3s-backend-production.tls: "true"
+      traefik.http.routers.arcana-k3s-backend-production.priority: "9000"
+      traefik.http.routers.arcana-k3s-backend-production.service: arcana-k3s-backend-canary
+
+      traefik.http.routers.arcana-k3s-frontend-production.rule: "Host(`tarot-reader.nguyenvanloc.com`) || Host(`arcanaai.nguyenvanloc.com`) || Host(`stacyn.io.vn`)"
+      traefik.http.routers.arcana-k3s-frontend-production.entrypoints: websecure
+      traefik.http.routers.arcana-k3s-frontend-production.tls: "true"
+      traefik.http.routers.arcana-k3s-frontend-production.priority: "9000"
+      traefik.http.routers.arcana-k3s-frontend-production.service: arcana-k3s-frontend-canary
+YAML
+fi
+```
+
+Validate all three files, preview the targeted carrier recreation, and record
+the edge identity:
+
+```bash
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  -f /root/traefik/arcana-k3s-production.yaml \
+  config -q
+
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  -f /root/traefik/arcana-k3s-production.yaml \
+  config \
+  | grep -E 'arcana-k3s-(backend|frontend)-production'
+
+TRAEFIK_ID_BEFORE="$(docker inspect traefik --format '{{.Id}}')"
+TRAEFIK_STARTED_BEFORE="$(docker inspect traefik --format '{{.State.StartedAt}}')"
+
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  -f /root/traefik/arcana-k3s-production.yaml \
+  --dry-run up -d --no-deps arcana-k3s-router
+```
+
+Activate only the carrier and require Traefik to retain its identity:
+
+```bash
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  -f /root/traefik/arcana-k3s-production.yaml \
+  up -d --no-deps arcana-k3s-router
+
+TRAEFIK_ID_AFTER="$(docker inspect traefik --format '{{.Id}}')"
+TRAEFIK_STARTED_AFTER="$(docker inspect traefik --format '{{.State.StartedAt}}')"
+
+if test "$TRAEFIK_ID_BEFORE" = "$TRAEFIK_ID_AFTER" \
+  && test "$TRAEFIK_STARTED_BEFORE" = "$TRAEFIK_STARTED_AFTER"; then
+  echo 'Production Traefik was not recreated or restarted'
+else
+  echo 'STOP: production Traefik identity changed' >&2
+fi
+```
+
+Confirm the new routers, send normal requests without the canary header, and
+prove the access log selected the production K3s routers:
+
+```bash
+docker exec tarot-backend \
+  curl -fsS http://traefik:8080/api/http/routers \
+  | python3 -c '
+import json, sys
+for item in json.load(sys.stdin):
+    if item.get("name", "").startswith("arcana-k3s-") and "production" in item.get("name", ""):
+        print("name={} status={} priority={} service={}".format(
+            item.get("name"), item.get("status"), item.get("priority"), item.get("service")
+        ))
+'
+
+curl -fsS -o /dev/null \
+  -w 'backend_production_http=%{http_code}\n' \
+  https://backend-arcanaai.nguyenvanloc.com/api/health/
+
+curl -fsS -o /dev/null \
+  -w 'frontend_production_http=%{http_code} redirect=%{redirect_url}\n' \
+  https://arcanaai.nguyenvanloc.com/
+
+docker logs traefik --since 5m 2>&1 \
+  | grep -E 'arcana-k3s-(backend|frontend)-production@docker' \
+  | grep -E '"(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) ' \
+  | tail -n 20
+```
+
+Require two enabled priority-9000 routers, HTTP 200 for both requests, no
+frontend redirect, and access-log entries showing the production routers and
+K3s ClusterIP upstreams. Docker backend, frontend, worker, Redis, and Beat stay
+running during this observation window.
+
+If any cutover check fails, immediately restore canary-only labels by targeting
+the carrier with only the original two Compose files:
+
+```bash
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  up -d --no-deps arcana-k3s-router
+
+curl -fsS -o /dev/null \
+  -w 'rollback_backend_http=%{http_code}\n' \
+  https://backend-arcanaai.nguyenvanloc.com/api/health/
+
+curl -fsS -o /dev/null \
+  -w 'rollback_frontend_http=%{http_code}\n' \
+  https://arcanaai.nguyenvanloc.com/
+```
+
+This rollback removes only the production carrier labels; it preserves the
+header-gated canary routes and does not restart Traefik.
+
+The production web cutover passed. Both host-only routers are enabled at
+priority 9000, backend and frontend returned HTTP 200 through public DNS, and
+Traefik access logs showed ordinary Cloudflare traffic routed through
+`arcana-k3s-backend-production@docker` and
+`arcana-k3s-frontend-production@docker` to the expected K3s ClusterIPs. Keep
+the Docker application containers running while the remaining worker and
+scheduler migration proceeds.
+
+### 41.15 Prepare the Kubernetes Beat activation revision
+
+**Run on: current administration workstation (the MacBook).**
+
+This subsection changes Git only. It must not sync Argo CD or stop Docker Beat.
+Update the production replica override from zero to one:
+
+```bash
+cd /Users/vanloc1808/Projects/arcana-deployment
+
+if test -n "$(git status --short)"; then
+  echo 'STOP: deployment repository is not clean' >&2
+else
+  cd apps/arcana/overlays/production
+  kustomize edit set replicas arcana-celery-beat=1
+  cd ../../../..
+fi
+
+git diff -- apps/arcana/overlays/production/kustomization.yaml
+git diff --check
+```
+
+Require the only semantic change to be Beat count `0` to `1`. Render and
+validate through the local KSOPS executable using a `.yaml` file:
+
+```bash
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+
+RENDER_DIRECTORY="$(mktemp -d)"
+RENDER_FILE="$RENDER_DIRECTORY/production.yaml"
+
+if kustomize build \
+  --enable-alpha-plugins \
+  --enable-exec \
+  apps/arcana/overlays/production \
+  >"$RENDER_FILE"; then
+  RESOURCE_COUNT="$(rg -c '^apiVersion:' "$RENDER_FILE")"
+  printf 'Rendered resources: %s\n' "$RESOURCE_COUNT"
+  kubeconform -strict -summary -exit-on-error "$RENDER_FILE"
+  rg -n 'name: arcana-celery-beat|replicas: 1' "$RENDER_FILE"
+else
+  echo 'STOP: production render failed' >&2
+fi
+
+if test -n "$RENDER_FILE" && test -f "$RENDER_FILE"; then
+  rm -f -- "$RENDER_FILE"
+  echo 'Removed temporary decrypted render'
+fi
+
+if test -n "$RENDER_DIRECTORY" \
+  && test -d "$RENDER_DIRECTORY"; then
+  rmdir -- "$RENDER_DIRECTORY"
+fi
+```
+
+Commit and push the inert desired-state change, then let Argo CD observe it
+without synchronizing:
+
+```bash
+git add apps/arcana/overlays/production/kustomization.yaml
+git diff --cached --check
+git diff --cached --stat
+git commit -m 'deploy: prepare Kubernetes Celery Beat activation'
+git push origin main
+
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+EXPECTED_REVISION="$(git rev-parse HEAD)"
+
+kubectl annotate application -n argocd arcana-production \
+  argocd.argoproj.io/refresh=hard \
+  --overwrite
+
+for attempt in {1..60}; do
+  OBSERVED_REVISION="$(
+    kubectl get application -n argocd arcana-production \
+      -o jsonpath='{.status.sync.revision}'
+  )"
+  test "$OBSERVED_REVISION" = "$EXPECTED_REVISION" && break
+  sleep 5
+done
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='sync={.status.sync.status}{"\n"}health={.status.health.status}{"\n"}revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get deployment -n arcana arcana-celery-beat \
+  -o custom-columns='NAME:.metadata.name,LIVE_REPLICAS:.spec.replicas'
+```
+
+Require Argo CD to observe the new revision as `OutOfSync`, automated sync to
+remain `false`, no active operation, and the live Beat Deployment to remain at
+zero. Do not stop Docker Beat or synchronize this revision until the singleton
+scheduler handoff subsection.
+
+The prepared revision `b084a6942bd1f92e0e1066333a49968647d99640`
+rendered and validated all 16 resources. Argo CD observed it as OutOfSync with
+automation disabled and no active operation, while live Kubernetes Beat
+remained at zero.
+
+### 41.16 Hand off the singleton Celery Beat scheduler
+
+**Run on: current administration workstation (the MacBook).**
+
+Perform the handoff through a shell function so a failure returns to the
+interactive prompt instead of closing the terminal. The rollback helper first
+scales Kubernetes Beat to zero and only then restarts Docker Beat, preventing
+two schedulers from running together:
+
+```bash
+arcana_beat_handoff() {
+  cd /Users/vanloc1808/Projects/arcana-deployment || return 1
+  export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+  EXPECTED_REVISION="$(git rev-parse HEAD)" || return 1
+  OBSERVED_REVISION="$(kubectl get application -n argocd arcana-production -o jsonpath='{.status.sync.revision}')" || return 1
+  AUTOMATED_ENABLED="$(kubectl get application -n argocd arcana-production -o jsonpath='{.spec.syncPolicy.automated.enabled}')" || return 1
+  ACTIVE_OPERATION="$(kubectl get application -n argocd arcana-production -o jsonpath='{.operation}')" || return 1
+  LIVE_BEAT_REPLICAS="$(kubectl get deployment -n arcana arcana-celery-beat -o jsonpath='{.spec.replicas}')" || return 1
+  DOCKER_BEAT_STATUS="$(ssh vps docker inspect tarot-celery-beat --format '{{.State.Status}}')" || return 1
+
+  if test "$EXPECTED_REVISION" != "$OBSERVED_REVISION" \
+    || test "$AUTOMATED_ENABLED" != false \
+    || test -n "$ACTIVE_OPERATION" \
+    || test "$LIVE_BEAT_REPLICAS" != 0 \
+    || test "$DOCKER_BEAT_STATUS" != running; then
+    echo 'STOP: Beat handoff preconditions are not satisfied' >&2
+    return 1
+  fi
+
+  ssh vps docker stop tarot-celery-beat || return 1
+
+  kubectl patch application -n argocd arcana-production \
+    --type=merge \
+    --patch "{\"operation\":{\"initiatedBy\":{\"username\":\"celery-beat-handoff-guide\"},\"sync\":{\"revision\":\"$EXPECTED_REVISION\",\"prune\":false}}}" \
+    || {
+      ssh vps docker start tarot-celery-beat
+      return 1
+    }
+
+  PHASE=""
+  OPERATION_REVISION=""
+
+  for attempt in {1..60}; do
+    PHASE="$(kubectl get application -n argocd arcana-production -o jsonpath='{.status.operationState.phase}')" || break
+    OPERATION_REVISION="$(kubectl get application -n argocd arcana-production -o jsonpath='{.status.operationState.syncResult.revision}')" || break
+
+    test "$PHASE" = Succeeded \
+      && test "$OPERATION_REVISION" = "$EXPECTED_REVISION" \
+      && break
+
+    test "$PHASE" = Failed -o "$PHASE" = Error && break
+    sleep 5
+  done
+
+  if test "$PHASE" != Succeeded \
+    || test "$OPERATION_REVISION" != "$EXPECTED_REVISION"; then
+    echo 'Beat sync failed; restoring Docker Beat' >&2
+    kubectl scale deployment -n arcana arcana-celery-beat --replicas=0
+    kubectl rollout status deployment/arcana-celery-beat -n arcana --timeout=2m
+    ssh vps docker start tarot-celery-beat
+    return 1
+  fi
+
+  if ! kubectl rollout status deployment/arcana-celery-beat -n arcana --timeout=5m; then
+    echo 'Kubernetes Beat rollout failed; restoring Docker Beat' >&2
+    kubectl scale deployment -n arcana arcana-celery-beat --replicas=0
+    kubectl rollout status deployment/arcana-celery-beat -n arcana --timeout=2m
+    ssh vps docker start tarot-celery-beat
+    return 1
+  fi
+
+  kubectl get pods -n arcana \
+    -l app.kubernetes.io/name=arcana-celery-beat \
+    -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,PHASE:.status.phase,RESTARTS:.status.containerStatuses[*].restartCount,IMAGE:.spec.containers[*].image'
+
+  kubectl get pvc -n arcana arcana-celery-beat-data -o wide
+  kubectl logs -n arcana deployment/arcana-celery-beat --tail=50
+  ssh vps docker inspect tarot-celery-beat --format 'docker_beat_status={{.State.Status}}'
+
+  kubectl annotate application -n argocd arcana-production \
+    argocd.argoproj.io/refresh=hard --overwrite
+
+  kubectl get application -n argocd arcana-production \
+    -o jsonpath='sync={.status.sync.status}{"\n"}health={.status.health.status}{"\n"}revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}operation={.operation}{"\n"}'
+
+  echo 'Celery Beat singleton handoff completed'
+}
+
+arcana_beat_handoff
+BEAT_HANDOFF_RESULT="$?"
+unset -f arcana_beat_handoff
+printf 'Beat handoff result: %s\n' "$BEAT_HANDOFF_RESULT"
+```
+
+Require one ready Kubernetes Beat Pod with zero restarts, a Bound Beat PVC,
+scheduler startup in its logs, Docker Beat `exited`, Argo CD Synced at the exact
+revision, automated sync still false, and no active operation. Keep the Docker
+worker and Redis running until their old broker queue is inspected and drained.
+
+The singleton handoff passed at revision
+`b084a6942bd1f92e0e1066333a49968647d99640`. Kubernetes Beat is ready with
+zero restarts, its 256 MiB schedule PVC is Bound, and logs show Celery 5.6.3
+using `redis://arcana-redis:6379/0` with the persistent scheduler database.
+Docker Beat is exited. Argo CD is Synced and Healthy with automation disabled
+and no active operation.
+
+### 41.17 Inspect and drain the old Docker task broker
+
+**Run on: VPS.**
+
+Do not print task payloads or Redis values. Inspect only queue lengths,
+unacknowledged counts, and the Docker worker's task summaries:
+
+```bash
+docker inspect tarot-celery-worker \
+  --format 'worker_status={{.State.Status}} started={{.State.StartedAt}}'
+
+docker inspect tarot-redis \
+  --format 'redis_status={{.State.Status}} started={{.State.StartedAt}}'
+
+docker exec tarot-redis redis-cli -n 0 LLEN celery
+docker exec tarot-redis redis-cli -n 0 HLEN unacked
+docker exec tarot-redis redis-cli -n 0 ZCARD unacked_index
+
+docker exec tarot-celery-worker \
+  /app/.venv/bin/celery -A celery_app inspect active --timeout=5
+
+docker exec tarot-celery-worker \
+  /app/.venv/bin/celery -A celery_app inspect reserved --timeout=5
+
+docker exec tarot-celery-worker \
+  /app/.venv/bin/celery -A celery_app inspect scheduled --timeout=5
+```
+
+Require queue length zero, both unacknowledged counts zero, and empty active,
+reserved, and scheduled task lists. If any count or list is non-empty, leave
+the Docker worker and Redis running and repeat after the tasks finish. Do not
+stop Docker Redis, worker, backend, or frontend during this inspection.
+
+The old broker was completely drained: queue, unacknowledged hash, and
+unacknowledged index counts were all zero, and the sole Docker worker reported
+empty active, reserved, and scheduled lists.
+
+### 41.18 Retire the old Arcana Docker runtime
+
+**Run on: VPS.**
+
+Stop, but do not remove, the drained worker and the web containers that no
+longer receive production traffic. Stop their Redis last:
+
+```bash
+docker stop tarot-celery-worker
+docker stop tarot-backend tarot-frontend
+docker stop tarot-redis
+
+docker inspect \
+  tarot-celery-beat \
+  tarot-celery-worker \
+  tarot-backend \
+  tarot-frontend \
+  tarot-redis \
+  --format '{{.Name}}={{.State.Status}}'
+```
+
+Require all five containers to be exited. Keep them present as rollback
+artifacts. Confirm Kubernetes remains healthy and public traffic still selects
+the K3s production routers:
+
+```bash
+sudo k3s kubectl get pods -n arcana \
+  -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,PHASE:.status.phase,RESTARTS:.status.containerStatuses[*].restartCount'
+
+curl -fsS -o /dev/null \
+  -w 'backend_after_docker_retirement=%{http_code}\n' \
+  https://backend-arcanaai.nguyenvanloc.com/api/health/
+
+curl -fsS -o /dev/null \
+  -w 'frontend_after_docker_retirement=%{http_code} redirect=%{redirect_url}\n' \
+  https://arcanaai.nguyenvanloc.com/
+
+docker logs traefik --since 5m 2>&1 \
+  | grep -E 'arcana-k3s-(backend|frontend)-production@docker' \
+  | grep -E '"(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) ' \
+  | tail -n 20
+```
+
+Require every Kubernetes Pod ready with zero restarts, both public requests
+HTTP 200, and access logs naming the production K3s routers and ClusterIP
+upstreams.
+
+If a web check fails, restore the stopped Docker runtime and canary-only
+routing in this order:
+
+```bash
+docker start tarot-redis
+docker start tarot-celery-worker tarot-backend tarot-frontend
+
+sudo docker compose \
+  -f /root/traefik/docker-compose.yaml \
+  -f /root/traefik/arcana-k3s-canary.yaml \
+  up -d --no-deps arcana-k3s-router
+
+curl -fsS -o /dev/null \
+  -w 'rollback_backend_http=%{http_code}\n' \
+  https://backend-arcanaai.nguyenvanloc.com/api/health/
+
+curl -fsS -o /dev/null \
+  -w 'rollback_frontend_http=%{http_code}\n' \
+  https://arcanaai.nguyenvanloc.com/
+```
+
+Do not restart Docker Beat during a web-only rollback; Kubernetes Beat is now
+the active singleton scheduler. Do not remove Docker containers or volumes
+until the later rollback-retention window has elapsed.
+
+The Docker retirement passed. Beat, worker, backend, frontend, and Redis are
+all exited but retained. All five Kubernetes Pods are ready with zero
+restarts, both public requests returned HTTP 200, and Traefik access logs prove
+ordinary traffic continues through the K3s production routers and ClusterIP
+upstreams.
+
+### 41.19 Enable automated Argo CD reconciliation
+
+**Run on: current administration workstation (the MacBook).**
+
+The Docker rollback artifacts are retained and the Kubernetes stack is now
+fully healthy. Enable the already configured automated policy in Git by
+changing only `enabled: false` to `enabled: true` in the bootstrap Application:
+
+```bash
+cd /Users/vanloc1808/Projects/arcana-deployment
+
+if test -n "$(git status --short)"; then
+  echo 'STOP: deployment repository is not clean' >&2
+else
+  sed -i '' \
+    's/^      enabled: false$/      enabled: true/' \
+    bootstrap/argocd/arcana-production.yaml
+fi
+
+git diff -- bootstrap/argocd/arcana-production.yaml
+git diff --check
+
+rg -n 'enabled:|prune:|selfHeal:|allowEmpty:|PruneLast' \
+  bootstrap/argocd/arcana-production.yaml
+```
+
+Require exactly one semantic change: `enabled` becomes true while `prune`,
+`selfHeal`, and `PruneLast` retain their reviewed values and `allowEmpty`
+remains false. Commit and push:
+
+```bash
+git add bootstrap/argocd/arcana-production.yaml
+git diff --cached --check
+git diff --cached --stat
+git commit -m 'deploy: enable automated Arcana reconciliation'
+git push origin main
+```
+
+The bootstrap file is outside the Application's managed source path, so apply
+that reviewed Application object explicitly and verify the resulting policy:
+
+```bash
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+kubectl diff -f bootstrap/argocd/arcana-production.yaml || true
+kubectl apply -f bootstrap/argocd/arcana-production.yaml
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='sync={.status.sync.status}{"\n"}health={.status.health.status}{"\n"}revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}prune={.spec.syncPolicy.automated.prune}{"\n"}selfHeal={.spec.syncPolicy.automated.selfHeal}{"\n"}allowEmpty={.spec.syncPolicy.automated.allowEmpty}{"\n"}operation={.operation}{"\n"}'
+
+kubectl get pods -n arcana \
+  -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,PHASE:.status.phase,RESTARTS:.status.containerStatuses[*].restartCount'
+```
+
+Require Synced, Healthy, enabled/prune/selfHeal true, allowEmpty false, no
+active operation, and every Pod ready with zero restarts. From this point,
+merged Git changes under the production overlay reconcile automatically; use
+Git reverts rather than live edits for normal rollback.
+
+The final policy check passed. Argo CD is Synced and Healthy at revision
+`b084a6942bd1f92e0e1066333a49968647d99640`; automated synchronization,
+pruning, and self-healing are enabled; allowEmpty is false; no operation is
+active; and all five production Pods are ready with zero restarts. The core
+ArcanaAI K3s and Argo CD migration is complete.
+
+## 42. Company-laptop continuation prompt
 
 After both repositories and the Age identity are available on the company
 laptop, paste the following prompt into the new assistant session:
@@ -8442,8 +9882,9 @@ Current state:
 - The application repository is arcana-ai.
 - The separate GitOps repository is arcana-deployment.
 - GitHub Actions publishes SHA-tagged public images to Docker Hub.
-- The production VPS currently runs Docker Compose and Docker Traefik on ports
-  80 and 443; do not interrupt them.
+- Docker Traefik remains the public edge on ports 80 and 443. Its separate
+  routing carrier forwards ordinary Arcana traffic to the K3s ClusterIP
+  Services. Do not restart or replace production Traefik.
 - The VPS has about 18 GiB free, with 10 GiB as the stop-and-investigate floor.
 - K3s v1.36.3+k3s1 is installed and healthy; the node is Ready and the core
   system workloads are Running.
@@ -8453,21 +9894,24 @@ Current state:
   dedicated GitHub deploy key.
 - KSOPS v4.5.1 is installed as an isolated repo-server sidecar with the Age
   identity mounted from an encrypted-at-rest Kubernetes Secret.
-- The `arcana-production` Application has automated synchronization disabled;
-  private Git and KSOPS rendering are verified.
-- Gate A revision `57847592cce9fbbce1be696ead745fe95fe06df0` was manually
-  synchronized successfully as inert infrastructure.
-- The `arcana` namespace exists. Redis, backend, frontend, and one non-root
-  concurrency-one worker are healthy; Beat remains at zero. No migration Job
-  or Ingress exists.
-- Desired state contains the backend, persistent Redis, frontend, one
-  concurrency-one Celery worker, one Celery Beat scheduler, retained Beat
-  schedule storage, and internal Services. Production Kustomize replacement
-  was verified offline: backend and frontend use the pinned commit SHA, Redis
-  uses `redis:7.4.10-alpine`, and no rendered image uses `:latest`.
-- The existing Docker Arcana stack and Docker Traefik remain production. Do
-  not stop or modify them during migration staging.
-- K3s packaged Traefik and ServiceLB must remain disabled during staging.
+- The `arcana-production` Application is Synced and Healthy. Automated sync,
+  pruning, and self-healing are enabled; allowEmpty is false.
+- GitOps revision `b084a6942bd1f92e0e1066333a49968647d99640` runs the
+  backend, corrected frontend, Redis StatefulSet, one non-root concurrency-one
+  worker, and one singleton Beat scheduler. All five Pods are ready with zero
+  restarts.
+- The avatar, Redis, and Beat schedule PVCs are Bound. The avatar claim is
+  pruning-protected and retained its seeded production data.
+- Docker Beat, worker, backend, frontend, and Arcana Redis are exited but
+  retained as rollback artifacts. Their old broker was drained before stop.
+  Do not remove their containers or volumes until a deliberate retention
+  decision is recorded.
+- `/root/traefik/arcana-k3s-canary.yaml` and
+  `/root/traefik/arcana-k3s-production.yaml` provide the host routing bridge.
+  Preserve and version their non-secret definitions before treating the host
+  configuration as fully reproducible.
+- K3s packaged Traefik and ServiceLB remain disabled. No Kubernetes Ingress is
+  used while Docker Traefik owns ports 80 and 443.
 - TCP 6443 is not open publicly; workstation kubectl access uses an SSH
   local-forward and a dedicated kubeconfig at `~/.kube/arcana-k3s.yaml`.
 - My SOPS Age identity is stored outside Git at
@@ -8481,31 +9925,19 @@ export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 test -r "$SOPS_AGE_KEY_FILE"
 age-keygen -y "$SOPS_AGE_KEY_FILE"
 
-Resume after Section 40.6. Internal-only Kubernetes backend, frontend, and one
-non-root concurrency-one worker are healthy. The worker runs as
-`nobody:nogroup` UID/GID 65534,
-reached Kubernetes Redis, reported expected registered tasks, had no
-active/reserved/scheduled work, and served internal metrics. Beat remains at
-zero, no Ingress exists, automated synchronization is disabled, and Docker
-still serves production. Section 37 inventoried two Docker avatar files and two
-database references. Sections 38-39 create a dedicated pruning-protected 1 GiB
-avatar PVC, mount it only into the Kubernetes backend, create a private VPS
-source backup, seed the empty claim, compare content-set digests, and verify
-persistence across a backend rollout. Section 40 restores Argo CD convergence
-after the controlled restart and inventories both sides of the Docker
-Traefik/Kubernetes traffic boundary without changing it. Docker remains the
-sole public writer, so an explicit bridge design plus final write-freeze and
-delta reconciliation are still required before Beat or public cutover. Give me
-one subsection at a time.
+Resume after Section 41.19. The production migration is complete. Next, make
+the host-side Traefik routing bridge reproducible in the deployment repository,
+define the rollback-artifact retention window, and review monitoring and
+backup coverage. Give me one subsection at a time.
 Whenever you add instructions to this Markdown guide, put an explicit
 `Run on: VPS` or `Run on: current administration workstation` line before the
 commands. Do not use ambiguous locations such as `local machine`; clearly say
 whether each command runs through SSH on the VPS or directly on my current
 computer.
-Do not run deployment commands on my behalf, expose secrets, change the
-firewall, stop Docker, modify another user's container, synchronize the
-Application, or take over ports 80/443. If output is unexpected, stop and
-diagnose it before continuing.
+Do not use `set -e`, `set -u`, or `set -eu` in commands. Do not run deployment
+commands on my behalf, expose secrets, change the firewall, modify another
+user's container, remove rollback artifacts, or take over ports 80/443. If
+output is unexpected, stop and diagnose it before continuing.
 ```
 
 The prompt contains the key path but never the private key. On the company
@@ -8543,4 +9975,5 @@ git -C /path/to/arcana-deployment pull --ff-only origin main
 - [Argo CD: Automated sync policy](https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/)
 - [GitHub: Managing deploy keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys)
 - [Docker Hub: Redis official image](https://hub.docker.com/_/redis)
+- [Traefik: Docker routing labels](https://doc.traefik.io/traefik/reference/routing-configuration/other-providers/docker/)
 - [Supabase: Database backups](https://supabase.com/docs/guides/platform/backups)
