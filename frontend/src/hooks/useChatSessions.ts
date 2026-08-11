@@ -5,6 +5,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { logDebug, logError, logHookError } from '@/lib/logger';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '@/config';
+import { getCsrfToken } from '@/lib/csrf';
 
 export interface ChatSession {
     id: number;
@@ -240,13 +241,13 @@ export const useChatSessions = () => {
             setMessages(prev => [...prev, tempUserMessage]);
 
             // Make streaming request using fetch API
-            const csrfToken = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/)?.[1];
+            const csrfToken = await getCsrfToken();
             const response = await fetch(`${API_URL}/api/chat/sessions/${sessionId}/messages/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'text/event-stream',
-                    ...(csrfToken ? { 'X-CSRF-Token': decodeURIComponent(csrfToken) } : {}),
+                    ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
                 },
                 credentials: 'include',
                 body: JSON.stringify({ content }),

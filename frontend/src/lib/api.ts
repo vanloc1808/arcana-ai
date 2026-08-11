@@ -2,6 +2,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { logDebug, logWarn } from '@/lib/logger';
 import { API_URL } from '@/config';
+import { getCsrfToken } from '@/lib/csrf';
 import {
     Card,
     TurnsResponse,
@@ -45,12 +46,6 @@ const api = axios.create({
     withCredentials: true,
 });
 
-function getCsrfToken(): string | null {
-    if (typeof document === "undefined") return null;
-    const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
-    return match ? decodeURIComponent(match[1]) : null;
-}
-
 let isRefreshing = false;
 let failedQueue: { resolve: (value: unknown) => void; reject: (reason?: Error) => void }[] = [];
 
@@ -67,8 +62,8 @@ const processQueue = (error: Error | null = null, token: string | null = null) =
 
 // Request interceptor
 api.interceptors.request.use(
-    (config) => {
-        const csrfToken = getCsrfToken();
+    async (config) => {
+        const csrfToken = await getCsrfToken();
         if (csrfToken && config.method && !["get", "head", "options"].includes(config.method.toLowerCase())) {
             config.headers["X-CSRF-Token"] = csrfToken;
         }
@@ -167,7 +162,7 @@ export const auth = {
     },
 
     refreshToken: async (legacyRefreshToken?: string) => {
-        const csrfToken = getCsrfToken();
+        const csrfToken = await getCsrfToken();
         const response = await fetch(`${API_URL}/api/auth/refresh`, {
             method: 'POST',
             headers: {
@@ -377,7 +372,7 @@ export const tarot = {
         onDone: () => void,
         onError: (error: string) => void,
     ): Promise<void> => {
-        const csrfToken = getCsrfToken();
+        const csrfToken = await getCsrfToken();
         const response = await fetch(`${API_URL}/api/tarot/compatibility/interpret/stream`, {
             method: 'POST',
             headers: {

@@ -332,6 +332,33 @@ def test_cookie_authenticated_mutation_requires_csrf_token(client, test_user):
     assert client.post("/auth/logout").status_code == status.HTTP_403_FORBIDDEN
 
 
+def test_authenticated_client_can_bootstrap_host_only_csrf_token(client, test_user):
+    login_response = client.post("/auth/token", data={"username": "testuser", "password": "testpassword"})
+    assert login_response.status_code == status.HTTP_200_OK
+
+    response = client.get("/auth/csrf")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"csrf_token": client.cookies.get("csrf_token")}
+
+
+def test_refresh_cookie_can_bootstrap_csrf_after_access_cookie_expires(client, test_user):
+    login_response = client.post("/auth/token", data={"username": "testuser", "password": "testpassword"})
+    assert login_response.status_code == status.HTTP_200_OK
+    client.cookies.delete("access_token")
+
+    response = client.get("/auth/csrf")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"csrf_token": client.cookies.get("csrf_token")}
+
+
+def test_unauthenticated_client_cannot_bootstrap_csrf_token(client):
+    response = client.get("/auth/csrf")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 def test_refresh_token_rotation_revokes_reused_token(client, test_user):
     client.post("/auth/token", data={"username": "testuser", "password": "testpassword"})
     old_refresh_token = client.cookies.get("refresh_token")

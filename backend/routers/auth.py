@@ -900,6 +900,24 @@ async def reset_password(request: Request, request_data: ResetPasswordRequest, d
         raise TarotAPIException(message="Error resetting password", details={"error": str(e)})
 
 
+@router.get("/csrf")
+async def get_csrf_token(
+    request: Request,
+    response: Response,
+):
+    """Return the current host-only CSRF token to an authenticated frontend."""
+    if not (
+        request.cookies.get(settings.ACCESS_COOKIE_NAME)
+        or request.cookies.get(settings.REFRESH_COOKIE_NAME)
+    ):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    csrf_token = request.cookies.get(settings.CSRF_COOKIE_NAME)
+    if not csrf_token:
+        raise HTTPException(status_code=403, detail="CSRF token is unavailable")
+    response.headers["Cache-Control"] = "no-store"
+    return {"csrf_token": csrf_token}
+
+
 @router.get("/me", response_model=UserResponse)
 @limiter.limit(RATE_LIMITS["default"])
 async def get_current_user_profile(

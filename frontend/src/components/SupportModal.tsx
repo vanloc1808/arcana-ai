@@ -27,6 +27,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { API_URL } from '@/config';
+import { getCsrfToken } from '@/lib/csrf';
 
 interface SupportModalProps {
     isOpen: boolean;
@@ -196,11 +197,11 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                 formDataToSend.append('files', file);
             });
 
-            const csrfToken = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/)?.[1];
+            const csrfToken = await getCsrfToken();
             const response = await fetch(`${API_URL}/api/support/`, {
                 method: 'POST',
                 headers: {
-                    ...(csrfToken ? { 'X-CSRF-Token': decodeURIComponent(csrfToken) } : {}),
+                    ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
                 },
                 credentials: 'include',
                 body: formDataToSend,
