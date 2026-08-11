@@ -9868,6 +9868,83 @@ pruning, and self-healing are enabled; allowEmpty is false; no operation is
 active; and all five production Pods are ready with zero restarts. The core
 ArcanaAI K3s and Argo CD migration is complete.
 
+### 41.20 Complete and verify the application-to-GitOps CI/CD pipeline
+
+**Run on: current administration workstation (the MacBook).**
+
+GitHub Actions now completes the production delivery chain after both test
+jobs pass: it builds SHA-tagged backend and frontend images, pushes them to
+Docker Hub, checks out `vanloc1808/arcana-deployment` using the
+repository-scoped `ARCANA_GITOPS_SSH_KEY`, updates both production image tags,
+and pushes the GitOps commit for Argo CD to reconcile.
+
+The CI writer key is deliberately separate from Argo CD's read-only deploy
+key. GitHub Actions stores the CI private key as an encrypted repository
+secret; a company laptop does not need that private key to trigger the
+pipeline. The personal MacBook copy at `~/.ssh/arcana_gitops_ci` is sensitive
+backup material and must never be committed.
+
+The first complete run passed for application revision
+`f7ccf2de0ee74ad55cb6de431a766a7e6d02b710`, creating GitOps revision
+`964c238473255b5cffc8dd89f94b75060e2024eb`. Use this read-only check for later
+deployments:
+
+```bash
+cd /path/to/arcana-ai
+
+gh run list \
+  --repo vanloc1808/arcana-ai \
+  --workflow ci.yml \
+  --branch main \
+  --limit 3
+
+export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
+
+kubectl get application -n argocd arcana-production \
+  -o jsonpath='sync={.status.sync.status}{"\n"}health={.status.health.status}{"\n"}revision={.status.sync.revision}{"\n"}enabled={.spec.syncPolicy.automated.enabled}{"\n"}'
+
+kubectl get pods -n arcana \
+  -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,RESTARTS:.status.containerStatuses[*].restartCount,IMAGE:.spec.containers[*].image'
+```
+
+The workflow currently emits non-blocking Node 20 action-runtime deprecation
+warnings. Updating the affected action versions is separate CI-only follow-up
+work and must be verified with one complete pipeline run.
+
+### 41.21 Repair cross-subdomain CSRF mutations
+
+**Run on: current administration workstation (the MacBook).**
+
+Production intentionally uses host-only authentication cookies so one
+deployment can support both the `stacyn.io.vn` and `nguyenvanloc.com` domain
+families. JavaScript on a frontend hostname cannot read a host-only CSRF
+cookie owned by its backend hostname, so the old frontend could not attach
+`X-CSRF-Token` to mutations.
+
+Application revision `2d6b02e7e8015e7055380418608cc128dbab480b` repairs this
+without widening cookie scope. The authenticated, non-cacheable
+`GET /api/auth/csrf` bootstrap returns the current token, including when only
+the refresh cookie remains. The frontend uses it for Axios mutations, token
+refresh, streaming chat and compatibility requests, and support submissions.
+
+CI/CD passed and created GitOps revision
+`580041f585a2fd42306ed6dcc987170186a44e91`. Argo CD is Synced and Healthy at
+that revision. All five Pods are ready with zero restarts; both public sites
+return HTTP 200; and unauthenticated CSRF bootstrap returns HTTP 401.
+
+After pulling the repository on another workstation, perform the remaining
+user acceptance check in a fresh browser session:
+
+1. Log out of `https://stacyn.io.vn`.
+2. Log in again to receive newly rotated cookies.
+3. Create a new chat and send one message.
+4. In the Network panel, require `GET /api/auth/csrf` to return 200 and the
+   subsequent mutation to succeed. Never copy or record the response token.
+
+Do not set a shared `AUTH_COOKIE_DOMAIN` to solve this issue. One parent cookie
+domain cannot cover both supported domain families and would regress one of
+them.
+
 ## 42. Company-laptop continuation prompt
 
 After both repositories and the Age identity are available on the company
@@ -9881,7 +9958,9 @@ giving me the next command.
 Current state:
 - The application repository is arcana-ai.
 - The separate GitOps repository is arcana-deployment.
-- GitHub Actions publishes SHA-tagged public images to Docker Hub.
+- GitHub Actions tests the application, publishes SHA-tagged public images to
+  Docker Hub, and updates both production image tags in the deployment
+  repository through the dedicated `ARCANA_GITOPS_SSH_KEY`.
 - Docker Traefik remains the public edge on ports 80 and 443. Its separate
   routing carrier forwards ordinary Arcana traffic to the K3s ClusterIP
   Services. Do not restart or replace production Traefik.
@@ -9896,10 +9975,14 @@ Current state:
   identity mounted from an encrypted-at-rest Kubernetes Secret.
 - The `arcana-production` Application is Synced and Healthy. Automated sync,
   pruning, and self-healing are enabled; allowEmpty is false.
-- GitOps revision `b084a6942bd1f92e0e1066333a49968647d99640` runs the
-  backend, corrected frontend, Redis StatefulSet, one non-root concurrency-one
-  worker, and one singleton Beat scheduler. All five Pods are ready with zero
-  restarts.
+- Application revision `2d6b02e7e8015e7055380418608cc128dbab480b` is deployed
+  through GitOps revision `580041f585a2fd42306ed6dcc987170186a44e91`.
+  Backend, frontend, Redis, one non-root concurrency-one worker, and one
+  singleton Beat scheduler are ready with zero restarts.
+- Cross-subdomain CSRF mutations use the authenticated, non-cacheable
+  `/api/auth/csrf` bootstrap while authentication cookies remain host-only.
+  The only remaining acceptance check is to log out, log in, create a chat,
+  and send one message from `https://stacyn.io.vn`.
 - The avatar, Redis, and Beat schedule PVCs are Bound. The avatar claim is
   pruning-protected and retained its seeded production data.
 - Docker Beat, worker, backend, frontend, and Arcana Redis are exited but
@@ -9916,19 +9999,23 @@ Current state:
   local-forward and a dedicated kubeconfig at `~/.kube/arcana-k3s.yaml`.
 - My SOPS Age identity is stored outside Git at
   ~/.config/sops/age/keys.txt on this laptop.
-- This administration workstation uses its own write-enabled,
-  repository-scoped deploy key. It does not reuse Argo CD's read-only deploy
-  key.
+- GitHub Actions uses a write-enabled deployment-repository key stored as the
+  `ARCANA_GITOPS_SSH_KEY` repository secret. It does not reuse Argo CD's
+  read-only deploy key, and the company laptop does not need the CI private
+  key to trigger deployments.
 
 Before any SOPS command, I will run:
 export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 test -r "$SOPS_AGE_KEY_FILE"
 age-keygen -y "$SOPS_AGE_KEY_FILE"
 
-Resume after Section 41.19. The production migration is complete. Next, make
-the host-side Traefik routing bridge reproducible in the deployment repository,
-define the rollback-artifact retention window, and review monitoring and
-backup coverage. Give me one subsection at a time.
+Resume after Section 41.21. The production migration and CI/CD pipeline are
+complete. First perform the CSRF browser acceptance check. Then finish these
+small operational tasks in order: commit the already copied Traefik bridge
+files with a non-secret README, define the rollback-artifact retention window,
+review monitoring and backup coverage, update the Node-runtime-deprecated
+GitHub Actions, and triage the existing Dependabot alerts. Give me one
+subsection at a time.
 Whenever you add instructions to this Markdown guide, put an explicit
 `Run on: VPS` or `Run on: current administration workstation` line before the
 commands. Do not use ambiguous locations such as `local machine`; clearly say
@@ -9943,10 +10030,38 @@ output is unexpected, stop and diagnose it before continuing.
 The prompt contains the key path but never the private key. On the company
 laptop, first update both repositories with:
 
+**Run on: current administration workstation (the company laptop).**
+
 ```bash
 git -C /path/to/arcana-ai pull --ff-only origin main
 git -C /path/to/arcana-deployment pull --ff-only origin main
 ```
+
+Before changing the deployment repository, inspect the remaining uncommitted
+Traefik bridge files:
+
+**Run on: current administration workstation (the company laptop).**
+
+```bash
+cd /path/to/arcana-deployment
+
+git status --short
+sha256sum \
+  infrastructure/traefik/arcana-k3s-canary.yaml \
+  infrastructure/traefik/arcana-k3s-production.yaml
+```
+
+Expected non-secret hashes copied from the VPS:
+
+- canary: `b78310ca5dae4cedbaac95bc942c6abaf75e25f89084368128a8d8fa6c8a6281`
+- production: `8a0483356c333571ccb06e95c5e4459325c7d9089de2f8ab35f243ebf2844bbd`
+
+Do not overwrite those files unless the hashes differ and the current VPS
+source has been deliberately re-inspected. Next add
+`infrastructure/traefik/README.md` describing ownership, activation, rollback,
+the requirement to preserve ports 80/443, and retained Docker rollback
+artifacts. Do not include ACME data, credentials, private keys, or Docker
+socket contents.
 
 ## Primary references
 
