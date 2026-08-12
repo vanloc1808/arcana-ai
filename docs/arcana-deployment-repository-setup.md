@@ -14,7 +14,7 @@ GitHub Actions: test and build
 Docker Hub: SHA-tagged images
         |
         v
-arcana-deployment: desired production state
+platform-gitops: desired production state
         |
         v
 Argo CD
@@ -30,7 +30,7 @@ GitHub Actions remains responsible for CI and publishing public images to Docker
 Go to <https://github.com/new> and select:
 
 - Owner: `vanloc1808`
-- Repository name: `arcana-deployment`
+- Repository name: `platform-gitops`
 - Description: `GitOps deployment configuration for ArcanaAI`
 - Visibility: Private
 - Initialize with README: Yes
@@ -45,17 +45,17 @@ Run on the local Mac:
 
 ```bash
 cd /Users/vanloc1808/Projects
-git clone git@github.com:vanloc1808/arcana-deployment.git
-cd arcana-deployment
+git clone git@github.com:vanloc1808/platform-gitops.git
+cd platform-gitops
 git remote -v
 git status
 ```
 
-The `origin` remote should be `git@github.com:vanloc1808/arcana-deployment.git`.
+The `origin` remote should be `git@github.com:vanloc1808/platform-gitops.git`.
 
 ## 3. Create the initial structure
 
-Run from `/Users/vanloc1808/Projects/arcana-deployment`:
+Run from `/Users/vanloc1808/Projects/platform-gitops`:
 
 ```bash
 mkdir -p apps/arcana/base
@@ -73,7 +73,7 @@ touch .gitignore
 Expected layout:
 
 ```text
-arcana-deployment/
+platform-gitops/
 ├── README.md
 ├── .gitignore
 ├── apps/
@@ -169,7 +169,7 @@ spec:
   project: default
 
   source:
-    repoURL: git@github.com:vanloc1808/arcana-deployment.git
+    repoURL: git@github.com:vanloc1808/platform-gitops.git
     targetRevision: main
     path: apps/arcana/overlays/production
 
@@ -356,13 +356,13 @@ Update `tasks/plan.md` to record:
 
 ```markdown
 - Deployment manifests live in the separate private
-  `vanloc1808/arcana-deployment` repository.
+  `vanloc1808/platform-gitops` repository.
 ```
 
 Update the first task in `tasks/todo.md` to show these decisions:
 
 ```markdown
-- [x] Use the separate `vanloc1808/arcana-deployment` repository.
+- [x] Use the separate `vanloc1808/platform-gitops` repository.
 - [x] Argo CD watches `main` at `apps/arcana/overlays/production`.
 - [x] Use Kustomize with base and production overlay directories.
 ```
@@ -379,7 +379,7 @@ git status
 
 ## 14. Add the backend Kubernetes workload
 
-Create the files from `/Users/vanloc1808/Projects/arcana-deployment`:
+Create the files from `/Users/vanloc1808/Projects/platform-gitops`:
 
 ```bash
 touch apps/arcana/base/backend-configmap.yaml
@@ -719,14 +719,14 @@ age-keygen -y "$SOPS_AGE_KEY_FILE"
 ```
 
 The final command prints only the public `age1...` recipient. Confirm it
-matches the recipient in `arcana-deployment/.sops.yaml`. Once verified, remove
+matches the recipient in `platform-gitops/.sops.yaml`. Once verified, remove
 the temporary transferred copy using the secure-deletion or managed-device
 procedure appropriate for that storage location. Do not generate a new Age
 identity on the company laptop for these existing encrypted files.
 
 ### 15.3 Add the SOPS policy
 
-Create `.sops.yaml` at the root of `arcana-deployment`:
+Create `.sops.yaml` at the root of `platform-gitops`:
 
 ```yaml
 creation_rules:
@@ -761,7 +761,7 @@ files before committing.
 
 ### 15.5 Create the encrypted backend Secret directly
 
-Run from the root of `arcana-deployment`:
+Run from the root of `platform-gitops`:
 
 ```bash
 SOPS_AGE_KEY_FILE=/Users/vanloc1808/.config/sops/age/keys.txt \
@@ -886,7 +886,7 @@ spec:
   revisionHistoryLimit: 10
 ```
 
-Run the local checks from `arcana-deployment`:
+Run the local checks from `platform-gitops`:
 
 ```bash
 kubectl kustomize apps/arcana/overlays/production \
@@ -1216,7 +1216,7 @@ Internet -----------------------------------X VPS public TCP 6443
 ```
 
 The K3s admin kubeconfig grants full cluster-administrator access. Never commit
-it, place it in `arcana-deployment`, or send it through chat.
+it, place it in `platform-gitops`, or send it through chat.
 
 ### 17.5 Stop point before installation
 
@@ -1631,7 +1631,7 @@ access can be added later through a separate local port-forward if needed.
 
 ## 21. Configure read-only Argo CD repository access
 
-Give Argo CD access to the private `vanloc1808/arcana-deployment` repository
+Give Argo CD access to the private `vanloc1808/platform-gitops` repository
 with a dedicated GitHub deploy key. Deploy keys are scoped to one repository
 and are read-only by default. Do not reuse a personal SSH key, GitHub account
 token, or CI credential.
@@ -1682,7 +1682,7 @@ cat "$HOME/.ssh/arcana-deployment-argocd.pub"
 Open the private repository on GitHub and go to:
 
 ```text
-vanloc1808/arcana-deployment
+vanloc1808/platform-gitops
   -> Settings
   -> Deploy keys
   -> Add deploy key
@@ -1714,7 +1714,7 @@ ssh-keygen -F github.com >/dev/null || {
 
 ARGOCD_REPO_KEY="$HOME/.ssh/arcana-deployment-argocd"
 GIT_SSH_COMMAND="ssh -i $ARGOCD_REPO_KEY -o IdentitiesOnly=yes" \
-  git ls-remote git@github.com:vanloc1808/arcana-deployment.git HEAD
+  git ls-remote git@github.com:vanloc1808/platform-gitops.git HEAD
 ```
 
 Expected output is one commit SHA followed by `HEAD`. An authentication error
@@ -1748,7 +1748,7 @@ fi
 kubectl create secret generic arcana-deployment-repo \
   --namespace=argocd \
   --from-literal=type=git \
-  --from-literal=url=git@github.com:vanloc1808/arcana-deployment.git \
+  --from-literal=url=git@github.com:vanloc1808/platform-gitops.git \
   --from-literal=project=default \
   --from-file=sshPrivateKey="$ARGOCD_REPO_KEY"
 
@@ -1822,7 +1822,7 @@ access tightly controlled and review changes to generator definitions.
 ### 22.1 Add the KSOPS plugin configuration to the deployment repository
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Create the directory and files:
 
@@ -1933,7 +1933,7 @@ separation mitigates path-traversal attacks.
 ### 22.2 Register the encrypted backend Secret with KSOPS
 
 **Run on:** the administration workstation, still in the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Create `apps/arcana/overlays/production/backend-secret-generator.yaml`:
 
@@ -1967,7 +1967,7 @@ spec:
   project: default
 
   source:
-    repoURL: git@github.com:vanloc1808/arcana-deployment.git
+    repoURL: git@github.com:vanloc1808/platform-gitops.git
     targetRevision: main
     path: apps/arcana/overlays/production
     plugin:
@@ -1980,7 +1980,7 @@ not apply this Application yet.
 
 ### 22.3 Validate the repository changes without exposing plaintext
 
-**Run on:** the administration workstation, from `arcana-deployment`.
+**Run on:** the administration workstation, from `platform-gitops`.
 
 Confirm the local identity is readable and that its public recipient matches
 the committed `.sops.yaml` recipient:
@@ -2075,7 +2075,7 @@ keys.txt
 
 ### 22.5 Apply the plugin configuration and repo-server patch
 
-**Run on:** the administration workstation, from `arcana-deployment`.
+**Run on:** the administration workstation, from `platform-gitops`.
 These commands change the Argo CD repo-server on the VPS.
 
 Apply the non-secret plugin configuration first, then validate the Deployment
@@ -2179,7 +2179,7 @@ Do not enable automated sync at the end of this phase.
 ### 23.1 Disable automated sync in Git
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 In `bootstrap/argocd/arcana-production.yaml`, change the existing automated
 sync setting from:
@@ -2379,7 +2379,7 @@ single node or disk.
 ### 24.2 Add the internal Redis Service
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Create the Redis files:
 
@@ -2722,7 +2722,7 @@ frontend image, not only a Kubernetes ConfigMap edit.
 ### 25.2 Add the frontend Deployment
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Create the frontend files:
 
@@ -3090,7 +3090,7 @@ if test -e "$MACBOOK_DEPLOY_KEY" || test -e "$MACBOOK_DEPLOY_KEY.pub"; then
 fi
 
 ssh-keygen -t ed25519 \
-  -C 'arcana-deployment personal MacBook' \
+  -C 'platform-gitops personal MacBook' \
   -f "$MACBOOK_DEPLOY_KEY"
 
 chmod 600 "$MACBOOK_DEPLOY_KEY"
@@ -3101,7 +3101,7 @@ pbcopy < "$MACBOOK_DEPLOY_KEY.pub"
 Use a passphrase when prompted and store it in the macOS Keychain. The final
 command copies only the public key.
 
-In GitHub, open `vanloc1808/arcana-deployment` and go to **Settings > Deploy
+In GitHub, open `vanloc1808/platform-gitops` and go to **Settings > Deploy
 keys > Add deploy key**. Use a descriptive title such as `Personal MacBook
 deployment writer`, paste the copied public key, deliberately select **Allow
 write access**, and add the key. Write access is appropriate only for this
@@ -3138,8 +3138,8 @@ Clone the deployment repository if it is not present:
 
 ```bash
 git clone \
-  git@github-arcana-deployment-macbook:vanloc1808/arcana-deployment.git
-cd arcana-deployment
+  git@github-arcana-deployment-macbook:vanloc1808/platform-gitops.git
+cd platform-gitops
 git remote -v
 git fetch origin main
 git rev-parse HEAD
@@ -3153,12 +3153,12 @@ current remote before changing anything:
 git remote -v
 ```
 
-If and only if `origin` points at the same `vanloc1808/arcana-deployment`
+If and only if `origin` points at the same `vanloc1808/platform-gitops`
 repository, select the dedicated MacBook alias and update safely:
 
 ```bash
 git remote set-url origin \
-  git@github-arcana-deployment-macbook:vanloc1808/arcana-deployment.git
+  git@github-arcana-deployment-macbook:vanloc1808/platform-gitops.git
 git pull --ff-only origin main
 ```
 
@@ -3206,7 +3206,7 @@ credential through an additional workstation.
 ### 26.2 Confirm the Celery image contract and staging capacity
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository. Keep the Section 19 SSH tunnel running in its
+`platform-gitops` repository. Keep the Section 19 SSH tunnel running in its
 other terminal.
 
 First capture the immutable production image tag and prove that it is a real
@@ -3293,7 +3293,7 @@ capacity is checked again.
 ### 26.4 Define the Celery worker
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Create `apps/arcana/base/celery-worker-deployment.yaml`:
 
@@ -3455,7 +3455,7 @@ defining its internal metrics Service.
 ### 26.5 Define the Celery worker metrics Service
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Create `apps/arcana/base/celery-worker-service.yaml`:
 
@@ -3498,7 +3498,7 @@ its persistent schedule storage.
 ### 26.6 Define persistent Celery Beat schedule storage
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Create `apps/arcana/base/celery-beat-pvc.yaml`:
 
@@ -3542,7 +3542,7 @@ scheduler Pod.
 ### 26.7 Define the single Celery Beat scheduler
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Create `apps/arcana/base/celery-beat-deployment.yaml`:
 
@@ -3707,7 +3707,7 @@ metrics Service.
 ### 26.8 Define the Celery Beat metrics Service
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Create `apps/arcana/base/celery-beat-service.yaml`:
 
@@ -3750,7 +3750,7 @@ the complete Celery slice.
 ### 26.9 Register and render the complete Celery slice
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Update `apps/arcana/base/kustomization.yaml` so its `resources` list is:
 
@@ -3819,7 +3819,7 @@ output for review before staging the slice.
 ### 26.10 Commit and push the Celery desired state
 
 **Run on:** the administration workstation, from the root of the
-`arcana-deployment` repository.
+`platform-gitops` repository.
 
 Stage only the reviewed Celery slice:
 
@@ -4031,7 +4031,7 @@ actual repository paths on this Ubuntu machine:
 
 ```bash
 ARCANA_AI_REPO=/absolute/path/to/arcana-ai
-ARCANA_DEPLOYMENT_REPO=/absolute/path/to/arcana-deployment
+ARCANA_DEPLOYMENT_REPO=/absolute/path/to/platform-gitops
 
 test -d "$ARCANA_AI_REPO/.git"
 test -d "$ARCANA_DEPLOYMENT_REPO/.git"
@@ -4255,7 +4255,7 @@ cluster or database.
 #### Override backend startup
 
 **Run on: current administration workstation (this Ubuntu machine), from the
-root of `~/Personal/arcana-deployment`.**
+root of `~/Personal/platform-gitops`.**
 
 Open `apps/arcana/base/backend-deployment.yaml`. In the existing `backend`
 container, add `workingDir`, `command`, and `args` immediately after
@@ -4299,7 +4299,7 @@ This explicit command is the control that prevents backend Pods from invoking
 Validate the edited Deployment:
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 
 kubeconform -strict -summary -exit-on-error \
   apps/arcana/base/backend-deployment.yaml
@@ -4314,7 +4314,7 @@ search must not find `/app/start.sh` or `alembic`.
 #### Add production zero-replica gates
 
 **Run on: current administration workstation (this Ubuntu machine), from the
-root of `~/Personal/arcana-deployment`.**
+root of `~/Personal/platform-gitops`.**
 
 In `apps/arcana/overlays/production/kustomization.yaml`, add this top-level
 block after `images` and before `generators`:
@@ -4339,7 +4339,7 @@ Pods from starting during staging.
 #### Author the unregistered migration Job
 
 **Run on: current administration workstation (this Ubuntu machine), from the
-root of `~/Personal/arcana-deployment`.**
+root of `~/Personal/platform-gitops`.**
 
 Create `apps/arcana/base/backend-migration-job.yaml` with this content:
 
@@ -4426,7 +4426,7 @@ fi
 #### Render Gate A without decrypting Secrets
 
 **Run on: current administration workstation (this Ubuntu machine), from the
-root of `~/Personal/arcana-deployment`.**
+root of `~/Personal/platform-gitops`.**
 
 Build a temporary non-secret copy of the production overlay. The command
 deliberately removes the KSOPS `generators` block, so it cannot decrypt or
@@ -4545,13 +4545,13 @@ existing Docker production stack remains unchanged.
 ### 28.1 Verify and push the exact Gate A scope
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`.**
+from the root of `~/Personal/platform-gitops`.**
 
 If the Gate A commit has not already been created, stage only the three
 reviewed files:
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 
 git add \
   apps/arcana/base/backend-deployment.yaml \
@@ -4616,11 +4616,11 @@ verify_gate_a_observation() {
   export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
   EXPECTED_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+    git -C "$HOME/Personal/platform-gitops" rev-parse HEAD
   )" || return 1
 
   REMOTE_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+    git -C "$HOME/Personal/platform-gitops" rev-parse origin/main
   )" || return 1
 
   if test "$EXPECTED_REVISION" != "$REMOTE_REVISION"; then
@@ -4763,7 +4763,7 @@ read-only checks on the VPS.**
 Reconfirm repository and cluster inputs:
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
 git status --short
@@ -4848,11 +4848,11 @@ sync_gate_a() {
   export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
   EXPECTED_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+    git -C "$HOME/Personal/platform-gitops" rev-parse HEAD
   )" || return 1
 
   REMOTE_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+    git -C "$HOME/Personal/platform-gitops" rev-parse origin/main
   )" || return 1
 
   OBSERVED_REVISION="$(
@@ -4943,7 +4943,7 @@ Wait for the one requested operation without starting another:
 wait_for_gate_a() {
   export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
   EXPECTED_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+    git -C "$HOME/Personal/platform-gitops" rev-parse HEAD
   )" || return 1
 
   OPERATION_PHASE=''
@@ -5158,13 +5158,13 @@ future releases.
 ### 30.1 Identify the provider without exposing the database URL
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`.**
+from the root of `~/Personal/platform-gitops`.**
 
 Decrypt only into a pipe, classify the hostname in memory, and print neither
 the URL nor hostname:
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 test -r "$SOPS_AGE_KEY_FILE"
 test "$(stat -c '%a' "$SOPS_AGE_KEY_FILE")" = 600
@@ -5225,7 +5225,7 @@ perform this check.
 ### 30.3 Read the production Alembic revision without migrating
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`.**
+from the root of `~/Personal/platform-gitops`.**
 
 Use a function so the decrypted URL exists only in the function environment
 and is unset immediately afterward. The URL is passed to Docker by environment
@@ -5348,7 +5348,7 @@ remain at zero replicas. It must not request a sync operation.
 with the Section 19 SSH tunnel running.**
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
 git status --short
@@ -5380,7 +5380,7 @@ resource.
 ### 31.2 Register the reviewed Job
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+from the root of `~/Personal/platform-gitops`. This edits Git only.**
 
 In `apps/arcana/base/kustomization.yaml`, add the already committed Job file to
 the `resources` list immediately after `backend-deployment.yaml`:
@@ -5410,7 +5410,7 @@ Argo CD Application in this subsection.
 ### 31.3 Validate the registered Gate B render
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`. These are offline Git checks.**
+from the root of `~/Personal/platform-gitops`. These are offline Git checks.**
 
 Validate the source Job and complete base:
 
@@ -5502,7 +5502,7 @@ been reviewed.
 ### 31.4 Commit and push registration only
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`.**
+from the root of `~/Personal/platform-gitops`.**
 
 Stage only the Kustomization change:
 
@@ -5555,7 +5555,7 @@ verify that rendering succeeded without an operation:
 ```bash
 verify_gate_b_registration() {
   EXPECTED_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+    git -C "$HOME/Personal/platform-gitops" rev-parse HEAD
   )" || return 1
 
   OBSERVED_REVISION=''
@@ -5664,13 +5664,13 @@ production, and automated synchronization remains disabled.
 ### 32.1 Revalidate the no-op and live safety boundary
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`, with the Section 19 SSH tunnel
+from the root of `~/Personal/platform-gitops`, with the Section 19 SSH tunnel
 running.**
 
 Recheck Git, Argo CD, and live workloads:
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
 git status --short
@@ -5813,10 +5813,10 @@ sync_gate_b_noop() {
   local AUTOMATED_ENABLED ACTIVE_OPERATION LIVE_JOBS
 
   EXPECTED_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+    git -C "$HOME/Personal/platform-gitops" rev-parse HEAD
   )" || return 1
   REMOTE_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+    git -C "$HOME/Personal/platform-gitops" rev-parse origin/main
   )" || return 1
   OBSERVED_REVISION="$(
     kubectl get application -n argocd arcana-production \
@@ -6054,7 +6054,7 @@ unregistered template for a future, separately reviewed migration revision.
 with the Section 19 SSH tunnel running.**
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
 git status --short
@@ -6089,7 +6089,7 @@ Stop on any difference.
 ### 33.2 Unregister only the completed hook
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+from the root of `~/Personal/platform-gitops`. This edits Git only.**
 
 Remove only this line from the `resources` list in
 `apps/arcana/base/kustomization.yaml`:
@@ -6127,7 +6127,7 @@ resources.
 ### 33.3 Render the post-migration inactive state
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`.**
+from the root of `~/Personal/platform-gitops`.**
 
 ```bash
 render_post_migration_baseline() {
@@ -6230,7 +6230,7 @@ verify_hook_retirement() {
   local ACTIVE_OPERATION AUTOMATED_ENABLED LIVE_JOBS
 
   EXPECTED_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+    git -C "$HOME/Personal/platform-gitops" rev-parse HEAD
   )" || return 1
 
   OBSERVED_REVISION=''
@@ -6319,7 +6319,7 @@ Before activation, correct two shared configuration issues:
 with the Section 19 SSH tunnel running.**
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
 git status --short
@@ -6346,7 +6346,7 @@ Required results:
 ### 34.2 Correct backend configuration and enable one replica
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+from the root of `~/Personal/platform-gitops`. This edits Git only.**
 
 In `apps/arcana/base/backend-configmap.yaml`, replace:
 
@@ -6523,10 +6523,10 @@ sync_backend_activation() {
   local AUTOMATED_ENABLED ACTIVE_OPERATION LIVE_JOBS
 
   EXPECTED_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+    git -C "$HOME/Personal/platform-gitops" rev-parse HEAD
   )" || return 1
   REMOTE_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+    git -C "$HOME/Personal/platform-gitops" rev-parse origin/main
   )" || return 1
   OBSERVED_REVISION="$(
     kubectl get application -n argocd arcana-production \
@@ -6708,7 +6708,7 @@ Ingress, or browser traffic.
 with the Section 19 SSH tunnel running.**
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
 git status --short
@@ -6740,7 +6740,7 @@ backend.
 ### 35.2 Enable one frontend replica in Git
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+from the root of `~/Personal/platform-gitops`. This edits Git only.**
 
 In `apps/arcana/overlays/production/kustomization.yaml`, change only the
 frontend count from zero to one:
@@ -6876,10 +6876,10 @@ sync_frontend_activation() {
   local BACKEND_REPLICAS FRONTEND_REPLICAS WORKER_REPLICAS BEAT_REPLICAS
 
   EXPECTED_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+    git -C "$HOME/Personal/platform-gitops" rev-parse HEAD
   )" || return 1
   REMOTE_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+    git -C "$HOME/Personal/platform-gitops" rev-parse origin/main
   )" || return 1
   OBSERVED_REVISION="$(
     kubectl get application -n argocd arcana-production \
@@ -7062,7 +7062,7 @@ do not compete for the same queues during this internal staging phase.
 with the Section 19 SSH tunnel running.**
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
 git status --short
@@ -7107,7 +7107,7 @@ Disk must remain above 10 GiB and Docker production must be unchanged.
 ### 36.2 Enable one worker replica in Git
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+from the root of `~/Personal/platform-gitops`. This edits Git only.**
 
 In `apps/arcana/overlays/production/kustomization.yaml`, change only the worker
 count from zero to one:
@@ -7245,10 +7245,10 @@ sync_worker_activation() {
   local BACKEND_REPLICAS FRONTEND_REPLICAS WORKER_REPLICAS BEAT_REPLICAS
 
   EXPECTED_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse HEAD
+    git -C "$HOME/Personal/platform-gitops" rev-parse HEAD
   )" || return 1
   REMOTE_REVISION="$(
-    git -C "$HOME/Personal/arcana-deployment" rev-parse origin/main
+    git -C "$HOME/Personal/platform-gitops" rev-parse origin/main
   )" || return 1
   OBSERVED_REVISION="$(
     kubectl get application -n argocd arcana-production \
@@ -7439,7 +7439,7 @@ replace this generic account with a dedicated named application account.
 #### Update and validate the worker security context
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+from the root of `~/Personal/platform-gitops`. This edits Git only.**
 
 In `apps/arcana/base/celery-worker-deployment.yaml`, add this Pod-level
 `securityContext` immediately under the Pod template's `spec`, before
@@ -7705,7 +7705,7 @@ local-path volume.
 ### 38.1 Author the avatar claim and backend mount
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`. This edits Git only.**
+from the root of `~/Personal/platform-gitops`. This edits Git only.**
 
 Create `apps/arcana/base/backend-avatar-pvc.yaml`:
 
@@ -8202,7 +8202,7 @@ change Traefik, expose a NodePort, or take over ports 80/443.
 ### 40.1 Prove the restart annotation is the only expected drift
 
 **Run on: current administration workstation (the company Ubuntu machine),
-from the root of `~/Personal/arcana-deployment`.**
+from the root of `~/Personal/platform-gitops`.**
 
 ```bash
 export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
@@ -9052,7 +9052,7 @@ was removed successfully. It is approved for a canary-only GitOps rollout.
 In the clean deployment repository, update only the frontend image tag:
 
 ```bash
-cd /Users/vanloc1808/Projects/arcana-deployment
+cd /Users/vanloc1808/Projects/platform-gitops
 
 if test -n "$(git status --short)"; then
   echo 'STOP: deployment repository is not clean' >&2
@@ -9243,7 +9243,7 @@ whose name ends in `.yaml`; `kubeconform` skips an extensionless file when it
 is passed as a filesystem argument:
 
 ```bash
-cd /Users/vanloc1808/Projects/arcana-deployment
+cd /Users/vanloc1808/Projects/platform-gitops
 export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 
 RENDER_DIRECTORY="$(mktemp -d)"
@@ -9491,7 +9491,7 @@ This subsection changes Git only. It must not sync Argo CD or stop Docker Beat.
 Update the production replica override from zero to one:
 
 ```bash
-cd /Users/vanloc1808/Projects/arcana-deployment
+cd /Users/vanloc1808/Projects/platform-gitops
 
 if test -n "$(git status --short)"; then
   echo 'STOP: deployment repository is not clean' >&2
@@ -9592,7 +9592,7 @@ two schedulers from running together:
 
 ```bash
 arcana_beat_handoff() {
-  cd /Users/vanloc1808/Projects/arcana-deployment || return 1
+  cd /Users/vanloc1808/Projects/platform-gitops || return 1
   export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 
   EXPECTED_REVISION="$(git rev-parse HEAD)" || return 1
@@ -9812,7 +9812,7 @@ fully healthy. Enable the already configured automated policy in Git by
 changing only `enabled: false` to `enabled: true` in the bootstrap Application:
 
 ```bash
-cd /Users/vanloc1808/Projects/arcana-deployment
+cd /Users/vanloc1808/Projects/platform-gitops
 
 if test -n "$(git status --short)"; then
   echo 'STOP: deployment repository is not clean' >&2
@@ -9874,7 +9874,7 @@ ArcanaAI K3s and Argo CD migration is complete.
 
 GitHub Actions now completes the production delivery chain after both test
 jobs pass: it builds SHA-tagged backend and frontend images, pushes them to
-Docker Hub, checks out `vanloc1808/arcana-deployment` using the
+Docker Hub, checks out `vanloc1808/platform-gitops` using the
 repository-scoped `ARCANA_GITOPS_SSH_KEY`, updates both production image tags,
 and pushes the GitOps commit for Argo CD to reconcile.
 

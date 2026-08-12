@@ -9,7 +9,39 @@ Edit Git -> validate -> commit and push -> review in Argo CD -> manually sync
 ```
 
 Do not treat the live Kubernetes object as the source of truth. Git in
-`arcana-deployment` is the source of truth; Argo CD applies that desired state.
+`platform-gitops` is the source of truth; Argo CD applies that desired state.
+
+## Repository rename follow-up
+
+After renaming the shared repository from `arcana-deployment` to
+`platform-gitops`, update each local clone and every Argo CD source reference:
+
+```bash
+cd "$HOME/Personal/platform-gitops"
+git remote set-url origin git@github-personal:<OWNER>/platform-gitops.git
+git remote -v
+```
+
+In the platform repository, update the `repoURL` in every Argo CD
+`Application` manifest to:
+
+```text
+git@github.com:<OWNER>/platform-gitops.git
+```
+
+The existing Argo CD repository Secret can retain its Kubernetes Secret name,
+but its URL must point to the renamed repository:
+
+```bash
+kubectl patch secret -n argocd arcana-deployment-repo \
+  --type=merge \
+  --patch '{"stringData":{"url":"git@github.com:<OWNER>/platform-gitops.git"}}'
+```
+
+Apply the updated Application manifests from `platform-gitops`, then verify
+that Argo CD can still render the repository. The GitHub deploy key and the
+GitHub Actions secret value normally remain usable after a repository rename;
+their names may still contain the old project name without affecting access.
 
 ## Which file should change?
 
@@ -36,7 +68,7 @@ Run these commands on a trusted administration workstation, not inside an
 application Pod:
 
 ```bash
-cd "$HOME/Personal/arcana-deployment"
+cd "$HOME/Personal/platform-gitops"
 export KUBECONFIG="$HOME/.kube/arcana-k3s.yaml"
 export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 

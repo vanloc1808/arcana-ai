@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.29] - 2026-08-11
 
 ### Added
+- Updated CI and deployment documentation for the renamed shared GitOps repository, `vanloc1808/platform-gitops`.
 - Added a production configuration and secret-rotation guide covering SOPS editing, ConfigMap changes, validation, Git promotion, and manual Argo CD synchronization.
 - Added a release-note blog post documenting the ArcanaAI GitOps migration, immutable CI/CD image promotion, staged K3s rollout, workload hardening, persistent avatars, Cloudflare-protected Argo CD, and rollback boundaries.
 - Added a public date-organized blog index and release-note route at `/blog/2026/08/12/arcanaai-cicd-release-notes`.

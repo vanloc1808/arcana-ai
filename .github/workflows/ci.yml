@@ -221,9 +221,9 @@ jobs:
       - name: Check out deployment repository
         uses: actions/checkout@v4
         with:
-          repository: vanloc1808/arcana-deployment
+          repository: vanloc1808/platform-gitops
           ref: main
-          path: arcana-deployment
+          path: platform-gitops
           fetch-depth: 0
           ssh-key: ${{ secrets.ARCANA_GITOPS_SSH_KEY }}
 
@@ -246,7 +246,7 @@ jobs:
 
       - name: Update production image tags
         if: steps.revision.outputs.promote == 'true'
-        working-directory: arcana-deployment
+        working-directory: platform-gitops
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
@@ -291,7 +291,7 @@ jobs:
 
       - name: Commit and push production image tags
         if: steps.revision.outputs.promote == 'true'
-        working-directory: arcana-deployment
+        working-directory: platform-gitops
         env:
           APPLICATION_REPOSITORY: ${{ github.repository }}
           IMAGE_TAG: ${{ github.sha }}
