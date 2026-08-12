@@ -3,5 +3,10 @@
 [cmd]: https://commandcode.ai/
 
 # logging
-- Use loguru.logger instead of the standard Python logging module for backend logging. Confidence: 0.75
+See [logging/taste.md](logging/taste.md)
 
+# environment
+See [environment/taste.md](environment/taste.md)
+
+# testing
+See [testing/taste.md](testing/taste.md)

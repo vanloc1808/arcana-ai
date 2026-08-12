@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(uv:*)",
+      "Shell(ls -la backend/app/api/ 2>/dev/null; echo \"---\"; ls backend/*.py | head -5)",
+      "Shell(git rm -q backend/models.py && find backend -name __pycache__ -path '*backend*' -prune -exec rm -rf {} + 2>/dev/null; uv run python -c \"import models; print(models.User, models.Base, models._prepare_password); print(len(models.__all__), 'exports OK')\")",
+      "Shell(python3 -c \"import yaml; yaml.safe_load(open('docker-compose.yaml')); yaml.safe_load(open('docker-compose.prod.yaml')); print('OK')\")",
+      "Shell(docker:*)",
+      "Shell(npm:*)",
+      "Shell(ls node_modules/react-i18next 2>&1; echo \"---\"; grep -E '\"(react-i18next|i18next|react|react-dom)\"' package.json; echo \"---\"; git status --short package.json package-lock.json)",
+      "Shell(grep -n \"patch-package\" package.json; ls node_modules/.bin/patch-package 2>&1; ls node_modules/react-i18next/package.json 2>&1)",
+      "Shell(ls -d node_modules/patch-package 2>&1; npm ls patch-package 2>&1 | head -5)",
+      "Shell(cat .npmrc 2>/dev/null; cat ../.npmrc 2>/dev/null; npm config get omit; npm config get NODE_ENV; echo \"env: ${NODE_ENV:-unset}\")",
+      "Shell(env -u NODE_ENV npm run test:ci)",
+      "Shell(git add frontend/src/app/forgot-password/__tests__/ForgotPassword.test.tsx frontend/src/app/password-reset-confirm/__tests__/ResetPasswordClient.test.tsx && git commit -F - <<'EOF' fix: mock usePathname in forgot/reset password tests AuthProvider calls usePathname(), but both suites mocked next/navigation with only useRouter, crashing every render with \"usePathname is not a function\". Co-authored-by: CommandCodeBot <noreply@commandcode.ai> EOF)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}
