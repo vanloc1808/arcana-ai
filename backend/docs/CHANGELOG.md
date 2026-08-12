@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Cookie-authenticated mutations now bootstrap the host-only CSRF token from the backend, allowing chat creation, streaming messages, support requests, token refresh, and other protected actions to work across the supported frontend/backend subdomains without weakening authentication-cookie isolation.
 
+### Removed
+- Removed the retired self-hosted Docker Compose deployment workflow so successful CI runs cannot restart the preserved legacy Docker stack or run database migrations outside the GitOps-controlled K3s delivery path.
+
 ## [0.0.28] - 2026-08-10
 
 ### Added
