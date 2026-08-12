@@ -167,7 +167,7 @@ export function EnhancedNavigation() {
         setShowSearchResults(false);
     };
 
-    if (!isAuthenticated) return null;
+    if (!isAuthenticated || pathname?.startsWith('/blog')) return null;
     if (pathname?.startsWith('/admin')) return null;
 
     const isUnlimited = hasUnlimitedTurns();

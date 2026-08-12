@@ -1,7 +1,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
-COPY patches ./patches
+COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/patches ./patches
 RUN npm ci && npx patch-package
 
 # Build the application
@@ -13,9 +13,10 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json package-lock.json ./
-COPY patches ./patches
-COPY . .
+COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/patches ./patches
+COPY frontend/. .
+COPY blog ./src/content/blog
 # Patches should already be applied from deps stage, but verify
 RUN test -d patches && npx patch-package || echo "No patches to apply"
 RUN npm run build
