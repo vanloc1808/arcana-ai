@@ -40,6 +40,7 @@ const PUBLIC_ROUTES = new Set([
     '/terms-of-service',
     '/privacy-policy',
     '/changelog',
+    '/blog',
 ]);
 
 const AUTH_ONLY_ROUTES = new Set([
@@ -57,7 +58,7 @@ export function getAuthRedirect(
 ): string | null {
     if (isAuthLoading) return null;
     if (isAuthenticated && AUTH_ONLY_ROUTES.has(pathname)) return '/';
-    if (!isAuthenticated && !PUBLIC_ROUTES.has(pathname)) return '/login';
+    if (!isAuthenticated && !PUBLIC_ROUTES.has(pathname) && !pathname.startsWith('/blog/')) return '/login';
     return null;
 }
 

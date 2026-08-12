@@ -1,0 +1,132 @@
+---
+title: "ArcanaAI CI/CD: From Docker Compose to GitOps"
+description: "How ArcanaAI moved production delivery to pinned images, Argo CD, K3s, and a guarded Cloudflare edge."
+date: "2026-08-12"
+author: "ArcanaAI"
+tags:
+  - release
+  - ci-cd
+  - gitops
+  - kubernetes
+---
+
+# ArcanaAI CI/CD: From Docker Compose to GitOps
+
+ArcanaAI production delivery is now Git-driven from image build to public
+traffic. The migration keeps the familiar Docker Compose stack available as a
+rollback artifact while Kubernetes, Argo CD, and Cloudflare provide the new
+runtime and delivery path.
+
+## What shipped
+
+### Immutable image promotion
+
+GitHub Actions tests the application, builds the backend and frontend images,
+publishes commit-SHA tags, and updates the separate deployment repository. The
+deployment repository is the source of truth for production image versions;
+floating `latest` tags are not used by the production overlay.
+
+The old self-hosted Docker deployment workflow was removed. Successful CI runs
+can no longer recreate the retired Compose application or run migrations
+outside the reviewed GitOps path.
+
+### Argo CD and K3s
+
+Argo CD now reconciles the Arcana production Application in K3s. Repository
+access uses a dedicated read-only deploy key, while encrypted application
+secrets are rendered through KSOPS and SOPS Age. The Kubernetes API remains
+private and is administered through a dedicated kubeconfig and SSH forwarding.
+
+The migration was deliberately staged:
+
+1. An inert baseline installed namespace-scoped resources and retained storage.
+2. A separately reviewed Alembic hook verified the database revision and ran as
+   an explicitly authorized, no-op migration.
+3. The hook was retired from active desired state so ordinary syncs cannot
+   rerun it.
+4. Backend, frontend, worker, and Beat were activated one workload at a time.
+
+### Workload hardening
+
+The Kubernetes runtime now includes:
+
+- Direct Uvicorn startup for the backend instead of image startup migrations.
+- Redis as a retained StatefulSet with persistent storage and network policy.
+- A non-root Celery worker using the image’s resolvable `nobody:nogroup`
+  identity.
+- A singleton Celery Beat scheduler with retained schedule storage.
+- Read-only frontend and connector filesystems where practical, capability
+  dropping, `RuntimeDefault` seccomp, and disabled privilege escalation.
+- Internal ClusterIP Services rather than public NodePorts or Kubernetes
+  Ingress resources.
+
+### Persistent avatar storage
+
+Avatars previously lived in a Docker bind mount. A dedicated retained
+Kubernetes claim now backs `/avatar` for the backend. Existing avatar content
+was copied without deleting or changing the Docker source, compared using
+content digests, and verified after a backend Pod replacement.
+
+The old Docker avatar source and stopped application containers remain
+available during the rollback-retention period. A final write-freeze and delta
+reconciliation remain required before those artifacts are removed.
+
+### Cloudflare-protected Argo CD
+
+The shared Argo CD UI is available through a Cloudflare Access-protected
+hostname and an outbound Cloudflare Tunnel. The tunnel runs as two pinned,
+non-root Kubernetes replicas and uses HTTP/2 because the VPS cannot establish
+QUIC connections to Cloudflare’s edge. Argo CD’s own login remains a second
+authentication layer.
+
+No inbound Kubernetes API port, NodePort, or public Kubernetes Ingress was
+needed. The initial Argo CD password was rotated after first login, and the
+bootstrap Secret was removed.
+
+## Safety boundaries
+
+The rollout retained several explicit guardrails:
+
+- Automated Argo CD synchronization stayed disabled during migration and
+  scheduler handoff; it was enabled only after public traffic and rollback
+  artifacts were verified.
+- Database migration ownership was separated from application startup.
+- Docker Beat was stopped before Kubernetes Beat started, preventing two
+  schedulers from running concurrently.
+- Docker Traefik retained ports 80 and 443 while traffic was canaried and then
+  switched to Kubernetes ClusterIP upstreams.
+- The old Docker backend, frontend, worker, Beat, and Redis containers remain
+  stopped but available for rollback.
+- Cross-subdomain CSRF bootstrap was verified with a real authenticated chat
+  mutation while host-only authentication cookies remained isolated.
+
+## Current outcome
+
+ArcanaAI is now delivered through a traceable chain:
+
+```text
+GitHub Actions
+  → SHA-tagged container images
+  → arcana-deployment Git repository
+  → Argo CD + KSOPS
+  → K3s workloads
+  → Docker Traefik routing bridge
+  → Cloudflare edge
+```
+
+The result is a repeatable deployment process with reviewable revisions,
+encrypted secrets, explicit migration boundaries, persistent application data,
+and a documented rollback path.
+
+## What remains operational
+
+The next maintenance work is intentionally smaller than the migration itself:
+
+- Keep the stopped Docker rollback artifacts through the agreed retention
+  window.
+- Review monitoring and backup coverage for the new Kubernetes resources.
+- Update deprecated GitHub Actions runtime versions.
+- Triage existing dependency alerts.
+- Perform periodic Cloudflare Access, Argo CD account, and tunnel-connector
+  reviews.
+

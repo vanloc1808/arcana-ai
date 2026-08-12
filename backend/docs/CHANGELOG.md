@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.29] - 2026-08-11
 
+### Added
+- Added a release-note blog post documenting the ArcanaAI GitOps migration, immutable CI/CD image promotion, staged K3s rollout, workload hardening, persistent avatars, Cloudflare-protected Argo CD, and rollback boundaries.
+- Added a public date-organized blog index and release-note route at `/blog/2026/08/12/arcanaai-cicd-release-notes`.
+- The public blog now reads the repository-level `blog/` tree directly, so each post has one source file instead of separate frontend and repository copies.
+- Blog pages are public and no longer require an ArcanaAI session or authenticated navigation shell.
+
 ### Fixed
 - Cookie-authenticated mutations now bootstrap the host-only CSRF token from the backend, allowing chat creation, streaming messages, support requests, token refresh, and other protected actions to work across the supported frontend/backend subdomains without weakening authentication-cookie isolation.
 
