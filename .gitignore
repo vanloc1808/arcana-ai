@@ -15,3 +15,4 @@ synthetic-traffic/.env
 synthetic-traffic/.env.*
 !synthetic-traffic/.env.example
 synthetic-traffic/__pycache__
+/node_modules
