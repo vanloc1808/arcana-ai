@@ -445,38 +445,29 @@ export function EnhancedNavigation() {
                 </div>
 
                 {/* ── TIER 2 — Navigation tabs (desktop only) ──── */}
-                <div className="hidden lg:flex items-end gap-4 px-8 border-t border-violet-400/8">
-                    {NAV_ITEMS.map(({ label, href, Icon, match }) => {
-                        const active = match(pathname ?? '');
-                        return (
-                            <Link
-                                key={href}
-                                href={href}
-                                className={`relative flex items-center gap-2 px-4 pt-2.5 pb-3 text-[15px] font-medium transition-colors ${
-                                    active
-                                        ? 'text-violet-50'
-                                        : 'text-violet-200/60 hover:text-violet-200/90'
-                                }`}
-                            >
-                                <Icon
-                                    size={16}
-                                    className={active ? 'text-violet-400' : 'text-violet-300/55'}
-                                />
-                                {label}
-                                {active && (
-                                    <span
-                                        aria-hidden
-                                        className="absolute bottom-0 left-2.5 right-2.5 h-0.5 rounded-full"
-                                        style={{
-                                            background:
-                                                'linear-gradient(90deg, transparent, #a78bfa 30%, #a78bfa 70%, transparent)',
-                                        }}
+                <div className="hidden lg:flex justify-center px-8 pb-3">
+                    <nav className="inline-flex items-center gap-1 rounded-2xl border border-violet-400/12 bg-white/[0.03] p-1.5 backdrop-blur-md">
+                        {NAV_ITEMS.map(({ label, href, Icon, match }) => {
+                            const active = match(pathname ?? '');
+                            return (
+                                <Link
+                                    key={href}
+                                    href={href}
+                                    className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[14px] font-medium transition-all ${
+                                        active
+                                            ? 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-lg shadow-violet-950/40'
+                                            : 'text-violet-200/65 hover:text-violet-100 hover:bg-violet-400/8'
+                                    }`}
+                                >
+                                    <Icon
+                                        size={16}
+                                        className={active ? 'text-violet-100' : 'text-violet-300/60'}
                                     />
-                                )}
-                            </Link>
-                        );
-                    })}
-
+                                    {label}
+                                </Link>
+                            );
+                        })}
+                    </nav>
                 </div>
             </header>
 
