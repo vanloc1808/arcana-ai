@@ -446,7 +446,7 @@ export function EnhancedNavigation() {
 
                 {/* ── TIER 2 — Navigation tabs (desktop only) ──── */}
                 <div className="hidden lg:flex justify-center px-8 pb-3">
-                    <nav className="inline-flex items-center gap-1 rounded-2xl border border-violet-400/12 bg-white/[0.03] p-1.5 backdrop-blur-md">
+                    <nav className="inline-flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 backdrop-blur-md">
                         {NAV_ITEMS.map(({ label, href, Icon, match }) => {
                             const active = match(pathname ?? '');
                             return (
@@ -456,12 +456,12 @@ export function EnhancedNavigation() {
                                     className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[14px] font-medium transition-all ${
                                         active
                                             ? 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-lg shadow-violet-950/40'
-                                            : 'text-violet-200/65 hover:text-violet-100 hover:bg-violet-400/8'
+                                            : 'text-gray-300/80 hover:text-gray-100 hover:bg-white/[0.06]'
                                     }`}
                                 >
                                     <Icon
                                         size={16}
-                                        className={active ? 'text-violet-100' : 'text-violet-300/60'}
+                                        className={active ? 'text-violet-100' : 'text-gray-400/80'}
                                     />
                                     {label}
                                 </Link>

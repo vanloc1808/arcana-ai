@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.30] - 2026-08-13
+
+### Changed
+- Refined the desktop navigation tab colors so inactive labels and icons better match the interface's neutral text hierarchy while preserving violet for active navigation.
+
 ## [0.0.29] - 2026-08-11
 
 ### Added
