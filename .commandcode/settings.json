@@ -12,7 +12,10 @@
       "Shell(ls -d node_modules/patch-package 2>&1; npm ls patch-package 2>&1 | head -5)",
       "Shell(cat .npmrc 2>/dev/null; cat ../.npmrc 2>/dev/null; npm config get omit; npm config get NODE_ENV; echo \"env: ${NODE_ENV:-unset}\")",
       "Shell(env -u NODE_ENV npm run test:ci)",
-      "Shell(git add frontend/src/app/forgot-password/__tests__/ForgotPassword.test.tsx frontend/src/app/password-reset-confirm/__tests__/ResetPasswordClient.test.tsx && git commit -F - <<'EOF' fix: mock usePathname in forgot/reset password tests AuthProvider calls usePathname(), but both suites mocked next/navigation with only useRouter, crashing every render with \"usePathname is not a function\". Co-authored-by: CommandCodeBot <noreply@commandcode.ai> EOF)"
+      "Shell(git add frontend/src/app/forgot-password/__tests__/ForgotPassword.test.tsx frontend/src/app/password-reset-confirm/__tests__/ResetPasswordClient.test.tsx && git commit -F - <<'EOF' fix: mock usePathname in forgot/reset password tests AuthProvider calls usePathname(), but both suites mocked next/navigation with only useRouter, crashing every render with \"usePathname is not a function\". Co-authored-by: CommandCodeBot <noreply@commandcode.ai> EOF)",
+      "Shell(yarn:*)",
+      "Shell(node -e const p=require('./package.json'); console.log(Object.keys(p.scripts||{})))",
+      "Shell(node -e const p=require('./package.json'); console.log(p.scripts.test, p.scripts['test:ci']))"
     ],
     "deny": [],
     "defaultMode": "default"

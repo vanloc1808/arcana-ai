@@ -10,3 +10,6 @@ See [environment/taste.md](environment/taste.md)
 
 # testing
 See [testing/taste.md](testing/taste.md)
+
+# frontend
+See [frontend/taste.md](frontend/taste.md)

@@ -86,12 +86,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setGlobalLogoutCallback(logout);
     }, [logout]);
 
-    const setTokens = useCallback((_accessToken: string | null, _refreshToken: string | null) => {
-        // Login responses set HttpOnly cookies. Ignore token values in the response body.
-        setToken(_accessToken ? 'cookie' : null);
-        setIsAuthLoading(false);
-    }, []);
-
     const refreshUser = useCallback(async () => {
         try {
             const userData = await auth.getProfile();
@@ -101,6 +95,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logError('Error refreshing user data', error, { component: 'AuthContext' });
         }
     }, []);
+
+    const setTokens = useCallback((_accessToken: string | null, _refreshToken: string | null) => {
+        // Login responses set HttpOnly cookies. Ignore token values in the response body.
+        setToken(_accessToken ? 'cookie' : null);
+        setIsAuthLoading(false);
+        if (_accessToken) {
+            void refreshUser();
+        }
+    }, [refreshUser]);
 
     useEffect(() => {
         let isMounted = true;
