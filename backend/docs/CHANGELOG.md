@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Added application support for `arcanaai.net` and its same-site API at `backend.arcanaai.net`, including browser API routing, CORS, and remote-image configuration.
+- Added a canonical advisor policy, high-stakes predictive screening, crisis-first handling, advisor guardrail metrics, and prompt regression coverage.
+
+### Changed
+- Repositioned ArcanaAI as hosted Tarot reflection software rather than a predictive or fortune-telling service.
+- Updated chat, reading, compatibility, relationship-spread, product, README, and Terms language to avoid predictive certainty and hidden-fact claims.
+- Renamed the Relationship Cross `The Outcome` position to `Possible Direction`.
 
 ## [0.0.30] - 2026-08-13
 
