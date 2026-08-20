@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added application support for `arcanaai.net` and its same-site API at `backend.arcanaai.net`, including browser API routing, CORS, and remote-image configuration.
 - Added a canonical advisor policy, high-stakes predictive screening, crisis-first handling, advisor guardrail metrics, and prompt regression coverage.
 
+### Fixed
+- Chat streaming now saves a readable fallback response when the model returns no content instead of persisting an empty assistant message.
+
 ### Changed
 - Repositioned ArcanaAI as hosted Tarot reflection software rather than a predictive or fortune-telling service.
 - Updated chat, reading, compatibility, relationship-spread, product, README, and Terms language to avoid predictive certainty and hidden-fact claims.

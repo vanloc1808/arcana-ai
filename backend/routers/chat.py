@@ -57,6 +57,7 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 # so the reading starts streaming only once the animation finishes.
 CARD_DRAW_ANIMATION_SECONDS = 5
 CHAT_PROMPT_VERSION = "advisor-v1"
+EMPTY_RESPONSE_FALLBACK = "I’m sorry, but I wasn’t able to generate a response. Please try again."
 
 # Initialize TarotReader
 reader = TarotReader()
@@ -1342,7 +1343,7 @@ async def create_message(
                         # Validate that the chat session still exists before saving
                         if not validate_chat_session_exists(db, session_id, current_user.id):
                             logger.logger.error(
-                                "Chat session no longer exists while saving empty assistant message",
+                                "Chat session no longer exists while saving empty-stream fallback message",
                                 extra={
                                     "user_id": current_user.id,
                                     "session_id": session_id,
@@ -1352,13 +1353,20 @@ async def create_message(
                                 status_code=404, detail="Chat session not found. Please refresh and try again."
                             )
 
-                        empty_ai_message = Message(chat_session_id=session_id, content="", role="assistant")
-                        db.add(empty_ai_message)
+                        # Do not persist an unreadable empty assistant message. Keep the
+                        # conversation usable when the provider returns an empty stream.
+                        yield f"data: {json.dumps({'type': 'content_chunk', 'content': EMPTY_RESPONSE_FALLBACK})}\n\n"
+                        fallback_message = Message(
+                            chat_session_id=session_id,
+                            content=EMPTY_RESPONSE_FALLBACK,
+                            role="assistant",
+                        )
+                        db.add(fallback_message)
                         db.commit()
-                        db.refresh(empty_ai_message)
+                        db.refresh(fallback_message)
                         record_chat_message(settings.FASTAPI_ENV, role="assistant", status="error")
-                        empty_message_response = MessageResponse.from_orm(empty_ai_message)
-                        message_dict_empty = empty_message_response.model_dump(mode="json")
+                        fallback_message_response = MessageResponse.from_orm(fallback_message)
+                        message_dict_empty = fallback_message_response.model_dump(mode="json")
                         event_payload_empty = {
                             "type": "assistant_message",
                             "message": message_dict_empty,
