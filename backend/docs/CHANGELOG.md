@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.31] - 2026-08-20
+
+### Added
+- Added application support for `arcanaai.net` and its same-site API at `backend.arcanaai.net`, including browser API routing, CORS, and remote-image configuration.
+
 ## [0.0.30] - 2026-08-13
 
 ### Changed

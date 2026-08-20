@@ -42,6 +42,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'backend.arcanaai.net',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'cdn.nguyenvanloc.com',
         port: '',
         pathname: '/**',
