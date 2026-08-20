@@ -162,6 +162,22 @@ content_safety_triggers_total = Counter(
     COMMON_LABELS + ["trigger_type", "action"],
 )
 
+advisor_reframes_total = Counter(
+    "arcana_advisor_reframes_total",
+    "Advisor-policy reframes of predictive user requests.",
+    COMMON_LABELS + ["category"],
+)
+advisor_high_stakes_redirects_total = Counter(
+    "arcana_advisor_high_stakes_redirects_total",
+    "Advisor-policy redirects for high-stakes requests.",
+    COMMON_LABELS + ["category"],
+)
+advisor_guardrail_triggers_total = Counter(
+    "arcana_advisor_guardrail_triggers_total",
+    "Advisor output guardrail triggers.",
+    COMMON_LABELS + ["category"],
+)
+
 
 def _handler_name(request: Request) -> str:
     """Return the templated route path for the request.
@@ -534,3 +550,15 @@ def record_safety_trigger(env: str, trigger_type: str, action: str) -> None:
         trigger_type=trigger_type,
         action=action,
     ).inc()
+
+
+def record_advisor_reframe(env: str, category: str) -> None:
+    advisor_reframes_total.labels(**base_labels(env), category=category).inc()
+
+
+def record_advisor_high_stakes_redirect(env: str, category: str) -> None:
+    advisor_high_stakes_redirects_total.labels(**base_labels(env), category=category).inc()
+
+
+def record_advisor_guardrail_trigger(env: str, category: str) -> None:
+    advisor_guardrail_triggers_total.labels(**base_labels(env), category=category).inc()

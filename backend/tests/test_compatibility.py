@@ -18,7 +18,7 @@ def relationship_spread(db_session):
         {"index": 1, "name": "Them", "description": "person B", "x": 75, "y": 50},
         {"index": 2, "name": "The Connection", "description": "bond", "x": 50, "y": 25},
         {"index": 3, "name": "The Challenge", "description": "friction", "x": 50, "y": 75},
-        {"index": 4, "name": "The Outcome", "description": "outcome", "x": 50, "y": 50},
+        {"index": 4, "name": "Possible Direction", "description": "possible direction", "x": 50, "y": 50},
     ]
     spread = Spread(
         name="Relationship Cross",
@@ -55,7 +55,7 @@ class TestCompatibilityReading:
         # Non-person positions are not personalized
         assert data["cards"][2]["position"] == "The Connection"
         assert data["cards"][3]["position"] == "The Challenge"
-        assert data["cards"][4]["position"] == "The Outcome"
+        assert data["cards"][4]["position"] == "Possible Direction"
 
     def test_works_without_focus(self, client, auth_headers, test_cards, mock_tarot_reader, relationship_spread):
         response = client.post(
@@ -129,7 +129,7 @@ class TestCompatibilityInterpretation:
             {"name": "Queen of Cups", "orientation": "reversed", "position": "Them — B", "meaning": "Insecurity"},
             {"name": "Four of Pentacles", "orientation": "upright", "position": "The Connection", "meaning": "Security"},
             {"name": "Eight of Swords", "orientation": "upright", "position": "The Challenge", "meaning": "Restriction"},
-            {"name": "Eight of Pentacles", "orientation": "reversed", "position": "The Outcome", "meaning": "Perfectionism"},
+            {"name": "Eight of Pentacles", "orientation": "reversed", "position": "Possible Direction", "meaning": "Perfectionism"},
         ]
 
     def test_interpret_returns_text(self, client, auth_headers, test_cards):

@@ -126,7 +126,7 @@ export default function TermsOfServicePage() {
                                 </h2>
                                 <div className="text-gray-300 space-y-4 text-lg leading-relaxed">
                                     <p>
-                                        ArcanaAI provides AI-powered tarot card readings for entertainment and personal reflection purposes. Our service includes:
+                                        ArcanaAI is hosted software that provides AI-powered Tarot reflection tools for entertainment and personal reflection. Our software includes:
                                     </p>
                                     <ul className="list-disc ml-6 space-y-2">
                                         <li>AI-generated tarot card interpretations</li>
@@ -135,7 +135,7 @@ export default function TermsOfServicePage() {
                                         <li>Subscription-based premium features</li>
                                     </ul>
                                     <p>
-                                        <strong>Important Disclaimer:</strong> Our service is for entertainment and self-reflection purposes only. Tarot readings should not be considered as professional advice for medical, legal, financial, or other important life decisions.
+                                        <strong>Important Disclaimer:</strong> ArcanaAI uses Tarot for reflection and entertainment. It does not predict future events, determine destiny, reveal unknown facts, or provide professional advice for medical, legal, financial, or other important life decisions.
                                     </p>
                                 </div>
                             </section>
@@ -257,7 +257,7 @@ export default function TermsOfServicePage() {
                                 </h2>
                                 <div className="text-gray-300 space-y-4 text-lg leading-relaxed">
                                     <p>
-                                        <strong>Entertainment Purpose Only:</strong> Tarot Agent is provided for entertainment and personal reflection purposes only. Our readings are not intended to provide professional advice.
+                                        <strong>Interpretive software only:</strong> ArcanaAI does not claim that Tarot cards, artificial intelligence, or the service can predict future events, determine destiny, or reveal unknown facts. Outputs are interpretive and intended for personal reflection and entertainment.
                                     </p>
                                     <p>
                                         <strong>No Guarantees:</strong> We make no guarantees about the accuracy, completeness, or usefulness of any reading or interpretation.

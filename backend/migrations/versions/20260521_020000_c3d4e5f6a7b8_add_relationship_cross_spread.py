@@ -34,7 +34,7 @@ POSITIONS = [
     {"index": 1, "name": "Them", "description": "How the second person shows up in the relationship", "x": 75, "y": 50},
     {"index": 2, "name": "The Connection", "description": "What binds you — the shared current between you", "x": 50, "y": 25},
     {"index": 3, "name": "The Challenge", "description": "What tests the bond — friction, blind spot, or growth edge", "x": 50, "y": 75},
-    {"index": 4, "name": "The Outcome", "description": "Where the relationship is heading if the current course holds", "x": 50, "y": 50},
+    {"index": 4, "name": "Possible Direction", "description": "A conditional direction to reflect on if the current course holds", "x": 50, "y": 50},
 ]
 
 

@@ -14,13 +14,19 @@ from openai import APIConnectionError, RateLimitError
 from sqlalchemy.orm import Session
 
 from config import settings
+from prompts.advisor_policy import REFLECTION_ADVISOR_POLICY
+from utils.advisor_guardrails import inspect_advisor_output, safe_block_message
 from utils.logging import logger
-from utils.metrics import estimate_openai_cost_usd, record_openai_request
+from utils.metrics import (
+    estimate_openai_cost_usd,
+    record_advisor_guardrail_trigger,
+    record_openai_request,
+)
 
 # Load environment variables
 load_dotenv()
 
-PROMPT_VERSION = "2.0"
+PROMPT_VERSION = "advisor-v1"
 
 # Errors worth retrying on a new connection attempt
 _RETRIABLE_ERRORS = (RateLimitError, APIConnectionError)
@@ -222,8 +228,8 @@ class TarotReader:
         """Create a tarot reading based on the drawn cards and the user's concern."""
         logger.info("Creating tarot reading...")
         template = (
-            "You are an experienced and empathetic tarot reader. "
-            "Create a CONCISE reading (maximum 1000 words) based on the following:\n\n"
+            f"{REFLECTION_ADVISOR_POLICY}\n\n"
+            "Create a CONCISE Tarot-based reflection (maximum 1000 words) based on the following:\n\n"
             "User's concern: {concern}\n\n"
             "Cards drawn (in order):\n{cards}\n\n"
             "STRUCTURE YOUR RESPONSE WITH THESE EXACT SECTIONS:\n\n"
@@ -234,11 +240,12 @@ class TarotReader:
             "## Synthesis\n"
             "[How the cards work together as a narrative]\n\n"
             "## Guidance\n"
-            "[1-2 practical, actionable suggestions]\n\n"
+            "[1-2 practical, actionable suggestions and questions to consider]\n\n"
             "## Wellbeing Note\n"
             "[One sentence reminding the reader this is for reflection, not professional advice]\n\n"
             "Keep the total response under 1000 words.\n\n"
-            "Tarot Reading:"
+            "Do not predict events, claim certainty, or assert unknown facts about other people.\n\n"
+            "Tarot Reflection:"
         )
 
         logger.info("Formatting cards information...")
@@ -322,6 +329,31 @@ class TarotReader:
 
         logger.info("Reading generation completed")
 
+    @staticmethod
+    def _compatibility_template() -> str:
+        return (
+            f"{REFLECTION_ADVISOR_POLICY}\n\n"
+            "Create a CONCISE relationship reflection (maximum 1000 words) for two people: "
+            "{person_a} and {person_b}.\n\n"
+            "{focus_line}"
+            "The cards were drawn in a Relationship Cross spread:\n{cards}\n\n"
+            "Format the reading in Markdown:\n"
+            "- Start each of the five positions with its own '### ' heading, e.g. "
+            "'### You — {person_a}: <Card Name> (<Orientation>)'\n"
+            "- Under each heading, write 1-2 short paragraphs interpreting the symbolism in its "
+            "relationship position. Refer to the people by name without claiming their private "
+            "thoughts, feelings, intentions, or actions as facts. Mention observable signs and "
+            "questions to consider instead. Account for reversals.\n"
+            "- Use the final heading '### Possible Direction' for conditional possibilities, not a "
+            "predicted outcome.\n"
+            "- End with a '### Summary' section that names a central strength and challenge and "
+            "offers 1-2 practical, kind suggestions.\n\n"
+            "Never present the cards as predicting what will happen, revealing hidden facts, or "
+            "guaranteeing reconciliation. Always write 'Tarot', not 'tarot'. Respond in the same "
+            "language as the question if one is given.\n\n"
+            "Compatibility Reflection:"
+        )
+
     async def stream_compatibility_reading(
         self,
         person_a: str,
@@ -330,7 +362,7 @@ class TarotReader:
         focus: str | None = None,
     ):
         """Stream a relationship reading for two people chunk by chunk."""
-        position_labels = ["You", "Them", "The Connection", "The Challenge", "The Outcome"]
+        position_labels = ["You", "Them", "The Connection", "The Challenge", "Possible Direction"]
         cards_text = ""
         for i, card in enumerate(cards):
             position = card.get("position") or (position_labels[i] if i < len(position_labels) else f"Card {i + 1}")
@@ -339,22 +371,7 @@ class TarotReader:
 
         focus_line = f"Their question: {focus}\n\n" if focus else ""
 
-        template = (
-            "You are an experienced, compassionate Tarot reader specializing in relationships. "
-            "Create a CONCISE compatibility reading (maximum 1000 words) for two people: "
-            "{person_a} and {person_b}.\n\n"
-            "{focus_line}"
-            "The cards were drawn in a Relationship Cross spread:\n{cards}\n\n"
-            "Format the reading in Markdown:\n"
-            "- Start each of the five positions with its own '### ' heading, e.g. "
-            "'### You — {person_a}: <Card Name> (<Orientation>)'\n"
-            "- Under each heading, write 1-2 short paragraphs interpreting that card in its "
-            "relationship position, referring to the people by name and accounting for reversals\n"
-            "- End with a '### Summary' section that names the central strength and the central "
-            "challenge of the bond and offers 1-2 practical, kind suggestions\n\n"
-            "Always write 'Tarot', not 'tarot'. Respond in the same language as the question if one is given.\n\n"
-            "Compatibility Reading:"
-        )
+        template = self._compatibility_template()
 
         prompt = ChatPromptTemplate.from_template(template)
         chain = prompt | self.llm | self.output_parser
@@ -363,6 +380,7 @@ class TarotReader:
         operation = "compatibility_interpretation"
         usage_cb = UsageMetadataCallbackHandler()
 
+        streamed_text = ""
         try:
             async for chunk in chain.astream(
                 {
@@ -373,6 +391,7 @@ class TarotReader:
                 },
                 config={"callbacks": [usage_cb]},
             ):
+                streamed_text += chunk
                 yield chunk
                 await asyncio.sleep(0)
         except Exception as exc:
@@ -387,6 +406,9 @@ class TarotReader:
             )
             raise
         else:
+            guardrail_category, _ = inspect_advisor_output(streamed_text)
+            if guardrail_category:
+                record_advisor_guardrail_trigger(settings.FASTAPI_ENV, guardrail_category)
             prompt_tokens, completion_tokens = _usage_from_callback(usage_cb)
             record_openai_request(
                 env=settings.FASTAPI_ENV,
@@ -412,11 +434,11 @@ class TarotReader:
         Unlike create_reading (which streams), this returns the complete
         interpretation in one string so the compatibility endpoint can respond
         with a single JSON payload. Cards are expected in Relationship Cross
-        order: You, Them, The Connection, The Challenge, The Outcome.
+        order: You, Them, The Connection, The Challenge, Possible Direction.
         """
         logger.info("Creating compatibility reading...")
 
-        position_labels = ["You", "Them", "The Connection", "The Challenge", "The Outcome"]
+        position_labels = ["You", "Them", "The Connection", "The Challenge", "Possible Direction"]
         cards_text = ""
         for i, card in enumerate(cards):
             position = card.get("position") or (position_labels[i] if i < len(position_labels) else f"Card {i + 1}")
@@ -425,22 +447,7 @@ class TarotReader:
 
         focus_line = f"Their question: {focus}\n\n" if focus else ""
 
-        template = (
-            "You are an experienced, compassionate Tarot reader specializing in relationships. "
-            "Create a CONCISE compatibility reading (maximum 1000 words) for two people: "
-            "{person_a} and {person_b}.\n\n"
-            "{focus_line}"
-            "The cards were drawn in a Relationship Cross spread:\n{cards}\n\n"
-            "Format the reading in Markdown:\n"
-            "- Start each of the five positions with its own '### ' heading, e.g. "
-            "'### You — {person_a}: <Card Name> (<Orientation>)'\n"
-            "- Under each heading, write 1-2 short paragraphs interpreting that card in its "
-            "relationship position, referring to the people by name and accounting for reversals\n"
-            "- End with a '### Summary' section that names the central strength and the central "
-            "challenge of the bond and offers 1-2 practical, kind suggestions\n\n"
-            "Always write 'Tarot', not 'tarot'. Respond in the same language as the question if one is given.\n\n"
-            "Compatibility Reading:"
-        )
+        template = self._compatibility_template()
 
         prompt = ChatPromptTemplate.from_template(template)
         chain = prompt | self.llm | self.output_parser
@@ -470,6 +477,11 @@ class TarotReader:
             )
             raise
         else:
+            guardrail_category, dangerous = inspect_advisor_output(result)
+            if guardrail_category:
+                record_advisor_guardrail_trigger(settings.FASTAPI_ENV, guardrail_category)
+                if dangerous:
+                    result = safe_block_message()
             prompt_tokens, completion_tokens = _usage_from_callback(usage_cb)
             record_openai_request(
                 env=settings.FASTAPI_ENV,

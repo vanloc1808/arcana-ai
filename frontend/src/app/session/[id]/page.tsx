@@ -124,9 +124,9 @@ function SpreadCard({ card, position, index, revealed }: {
 const SPREAD_POSITIONS: Record<number, string[]> = {
   1: ['Present'],
   2: ['Challenge', 'Advice'],
-  3: ['Past', 'Present', 'Future'],
+  3: ['Past', 'Present', 'Possible Direction'],
   4: ['Mind', 'Body', 'Spirit', 'Advice'],
-  5: ['Past', 'Present', 'Future', 'Above', 'Below'],
+  5: ['Past', 'Present', 'Possible Direction', 'Above', 'Below'],
 };
 
 function getPositions(count: number): string[] {

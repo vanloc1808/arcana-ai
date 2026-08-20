@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from config import settings
 from database import get_db
 from models import Card, ChatSession, Message, MessageCardAssociation, User
+from prompts.advisor_policy import DEFAULT_CHAT_SYSTEM_PROMPT
 from routers.auth import get_current_user
 from schemas import (
     ChatSessionCreate,
@@ -22,6 +23,14 @@ from schemas import (
 from services.streak_service import record_activity as record_streak_activity
 from services.subscription_service import SubscriptionService
 from tarot_reader import TarotReader
+from utils.advisor_guardrails import inspect_advisor_output, safe_block_message
+from utils.content_safety import (
+    CRISIS_RESPONSE_PREFIX,
+    HIGH_STAKES_RESPONSE,
+    WELLBEING_DISCLAIMER,
+    is_predictive_request,
+    screen_content,
+)
 from utils.error_handlers import (
     ChatSessionError,
     RateLimitExceededError,
@@ -30,19 +39,16 @@ from utils.error_handlers import (
 )
 from utils.metrics import (
     estimate_openai_cost_usd,
+    record_advisor_guardrail_trigger,
+    record_advisor_high_stakes_redirect,
+    record_advisor_reframe,
     record_chat_conversation,
     record_chat_message,
     record_openai_request,
+    record_safety_trigger,
     set_active_chat_conversations,
 )
 from utils.rate_limiter import RATE_LIMITS, limiter
-
-from utils.content_safety import (
-    CRISIS_RESPONSE_PREFIX,
-    WELLBEING_DISCLAIMER,
-    screen_content,
-)
-from utils.metrics import record_safety_trigger
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -50,7 +56,7 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 # long after signalling a draw before revealing cards and streaming the reading,
 # so the reading starts streaming only once the animation finishes.
 CARD_DRAW_ANIMATION_SECONDS = 5
-CHAT_PROMPT_VERSION = "1.0"
+CHAT_PROMPT_VERSION = "advisor-v1"
 
 # Initialize TarotReader
 reader = TarotReader()
@@ -132,13 +138,7 @@ def load_system_prompt() -> str:
         logger.logger.warning(
             "System prompt file not found, using fallback prompt", extra={"file_path": str(system_prompt_path)}
         )
-        # Fallback system prompt
-        return (
-            "You are a compassionate and insightful tarot reader. "
-            "You help people gain clarity and guidance through tarot card readings. "
-            "When someone asks you a question that would benefit from tarot guidance, "
-            "use the draw_cards tool to draw cards for them."
-        )
+        return DEFAULT_CHAT_SYSTEM_PROMPT
     except Exception as e:
         # Calculate the path for logging even if there's an error
         current_dir = Path(__file__).resolve().parent
@@ -149,13 +149,7 @@ def load_system_prompt() -> str:
             "Error loading system prompt file, using fallback prompt",
             extra={"error": str(e), "file_path": str(system_prompt_path)},
         )
-        # Fallback system prompt
-        return (
-            "You are a compassionate and insightful tarot reader. "
-            "You help people gain clarity and guidance through tarot card readings. "
-            "When someone asks you a question that would benefit from tarot guidance, "
-            "use the draw_cards tool to draw cards for them."
-        )
+        return DEFAULT_CHAT_SYSTEM_PROMPT
 
 
 # Rate limiting
@@ -169,9 +163,9 @@ DRAW_CARDS_TOOL = {
     "function": {
         "name": "draw_cards",
         "description": (
-            "Draw tarot cards and provide a reading for the user's question or concern. "
-            "Use this when the user is asking for guidance, advice, insights about their life, "
-            "future, relationships, career, or any other personal matter."
+            "Draw Tarot cards to help the user reflect on a question, situation, decision, "
+            "relationship, goal, or concern. Use the cards as symbolic prompts for perspective "
+            "and self-reflection. Do not use this tool to predict future events or reveal unknown facts."
         ),
         "parameters": {
             "type": "object",
@@ -1033,8 +1027,32 @@ async def create_message(
                 has_triggers = bool(triggers)
                 for trigger in triggers:
                     record_safety_trigger(settings.FASTAPI_ENV, trigger, "flagged")
-                if is_crisis:
-                    system_message_content = CRISIS_RESPONSE_PREFIX + system_message_content
+                if "predictive_high_stakes" in triggers:
+                    record_advisor_high_stakes_redirect(settings.FASTAPI_ENV, "predictive_high_stakes")
+                elif is_predictive_request(message_request.content):
+                    record_advisor_reframe(settings.FASTAPI_ENV, "predictive_question")
+                elif has_triggers and not is_crisis:
+                    record_advisor_reframe(settings.FASTAPI_ENV, triggers[0])
+
+                # Crisis and high-stakes predictive requests must not reach card drawing.
+                # Return a support-oriented response while preserving the user's message
+                # in the conversation history.
+                if is_crisis or "predictive_high_stakes" in triggers:
+                    response_content = (
+                        CRISIS_RESPONSE_PREFIX if is_crisis else HIGH_STAKES_RESPONSE
+                    ) + WELLBEING_DISCLAIMER
+                    yield f"data: {json.dumps({'type': 'content_start', 'content': response_content})}\n\n"
+                    crisis_message = Message(
+                        chat_session_id=session_id,
+                        content=response_content,
+                        role="assistant",
+                    )
+                    db.add(crisis_message)
+                    db.commit()
+                    db.refresh(crisis_message)
+                    record_chat_message(settings.FASTAPI_ENV, role="assistant", status="success")
+                    yield f"data: {json.dumps({'type': 'assistant_message', 'message': MessageResponse.from_orm(crisis_message).model_dump(mode='json')})}\n\n"
+                    return
 
                 # Fetch historical messages for context
                 db_messages_for_context = (
@@ -1158,6 +1176,16 @@ async def create_message(
                             ):  # Pass display data for reading generation
                                 full_reading_text += chunk
                                 yield f"data: {json.dumps({'type': 'content_chunk', 'content': chunk})}\n\n"
+
+                            guardrail_category, dangerous = inspect_advisor_output(full_reading_text)
+                            if guardrail_category:
+                                record_advisor_guardrail_trigger(
+                                    settings.FASTAPI_ENV,
+                                    guardrail_category,
+                                )
+                                if dangerous:
+                                    full_reading_text = safe_block_message()
+                                    yield f"data: {json.dumps({'type': 'content_chunk', 'content': full_reading_text})}\n\n"
 
                             complete_ai_content = (
                                 start_message_content + card_details_content + reading_header + full_reading_text

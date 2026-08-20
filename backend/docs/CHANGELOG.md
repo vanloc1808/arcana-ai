@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.31] - 2026-08-20
+
+### Added
+- Added a canonical advisor policy, high-stakes predictive screening, crisis-first handling, advisor guardrail metrics, and prompt regression coverage.
+
+### Changed
+- Repositioned ArcanaAI as hosted Tarot reflection software rather than a predictive or fortune-telling service.
+- Updated chat, reading, compatibility, relationship-spread, product, README, and Terms language to avoid predictive certainty and hidden-fact claims.
+- Renamed the Relationship Cross `The Outcome` position to `Possible Direction`.
+
 ## [0.0.30] - 2026-08-13
 
 ### Changed

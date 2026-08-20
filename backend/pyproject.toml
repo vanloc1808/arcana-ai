@@ -142,4 +142,4 @@ skips = ["B101", "B601", "B113", "B311"]  # Skip assert statements, shell inject
 skips = ["**/tests/**", "**/test_*.py"]
 
 [tool.setuptools]
-packages = ["routers", "tarot_image_utils"]
+packages = ["prompts", "routers", "tarot_image_utils"]
