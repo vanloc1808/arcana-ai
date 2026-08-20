@@ -1286,28 +1286,16 @@ async def create_message(
                                 raise HTTPException(status_code=500, detail=error_content)
 
                 else:
-                    response_content = ""
-                    openai_start_time = time.perf_counter()
-                    try:
-                        async for chunk in llm.astream(messages_for_llm):
-                            if chunk.content:
-                                response_content += chunk.content  # Accumulate content for saving
-                                yield f"data: {json.dumps({'type': 'content_chunk', 'content': chunk.content})}\n\n"
-                    except Exception as exc:
-                        _record_openai_error(exc, openai_start_time)
-                        raise
-                    else:
-                        record_openai_request(
-                            env=settings.FASTAPI_ENV,
-                            model=settings.OPENAI_MODEL,
-                            operation="chat_message",
-                            status="success",
-                            duration=time.perf_counter() - openai_start_time,
-                            prompt_version=CHAT_PROMPT_VERSION,
-                        )
+                    # ``invoke`` above already made the model request used to
+                    # decide whether to draw cards. Reusing its text keeps the
+                    # response and persistence path on one model outcome rather
+                    # than issuing a second, independent request that can return
+                    # an empty response.
+                    response_content = llm_response.content if isinstance(llm_response.content, str) else ""
 
                     # Save the complete AI response if no tools were called
                     if response_content:  # Ensure there's content to save
+                        yield f"data: {json.dumps({'type': 'content_chunk', 'content': response_content})}\n\n"
                         # Validate that the chat session still exists before saving
                         if not validate_chat_session_exists(db, session_id, current_user.id):
                             logger.logger.error(

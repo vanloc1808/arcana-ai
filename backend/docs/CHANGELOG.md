@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a canonical advisor policy, high-stakes predictive screening, crisis-first handling, advisor guardrail metrics, and prompt regression coverage.
 
 ### Fixed
-- Chat streaming now saves a readable fallback response when the model returns no content instead of persisting an empty assistant message.
+- Chat now persists the response from its original tool-decision request instead of making a second independent model request that could yield an empty assistant message; genuinely empty outcomes still receive a readable fallback.
 
 ### Changed
 - Repositioned ArcanaAI as hosted Tarot reflection software rather than a predictive or fortune-telling service.
