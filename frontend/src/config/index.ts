@@ -7,6 +7,8 @@ const API_URL_BY_FRONTEND_HOST: Record<string, string> = {
     'www.arcanaai.nguyenvanloc.com': 'https://backend-arcanaai.nguyenvanloc.com',
     'tarot-reader.nguyenvanloc.com': 'https://backend-tarotreader.nguyenvanloc.com',
     'www.tarot-reader.nguyenvanloc.com': 'https://backend-tarotreader.nguyenvanloc.com',
+    'arcanaai.net': 'https://backend.arcanaai.net',
+    'www.arcanaai.net': 'https://backend.arcanaai.net',
 };
 
 export function resolveApiUrl(hostname: string, configuredApiUrl?: string): string {

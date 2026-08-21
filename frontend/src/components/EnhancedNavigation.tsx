@@ -445,25 +445,32 @@ export function EnhancedNavigation() {
                 </div>
 
                 {/* ── TIER 2 — Navigation tabs (desktop only) ──── */}
-                <div className="hidden lg:flex justify-center px-8 pb-3">
-                    <nav className="inline-flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 backdrop-blur-md">
+                <div className="hidden lg:flex justify-center px-8 pb-4 pt-0.5">
+                    <nav
+                        aria-label="Primary navigation"
+                        className="relative inline-flex items-center gap-1.5 overflow-hidden rounded-[20px] border border-violet-300/20 bg-[linear-gradient(120deg,rgba(38,25,72,0.78),rgba(16,12,38,0.9)_46%,rgba(40,22,72,0.78))] p-2 shadow-[0_12px_34px_rgba(3,1,16,0.38),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl before:pointer-events-none before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-violet-200/70 before:to-transparent after:pointer-events-none after:absolute after:-inset-x-12 after:-bottom-8 after:h-12 after:bg-violet-500/10 after:blur-2xl"
+                    >
                         {NAV_ITEMS.map(({ label, href, Icon, match }) => {
                             const active = match(pathname ?? '');
                             return (
                                 <Link
                                     key={href}
                                     href={href}
-                                    className={`flex items-center gap-2 rounded-xl px-5 py-2 text-[14px] font-medium transition-all ${
+                                    aria-current={active ? 'page' : undefined}
+                                    className={`group relative z-10 flex items-center gap-2.5 rounded-[13px] px-5 py-2.5 text-[14px] font-medium tracking-[0.01em] transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-200 ${
                                         active
-                                            ? 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-lg shadow-violet-950/40'
-                                            : 'text-gray-300/80 hover:text-gray-100 hover:bg-white/[0.06]'
+                                            ? 'bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-700 text-white shadow-[0_7px_18px_rgba(70,30,150,0.44),inset_0_1px_0_rgba(255,255,255,0.22)]'
+                                            : 'text-violet-100/72 hover:-translate-y-px hover:text-white hover:bg-white/[0.08]'
                                     }`}
                                 >
+                                    {active && (
+                                        <span className="absolute inset-x-5 bottom-1 h-px rounded-full bg-violet-100/80 shadow-[0_0_8px_rgba(221,214,254,0.9)]" />
+                                    )}
                                     <Icon
                                         size={16}
-                                        className={active ? 'text-violet-100' : 'text-gray-400/80'}
+                                        className={`relative z-10 transition-colors ${active ? 'text-violet-100' : 'text-violet-300/60 group-hover:text-violet-100'}`}
                                     />
-                                    {label}
+                                    <span className="relative z-10">{label}</span>
                                 </Link>
                             );
                         })}

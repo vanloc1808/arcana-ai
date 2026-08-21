@@ -5,7 +5,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      # A shared cookie domain cannot span nguyenvanloc.com and stacyn.io.vn.
+      # Keep cookies host-only because the production domains use different parent domains.
       AUTH_COOKIE_DOMAIN: ""
       AUTH_COOKIE_SECURE: "true"
     volumes:
@@ -15,7 +15,7 @@ services:
     restart: always
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tarot-backend.rule=Host(`backend-tarotreader.nguyenvanloc.com`) || Host(`backend-arcanaai.nguyenvanloc.com`) || Host(`backend.stacyn.io.vn`)"
+      - "traefik.http.routers.tarot-backend.rule=Host(`backend-tarotreader.nguyenvanloc.com`) || Host(`backend-arcanaai.nguyenvanloc.com`) || Host(`backend.stacyn.io.vn`) || Host(`backend.arcanaai.net`)"
       - "traefik.http.routers.tarot-backend.entrypoints=websecure"
       - "traefik.http.routers.tarot-backend.tls=true"
       - "traefik.http.services.tarot-backend.loadbalancer.server.port=8000"
@@ -30,7 +30,7 @@ services:
       - ./frontend/.env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tarot-frontend.rule=Host(`tarot-reader.nguyenvanloc.com`) || Host(`arcanaai.nguyenvanloc.com`) || Host(`stacyn.io.vn`)"
+      - "traefik.http.routers.tarot-frontend.rule=Host(`tarot-reader.nguyenvanloc.com`) || Host(`arcanaai.nguyenvanloc.com`) || Host(`stacyn.io.vn`) || Host(`arcanaai.net`) || Host(`www.arcanaai.net`)"
       - "traefik.http.routers.tarot-frontend.entrypoints=websecure"
       - "traefik.http.routers.tarot-frontend.tls=true"
       - "traefik.http.services.tarot-frontend.loadbalancer.server.port=3000"

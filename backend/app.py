@@ -157,6 +157,8 @@ app.add_middleware(
         "https://www.tarot-reader.nguyenvanloc.com",  # Tarot reader www domain
         "https://stacyn.io.vn",  # Stacyn production domain
         "https://www.stacyn.io.vn",  # Stacyn www domain
+        "https://arcanaai.net",  # ArcanaAI.net production domain
+        "https://www.arcanaai.net",  # ArcanaAI.net www domain
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],

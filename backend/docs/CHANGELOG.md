@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.32] - 2026-08-21
+
+### Changed
+- Replaced Argo CD production promotion with a serialized GitHub Actions SSH deployment to the Docker Compose stack, using commit-SHA image tags and strict SSH host verification.
+- Added `arcanaai.net` and `www.arcanaai.net` as frontend domains with `backend.arcanaai.net` API routing and CORS support.
+
+## [0.0.31] - 2026-08-14
+
+### Changed
+- Elevated the desktop navigation into a more spacious, luminous tab tray with clearer active-page emphasis and refined hover feedback.
+
 ## [0.0.30] - 2026-08-13
 
 ### Changed

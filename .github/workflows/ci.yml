@@ -206,10 +206,10 @@ jobs:
           cache-to: type=registry,ref=vanloc1808/tarot-frontend:buildcache,mode=max
 
   update-gitops:
-    name: Promote images to production GitOps
+    name: Retired GitOps promotion
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ false }}
     concurrency:
       group: arcana-production-gitops
       cancel-in-progress: false
@@ -315,3 +315,64 @@ jobs:
           git diff --cached --check
           git commit -m "deploy: promote Arcana images to $IMAGE_TAG"
           git push origin HEAD:main
+
+  deploy-compose:
+    name: Deploy production Compose stack
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: arcana-production-compose
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Load deployment SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ARCANA_DEPLOY_SSH_KEY }}
+
+      - name: Configure SSH host verification
+        env:
+          VPS_KNOWN_HOSTS: ${{ secrets.ARCANA_VPS_KNOWN_HOSTS }}
+        run: |
+          test -n "$VPS_KNOWN_HOSTS"
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+      - name: Deploy immutable image tag with Docker Compose
+        env:
+          VPS_HOST: ${{ secrets.ARCANA_VPS_HOST }}
+          VPS_USER: ${{ secrets.ARCANA_VPS_USER }}
+          VPS_PORT: ${{ secrets.ARCANA_VPS_PORT || '22' }}
+          VPS_APP_DIR: ${{ secrets.ARCANA_VPS_APP_DIR }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          test -n "$VPS_HOST"
+          test -n "$VPS_USER"
+          test -n "$VPS_APP_DIR"
+
+          ssh -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            bash -s -- "$VPS_APP_DIR" "$IMAGE_TAG" <<'REMOTE'
+          set -euo pipefail
+
+          app_dir="$1"
+          image_tag="$2"
+          compose_file="$app_dir/docker-compose.prod.yaml"
+
+          test -f "$compose_file"
+          cd "$app_dir"
+          export IMAGE_TAG="$image_tag"
+
+          docker compose -f "$compose_file" config >/dev/null
+          docker compose -f "$compose_file" pull backend frontend celery-worker celery-beat
+          docker compose -f "$compose_file" up -d --remove-orphans
+          docker compose -f "$compose_file" ps
+          REMOTE
