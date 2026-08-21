@@ -184,6 +184,13 @@ class TestSubscriptionService:
         with patch('services.subscription_service.httpx.AsyncClient', return_value=mock_client):
             result = await service.create_checkout_url(user, "10_turns", db_session)
 
+        request_payload = mock_client.post.call_args.kwargs["json"]
+        assert request_payload["data"]["attributes"]["checkout_data"]["email"] == user.email
+        assert request_payload["data"]["attributes"]["checkout_data"]["custom"] == {
+            "user_id": str(user.id),
+            "product_variant": "10_turns",
+        }
+
         assert result == "https://checkout.lemonsqueezy.com/123"
         checkout_session = (
             db_session.query(CheckoutSession).filter(CheckoutSession.user_id == user.id).first()
@@ -364,6 +371,49 @@ class TestSubscriptionService:
 
             # Verify handler was called
             mock_handler.assert_called_once()
+
+    @patch('services.subscription_service.settings')
+    def test_order_webhook_uses_meta_custom_data_and_is_idempotent(self, mock_settings, db_session):
+        """Repeated order webhooks must not grant the same credits twice."""
+        mock_settings.LEMON_SQUEEZY_ENABLE_TEST_MODE = True
+        mock_settings.LEMON_SQUEEZY_PRODUCT_ID_10_TURNS = "prod_10"
+        mock_settings.LEMON_SQUEEZY_PRODUCT_ID_20_TURNS = "prod_20"
+
+        service = SubscriptionService()
+        user = UserFactory.create(db=db_session, number_of_paid_turns=0)
+        event_data = {
+            "meta": {
+                "event_name": "order_created",
+                "test_mode": False,
+                "custom_data": {
+                    "user_id": str(user.id),
+                    "product_variant": "10_turns",
+                },
+            },
+            "data": {
+                "id": "order_idempotent_123",
+                "attributes": {
+                    "store_id": "test_store_id",
+                    "customer_id": "cust_123",
+                    "total": 399,
+                    "currency": "USD",
+                    "first_order_item": {
+                        "variant_id": "prod_10",
+                        "product_name": "10 Reading Credits",
+                    },
+                    "created_at": datetime.now(UTC).isoformat(),
+                },
+            },
+        }
+
+        service.process_webhook_event(db_session, event_data)
+        service.process_webhook_event(db_session, event_data)
+
+        db_session.refresh(user)
+        assert user.number_of_paid_turns == 10
+        assert db_session.query(PaymentTransaction).filter(
+            PaymentTransaction.external_transaction_id == "order_idempotent_123"
+        ).count() == 1
 
     def test_handle_subscription_created_updated_10_turns(self, db_session):
         """Test handling subscription created/updated event for 10 turns."""

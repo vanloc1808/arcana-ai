@@ -176,6 +176,7 @@ class PaymentTransaction(Base):
     processor_fee = Column(String, nullable=True)  # Fee charged by processor
     net_amount = Column(String, nullable=True)  # Net amount after fees
     transaction_metadata = Column(JSON, nullable=True)  # Additional transaction data
+    idempotency_key = Column(String, nullable=True, unique=True, index=True)
     processed_at = Column(DateTime(timezone=True), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 

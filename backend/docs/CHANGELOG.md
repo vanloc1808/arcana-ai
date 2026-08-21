@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.34] - 2026-08-21
+
+### Changed
+- Began the Lemon Squeezy verification-readiness release by making checkout user metadata authoritative and preventing duplicate order webhooks from granting duplicate credits.
+
 ## [0.0.33] - 2026-08-21
 
 ### Changed

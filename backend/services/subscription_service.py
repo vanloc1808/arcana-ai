@@ -22,6 +22,11 @@ class SubscriptionService:
         self.product_id_10_turns = settings.LEMON_SQUEEZY_PRODUCT_ID_10_TURNS
         self.product_id_20_turns = settings.LEMON_SQUEEZY_PRODUCT_ID_20_TURNS
         self.enable_test_mode = settings.LEMON_SQUEEZY_ENABLE_TEST_MODE
+        self.enabled_payment_methods = {
+            method.strip()
+            for method in str(getattr(settings, "ENABLED_PAYMENT_METHODS", "lemon_squeezy")).split(",")
+            if method.strip()
+        }
         self.base_url = "https://api.lemonsqueezy.com/v1"
 
     def _get_headers(self) -> dict[str, str]:
@@ -76,6 +81,20 @@ class SubscriptionService:
         checkout_data = {
             "data": {
                 "type": "checkouts",
+                "attributes": {
+                    "checkout_data": {
+                        "email": user.email,
+                        "custom": {
+                            "user_id": str(user.id),
+                            "product_variant": product_variant,
+                        },
+                    },
+                    "product_options": {
+                        "redirect_url": f"{settings.FRONTEND_URL.rstrip('/')}/profile?tab=subscription&checkout=success",
+                        "receipt_button_text": "Open ArcanaAI",
+                        "receipt_link_url": f"{settings.FRONTEND_URL.rstrip('/')}/profile?tab=subscription",
+                    },
+                },
                 "relationships": {
                     "store": {"data": {"type": "stores", "id": self.store_id}},
                     "variant": {"data": {"type": "variants", "id": product_id}},
@@ -146,8 +165,8 @@ class SubscriptionService:
         event_name = event_data.get("meta", {}).get("event_name")
         data = event_data.get("data", {})
         attributes = data.get("attributes", {})
-        custom_data = attributes.get("custom", {})
         meta = event_data.get("meta", {})
+        custom_data = meta.get("custom_data") or attributes.get("custom", {})
         is_test_mode = meta.get("test_mode", False)
 
         logger.info(f"Processing webhook event: {event_name}, test_mode: {is_test_mode}")
@@ -157,13 +176,26 @@ class SubscriptionService:
             logger.info(f"Ignoring test mode webhook event {event_name} - test mode not enabled")
             return
 
-        # Try to get user_id from custom data first (for legacy/subscription events)
+        if event_name == "order_created" and data.get("id"):
+            existing_transaction = db.query(PaymentTransaction).filter(
+                PaymentTransaction.payment_method == "lemon_squeezy",
+                PaymentTransaction.transaction_type == "purchase",
+                PaymentTransaction.external_transaction_id == str(data["id"]),
+            ).first()
+            if existing_transaction:
+                logger.info("Ignoring duplicate Lemon Squeezy order webhook", extra={"order_id": str(data["id"])})
+                return
+
+        # Try to get user_id from checkout custom data first.
         user_id = custom_data.get("user_id")
         user = None
         checkout_session = None
 
         if user_id:
-            user = db.query(User).filter(User.id == int(user_id)).first()
+            try:
+                user = db.query(User).filter(User.id == int(user_id)).first()
+            except (TypeError, ValueError):
+                logger.warning("Ignoring webhook with invalid custom user id")
             logger.info(f"Found user by user_id: {user.id if user else 'None'}")
 
         # For order events, try to find user by checkout session
@@ -281,7 +313,14 @@ class SubscriptionService:
             turns_affected = self._handle_subscription_resumed(user, attributes, custom_data)
         elif event_name == "order_created":
             # Pass checkout_session to get product_variant if available
-            turns_affected = self._handle_order_created(user, attributes, data, db, checkout_session)
+            turns_affected = self._handle_order_created(
+                user,
+                attributes,
+                data,
+                db,
+                checkout_session,
+                custom_data.get("product_variant"),
+            )
 
         # Log the subscription event for history tracking
         self.log_subscription_event(
@@ -351,7 +390,15 @@ class SubscriptionService:
 
         return turns_added
 
-    def _handle_order_created(self, user: User, attributes: dict, data: dict, db: Session, checkout_session: CheckoutSession = None) -> int:
+    def _handle_order_created(
+        self,
+        user: User,
+        attributes: dict,
+        data: dict,
+        db: Session,
+        checkout_session: CheckoutSession = None,
+        custom_product_variant: str | None = None,
+    ) -> int:
         """Handle order created events for one-time purchases.
 
         Args:
@@ -378,6 +425,9 @@ class SubscriptionService:
         if checkout_session:
             product_variant = checkout_session.product_variant
             logger.info(f"Using product_variant from checkout session: {product_variant}")
+        elif custom_product_variant:
+            product_variant = custom_product_variant
+            logger.info(f"Using product_variant from checkout custom data: {product_variant}")
         else:
             # Fallback: Extract product information from the order
             first_order_item = attributes.get("first_order_item", {})
