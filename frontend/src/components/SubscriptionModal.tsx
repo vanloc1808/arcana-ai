@@ -32,7 +32,9 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
     const {
         turns,
         products,
+        paymentMethods,
         loading,
+        purchaseSubscription,
         getSubscriptionStatusText,
         getDaysUntilReset,
         refreshData,
@@ -91,13 +93,13 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                         </div>
                     </DialogTitle>
                     <DialogDescription className="text-base md:text-lg text-purple-300 text-center">
-                        {t('payWithMetaMask')}
+                        {t('payWithLemonSqueezy')}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 md:space-y-6">
-                    {/* MetaMask Status */}
-                    <Card className="border-green-500 bg-green-900/20">
+                    {/* Optional crypto payment status */}
+                    {paymentMethods.includes('ethereum') && <Card className="border-green-500 bg-green-900/20">
                         <CardContent className="p-4 md:p-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
@@ -123,7 +125,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                 )}
                             </div>
                         </CardContent>
-                    </Card>
+                    </Card>}
 
                     {/* Current Status */}
                     <Card className="border-blue-500 bg-blue-900/20">
@@ -151,7 +153,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                         </CardContent>
                     </Card>
 
-                    {/* Products Grid — MetaMask only */}
+                    {/* Products Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto">
                         {loading ? (
                             Array.from({ length: 2 }).map((_, index) => (
@@ -205,25 +207,36 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
                                             </div>
 
                                             <Button
-                                                onClick={() => {
-                                                    const usdtAmount = product.variant === '10_turns' ? '3.99' : '5.99';
-                                                    handleUSDTPayment(product.variant, usdtAmount, product.price);
-                                                }}
-                                                disabled={paymentLoading === product.variant}
-                                                className="w-full py-3 md:py-2 text-base md:text-sm touch-manipulation transition-all bg-green-600 hover:bg-green-700 text-white"
+                                                onClick={() => purchaseSubscription(product.variant)}
+                                                disabled={loading}
+                                                className="w-full py-3 md:py-2 text-base md:text-sm touch-manipulation transition-all bg-purple-600 hover:bg-purple-700 text-white"
                                             >
-                                                {paymentLoading === product.variant ? (
+                                                {loading ? (
                                                     <>
                                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                                                         {t('processing', { ns: 'common' })}
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <Wallet className="h-4 w-4 mr-2" />
-                                                        {t('payWith')}{product.variant === '10_turns' ? '3.99' : '5.99'} {t('usdt')}
+                                                        <Zap className="h-4 w-4 mr-2" />
+                                                        {t('buyWithLemonSqueezy')}
                                                     </>
                                                 )}
                                             </Button>
+                                            {paymentMethods.includes('ethereum') && (
+                                                <Button
+                                                    onClick={() => {
+                                                        const usdtAmount = product.variant === '10_turns' ? '3.99' : '5.99';
+                                                        handleUSDTPayment(product.variant, usdtAmount, product.price);
+                                                    }}
+                                                    disabled={paymentLoading === product.variant}
+                                                    variant="outline"
+                                                    className="w-full mt-2 border-green-600 text-green-400"
+                                                >
+                                                    <Wallet className="h-4 w-4 mr-2" />
+                                                    {t('payWith')}{product.price} {t('usdt')}
+                                                </Button>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 );
