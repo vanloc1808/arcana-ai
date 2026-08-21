@@ -1,6 +1,7 @@
 import hashlib
 import hmac
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 import httpx
 from sqlalchemy.orm import Session
@@ -321,6 +322,8 @@ class SubscriptionService:
                 checkout_session,
                 custom_data.get("product_variant"),
             )
+        elif event_name == "order_refunded":
+            turns_affected = self._handle_order_refunded(user, attributes, data, db)
 
         # Log the subscription event for history tracking
         self.log_subscription_event(
@@ -338,6 +341,55 @@ class SubscriptionService:
         # Update sync timestamp
         user.last_subscription_sync = datetime.now(UTC)
         db.commit()
+
+    def _handle_order_refunded(self, user: User, attributes: dict, data: dict, db: Session) -> int:
+        """Reconcile a full or partial Lemon Squeezy refund against a credit lot."""
+        order_id = str(data.get("id") or attributes.get("order_id") or "")
+        transaction = (
+            db.query(PaymentTransaction)
+            .filter(
+                PaymentTransaction.user_id == user.id,
+                PaymentTransaction.payment_method == "lemon_squeezy",
+                PaymentTransaction.transaction_type == "purchase",
+                PaymentTransaction.external_transaction_id == order_id,
+            )
+            .first()
+        )
+        if transaction is None or not transaction.turns_purchased:
+            logger.warning("Refund webhook did not match a tracked purchase", extra={"order_id": order_id})
+            return 0
+
+        original_amount = Decimal(str(transaction.amount))
+        raw_refunded = attributes.get("refunded_amount")
+        if raw_refunded is None:
+            raw_refunded = attributes.get("refunded")
+        if isinstance(raw_refunded, bool):
+            refunded_amount = original_amount if raw_refunded else Decimal("0.00")
+        else:
+            try:
+                refunded_amount = Decimal(str(raw_refunded or 0)) / Decimal("100")
+            except InvalidOperation:
+                refunded_amount = Decimal("0.00")
+
+        target_refunded = min(
+            transaction.turns_purchased,
+            int(
+                (Decimal(transaction.turns_purchased) * refunded_amount / original_amount).quantize(
+                    Decimal("1"), rounding=ROUND_HALF_UP
+                )
+            )
+            if original_amount > 0
+            else 0,
+        )
+        delta = max(target_refunded - (transaction.turns_refunded or 0), 0)
+        if delta:
+            user.number_of_paid_turns = max((user.number_of_paid_turns or 0) - min(delta, transaction.turns_remaining or 0), 0)
+            transaction.turns_remaining = max((transaction.turns_remaining or 0) - delta, 0)
+            transaction.turns_refunded = target_refunded
+            transaction.refunded_amount = f"{refunded_amount:.2f}"
+            transaction.status = "refunded" if transaction.turns_remaining == 0 else "partially_refunded"
+            db.add(transaction)
+        return -delta
 
     def _handle_subscription_created_updated(self, user: User, attributes: dict, custom_data: dict, db: Session) -> int:
         """Handle subscription created/updated events.
@@ -381,6 +433,8 @@ class SubscriptionService:
                 product_variant=product_variant,
                 turns_purchased=turns_added,
                 status="completed",
+                turns_remaining=turns_added,
+                idempotency_key=f"lemon_squeezy:order:{attributes.get('order_id', attributes.get('id', 'unknown'))}",
                 metadata={
                     "customer_id": attributes.get("customer_id"),
                     "subscription_id": attributes.get("id"),
@@ -473,6 +527,8 @@ class SubscriptionService:
                 product_variant=product_variant,
                 turns_purchased=turns_added,
                 status="completed",
+                turns_remaining=turns_added,
+                idempotency_key=f"lemon_squeezy:order:{data.get('id', 'unknown')}",
                 metadata={
                     "customer_id": customer_id,
                     "order_id": data.get("id"),
@@ -564,12 +620,17 @@ class SubscriptionService:
             if turn_user.should_reset_free_turns():
                 turn_user.reset_free_turns()
 
+            free_turns_before = turn_user.number_of_free_turns or 0
+            paid_turns_before = turn_user.number_of_paid_turns or 0
+
             # Try to consume a turn
             success = turn_user.consume_turn()
 
             if success:
-                # Determine which type of turn was consumed
-                turn_type = "free" if turn_user.number_of_free_turns < 3 else "paid"
+                # Determine which type of turn was consumed before decrementing it.
+                turn_type = "free" if free_turns_before > 0 else "paid"
+                if turn_type == "paid":
+                    self.consume_paid_credit_lot(turn_db, turn_user.id)
 
                 # Log turn usage for history tracking
                 self.log_turn_usage(
@@ -582,8 +643,8 @@ class SubscriptionService:
                     feature_used="turn_consumption",
                     metadata={
                         "consumption_method": "subscription_service",
-                        "free_turns_before": (turn_user.number_of_free_turns or 0) + (1 if turn_type == "free" else 0),
-                        "paid_turns_before": (turn_user.number_of_paid_turns or 0) + (1 if turn_type == "paid" else 0),
+                        "free_turns_before": free_turns_before,
+                        "paid_turns_before": paid_turns_before,
                         "free_turns_after": turn_user.number_of_free_turns or 0,
                         "paid_turns_after": turn_user.number_of_paid_turns or 0,
                     },
@@ -658,17 +719,72 @@ class SubscriptionService:
         """
         products = {
             "10_turns": {
-                "name": "10 Drawing Turns",
+                "name": "10 Reading Credits",
                 "price": "$3.99",
-                "description": "10 additional tarot card drawing turns",
+                "description": "10 additional ArcanaAI reading credits",
             },
             "20_turns": {
-                "name": "20 Drawing Turns",
+                "name": "20 Reading Credits",
                 "price": "$5.99",
-                "description": "20 additional tarot card drawing turns",
+                "description": "20 additional ArcanaAI reading credits",
             },
         }
         return products.get(product_variant, {})
+
+    def get_refund_quote(self, transaction: PaymentTransaction, now: datetime | None = None) -> dict:
+        """Calculate the remaining-credit refund for a Lemon Squeezy purchase."""
+        now = now or datetime.now(UTC)
+        purchased_at = transaction.processed_at or transaction.created_at
+        if purchased_at and purchased_at.tzinfo is None:
+            purchased_at = purchased_at.replace(tzinfo=UTC)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=UTC)
+        deadline = purchased_at + timedelta(days=14) if purchased_at else None
+        remaining_turns = max(transaction.turns_remaining or 0, 0)
+        eligible = (
+            transaction.payment_method == "lemon_squeezy"
+            and transaction.transaction_type == "purchase"
+            and transaction.turns_purchased > 0
+            and remaining_turns > 0
+            and transaction.refund_requested_at is None
+            and deadline is not None
+            and now <= deadline
+        )
+        try:
+            amount_paid = Decimal(str(transaction.amount))
+            refund_amount = (
+                amount_paid * Decimal(remaining_turns) / Decimal(transaction.turns_purchased)
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, TypeError, ZeroDivisionError):
+            refund_amount = Decimal("0.00")
+
+        return {
+            "eligible": eligible and refund_amount > 0,
+            "remaining_turns": remaining_turns,
+            "refund_amount": refund_amount,
+            "deadline": deadline,
+        }
+
+    def consume_paid_credit_lot(self, db: Session, user_id: int) -> PaymentTransaction | None:
+        """Consume one tracked paid credit using oldest-purchase-first ordering."""
+        transaction = (
+            db.query(PaymentTransaction)
+            .filter(
+                PaymentTransaction.user_id == user_id,
+                PaymentTransaction.transaction_type == "purchase",
+                PaymentTransaction.turns_remaining > 0,
+                PaymentTransaction.status.in_(("completed", "refund_requested")),
+            )
+            .order_by(PaymentTransaction.created_at.asc(), PaymentTransaction.id.asc())
+            .with_for_update()
+            .first()
+        )
+        if transaction is None:
+            return None
+        transaction.turns_remaining -= 1
+        db.add(transaction)
+        db.flush()
+        return transaction
 
     def log_subscription_event(
         self,
@@ -727,6 +843,8 @@ class SubscriptionService:
         processor_fee: str = None,
         net_amount: str = None,
         metadata: dict = None,
+        turns_remaining: int | None = None,
+        idempotency_key: str | None = None,
     ) -> PaymentTransaction:
         """Create a payment transaction record for history tracking.
 
@@ -761,6 +879,8 @@ class SubscriptionService:
             processor_fee=processor_fee,
             net_amount=net_amount,
             transaction_metadata=metadata or {},
+            turns_remaining=turns_purchased if turns_remaining is None and transaction_type == "purchase" else turns_remaining,
+            idempotency_key=idempotency_key,
             processed_at=datetime.now(UTC),
         )
 
