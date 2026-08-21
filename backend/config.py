@@ -4,7 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi_mail import ConnectionConfig
 from pydantic import PrivateAttr, validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Load environment variables
 env_file = os.getenv("ENV_FILE", ".env")
@@ -56,6 +56,8 @@ class Settings(BaseSettings):
         FASTAPI_ENV (str): FastAPI environment (e.g., 'local', 'production').
         email_config (ConnectionConfig): Email connection configuration.
     """
+
+    model_config = SettingsConfigDict(env_file=env_file, extra="ignore")
 
     # JWT Settings
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your-secret-key")
@@ -218,15 +220,5 @@ class Settings(BaseSettings):
                 VALIDATE_CERTS=self.VALIDATE_CERTS,
             )
         return self._email_config
-
-    class Config:
-        """Pydantic configuration for the Settings class.
-
-        Attributes:
-            env_file (str): Path to the .env file to load environment variables from.
-        """
-
-        env_file = env_file
-
 
 settings = Settings()

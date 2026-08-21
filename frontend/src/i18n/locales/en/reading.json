@@ -35,7 +35,7 @@
     "challenge": "Challenge",
     "advice": "Advice",
     "past": "Past",
-    "future": "Future",
+    "future": "Possible Direction",
     "mind": "Mind",
     "body": "Body",
     "spirit": "Spirit",
@@ -46,7 +46,7 @@
   "compatibility": {
     "backToReadings": "Back to readings",
     "title": "Compatibility Reading",
-    "description": "Draw a five-card Relationship Cross to see how two people show up in their bond — what connects them, what tests them, and where the relationship is heading.",
+    "description": "Draw a five-card Relationship Cross to reflect on how two people show up in their bond — what connects them, what tests them, and what possible direction deserves attention.",
     "firstPerson": "First person",
     "name": "Name",
     "secondPerson": "Second person",

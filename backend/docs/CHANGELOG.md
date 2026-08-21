@@ -5,11 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.32] - 2026-08-21
+## [0.0.33] - 2026-08-21
 
 ### Changed
 - Replaced Argo CD production promotion with a serialized GitHub Actions SSH deployment to the Docker Compose stack, using commit-SHA image tags and strict SSH host verification.
 - Added `arcanaai.net` and `www.arcanaai.net` as frontend domains with `backend.arcanaai.net` API routing and CORS support.
+
+## [0.0.32] - 2026-08-20
+
+### Added
+- Added application support for `arcanaai.net` and its same-site API at `backend.arcanaai.net`, including browser API routing, CORS, and remote-image configuration.
+- Added a canonical advisor policy, high-stakes predictive screening, crisis-first handling, advisor guardrail metrics, and prompt regression coverage.
+
+### Fixed
+- Chat now persists the response from its original tool-decision request instead of making a second independent model request that could yield an empty assistant message; genuinely empty outcomes still receive a readable fallback.
+
+### Changed
+- Repositioned ArcanaAI as hosted Tarot reflection software rather than a predictive or fortune-telling service.
+- Updated chat, reading, compatibility, relationship-spread, product, README, and Terms language to avoid predictive certainty and hidden-fact claims.
+- Renamed the Relationship Cross `The Outcome` position to `Possible Direction`.
 
 ## [0.0.31] - 2026-08-14
 

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "ArcanaAI - Mystical Guidance & Insights",
-    "description": "Get AI-powered tarot readings with mystical wisdom for your questions and spiritual guidance"
+    "description": "A Tarot-powered reflection companion for perspective, self-exploration, and thoughtful next steps"
   },
   "page": {
     "askPlaceholder": "Ask your mystical question...",
@@ -85,7 +85,7 @@
     "v25_sub_settling": "Even silence can be part of the reading.",
     "v26_title": "The universe has terrible timing.",
     "v26_sub": "Fortunately, the tarot compensates for it.",
-    "v27_title": "Another night, another attempt to negotiate with fate.",
+    "v27_title": "Another night, another chance to look with fresh eyes.",
     "v27_sub": "At least this time you brought cards.",
     "v28_title": "The deck has opinions today.",
     "v28_sub": "You may or may not enjoy hearing them.",
@@ -127,7 +127,7 @@
     "oneCard": "One card",
     "oneCardDesc": "A quick whisper for the moment.",
     "threeCards": "Three cards",
-    "threeCardsDesc": "Past · present · future.",
+    "threeCardsDesc": "Past · present · possible direction.",
     "celticCross": "Celtic Cross",
     "celticCrossDesc": "The full ten-card story.",
     "horseshoe": "Horseshoe",
@@ -140,11 +140,11 @@
   },
   "onboarding": {
     "title": "Welcome to ArcanaAI",
-    "subtitle": "Your AI-Powered Mystical Guide",
-    "intro": "Discover the ancient wisdom of Tarot through modern AI technology. Get personalized readings, track your spiritual journey, and unlock deep insights.",
+    "subtitle": "Your AI-Powered Reflection Companion",
+    "intro": "Explore your situation through Tarot symbolism, consider different perspectives, and find thoughtful next steps with an AI reflection companion.",
     "howItWorks": "How It Works",
     "simpleIntuitive": "Simple, Intuitive, Magical",
-    "howItWorksDesc": "Chat with our ArcanaAI, ask questions about love, career, or life path. Our AI interprets traditional Tarot wisdom for modern guidance.",
+    "howItWorksDesc": "Chat with ArcanaAI about relationships, work, goals, or decisions. Our AI uses traditional Tarot symbolism to support reflection and practical guidance—not prediction.",
     "discoverFeatures": "Discover Your Features",
     "everythingYouNeed": "Everything You Need for Your Journey",
     "featureReadings": "Interactive Tarot Readings",

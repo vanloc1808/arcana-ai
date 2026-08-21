@@ -1,6 +1,6 @@
-# ArcanaAI - AI-Powered Tarot Reading Service
+# ArcanaAI - AI-Powered Tarot Reflection Companion
 
-A comprehensive, AI-powered tarot reading service built with FastAPI, Next.js, and modern web technologies. This application provides interactive tarot readings, subscription management, user authentication, and a beautiful, responsive interface.
+A hosted, AI-powered Tarot reflection application built with FastAPI, Next.js, and modern web technologies. ArcanaAI uses Tarot symbolism to help users explore perspectives, choices, emotions, and practical next steps; it does not predict future events or provide professional advice.
 
 ## 🌐 Live Demo
 
@@ -10,10 +10,10 @@ Experience the full application with live tarot readings, user authentication, a
 
 ## 🌟 Features
 
-- **AI-Powered Tarot Readings**: Get personalized tarot interpretations using OpenAI's GPT models
+- **AI-Powered Tarot Reflections**: Explore personalized symbolic interpretations using OpenAI's GPT models
 - **Multiple Tarot Decks**: Support for various tarot deck styles and interpretations
 - **User Authentication**: JWT-based authentication with email verification
-- **Subscription Management**: Turn-based system with premium features
+- **Subscription Management**: Turn-based hosted software access with premium features
 - **Interactive Chat Interface**: Real-time chat sessions with tarot readings
 - **Journal System**: Save and track your tarot reading history
 - **Responsive Design**: Mobile-first design with modern UI components

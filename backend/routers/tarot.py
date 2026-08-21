@@ -342,7 +342,7 @@ async def get_compatibility_reading(
     """Draw a relationship-focused tarot reading for two people.
 
     Uses the Relationship Cross spread (You / Them / Connection / Challenge /
-    Outcome). The two person-position labels are personalized with the
+    Possible Direction). The two person-position labels are personalized with the
     provided names. Consumes one turn (same as a standard reading).
     """
     start_time = time.time()

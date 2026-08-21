@@ -4,6 +4,7 @@ describe('resolveApiUrl', () => {
     it.each([
         ['stacyn.io.vn', 'https://backend.stacyn.io.vn'],
         ['www.stacyn.io.vn', 'https://backend.stacyn.io.vn'],
+        ['arcanaai.net', 'https://backend.arcanaai.net'],
         ['arcanaai.nguyenvanloc.com', 'https://backend-arcanaai.nguyenvanloc.com'],
         ['www.arcanaai.nguyenvanloc.com', 'https://backend-arcanaai.nguyenvanloc.com'],
         ['tarot-reader.nguyenvanloc.com', 'https://backend-tarotreader.nguyenvanloc.com'],

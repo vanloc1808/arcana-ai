@@ -19,10 +19,10 @@ interface ArcanaHomeProps {
 
 const WHISPERS = [
   'In every ending, there lies a new beginning.',
-  'The cards reveal what the heart already knows.',
+  'The symbols offer a question the heart can sit with.',
   'Trust the wisdom of the ancient symbols.',
   'Your intuition is your greatest guide.',
-  'The future is not fixed, but flows like water.',
+  'Possibility opens when we pause and look again.',
   'Listen to the whispers of your soul.',
   'Wisdom comes to those who seek with an open heart.',
 ];
@@ -642,6 +642,9 @@ export function ArcanaHome({
           &ldquo;{whisper}&rdquo;
           <span className="ah-whisper-attrib">{t('spreads.dailyAdvice')}</span>
         </div>
+        <p className="mt-6 text-center text-xs text-gray-500">
+          ArcanaAI uses Tarot for reflection and entertainment. It does not predict future events or provide professional advice.
+        </p>
       </div>
     </div>
   );

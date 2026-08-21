@@ -5,8 +5,8 @@ import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { EnhancedNavigation } from "@/components/EnhancedNavigation";
 
 export const metadata: Metadata = {
-  title: "ArcanaAI - Mystical Guidance & Insights",
-  description: "Get AI-powered tarot readings with mystical wisdom for your questions and spiritual guidance",
+  title: "ArcanaAI - Tarot Reflection Companion",
+  description: "Explore situations and choices through Tarot symbolism, AI reflection, and thoughtful next steps.",
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
