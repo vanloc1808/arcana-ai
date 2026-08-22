@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.security import HTTPBearer
-from sqlalchemy import asc, desc, func, or_
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from sqlalchemy import asc, desc, func, or_, text
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -18,6 +21,7 @@ from schemas import (
     AdminDeckResponse,
     AdminDeckUpdate,
     AdminMessageResponse,
+    AdminMigrationStatus,
     AdminSearchRequest,
     AdminSharedReadingResponse,
     AdminSpreadCreate,
@@ -31,6 +35,46 @@ from utils.avatar_utils import avatar_manager
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 security = HTTPBearer()
+
+
+def _migration_status(db: Session) -> AdminMigrationStatus:
+    """Read the database revision and compare it with the checked-in Alembic heads."""
+    backend_dir = Path(__file__).resolve().parent.parent
+    alembic_config = Config(str(backend_dir / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(backend_dir / "migrations"))
+    script = ScriptDirectory.from_config(alembic_config)
+    application_heads = sorted(script.get_heads())
+    current_revisions = sorted(
+        str(version)
+        for version in db.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
+    )
+    revisions = [
+        {
+            "revision": revision.revision,
+            "down_revision": (
+                revision.down_revision[0]
+                if isinstance(revision.down_revision, tuple)
+                else revision.down_revision
+            ),
+            "description": (revision.doc or "").split("\n", 1)[0],
+        }
+        for revision in script.walk_revisions()
+    ]
+    return AdminMigrationStatus(
+        current_revisions=current_revisions,
+        application_heads=application_heads,
+        is_current=bool(current_revisions) and set(current_revisions) == set(application_heads),
+        revisions=revisions,
+    )
+
+
+@router.get("/migrations", response_model=AdminMigrationStatus)
+async def get_migration_status(admin_user: User = Depends(get_admin_user), db: Session = Depends(get_db)):
+    """Show the database Alembic revision and the application migration history."""
+    try:
+        return _migration_status(db)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Migration status is unavailable") from exc
 
 
 def build_admin_user_response(user: User, base_url: str = "") -> AdminUserResponse:

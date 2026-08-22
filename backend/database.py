@@ -72,11 +72,6 @@ if is_postgres:
 else:
     # Development SQLite settings
     pool_settings = {
-        "pool_pre_ping": True,
-        "pool_size": 5,
-        "max_overflow": 10,
-        "pool_timeout": 30,
-        "pool_recycle": 1800,
         "echo": settings.DEBUG_SQL,  # Enable SQL echo only when DEBUG_SQL=true
     }
 

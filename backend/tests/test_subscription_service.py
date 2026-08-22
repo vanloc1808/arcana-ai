@@ -6,6 +6,7 @@ covering checkout URL creation, webhook processing, turn consumption, and paymen
 """
 
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -183,6 +184,13 @@ class TestSubscriptionService:
 
         with patch('services.subscription_service.httpx.AsyncClient', return_value=mock_client):
             result = await service.create_checkout_url(user, "10_turns", db_session)
+
+        request_payload = mock_client.post.call_args.kwargs["json"]
+        assert request_payload["data"]["attributes"]["checkout_data"]["email"] == user.email
+        assert request_payload["data"]["attributes"]["checkout_data"]["custom"] == {
+            "user_id": str(user.id),
+            "product_variant": "10_turns",
+        }
 
         assert result == "https://checkout.lemonsqueezy.com/123"
         checkout_session = (
@@ -365,6 +373,49 @@ class TestSubscriptionService:
             # Verify handler was called
             mock_handler.assert_called_once()
 
+    @patch('services.subscription_service.settings')
+    def test_order_webhook_uses_meta_custom_data_and_is_idempotent(self, mock_settings, db_session):
+        """Repeated order webhooks must not grant the same credits twice."""
+        mock_settings.LEMON_SQUEEZY_ENABLE_TEST_MODE = True
+        mock_settings.LEMON_SQUEEZY_PRODUCT_ID_10_TURNS = "prod_10"
+        mock_settings.LEMON_SQUEEZY_PRODUCT_ID_20_TURNS = "prod_20"
+
+        service = SubscriptionService()
+        user = UserFactory.create(db=db_session, number_of_paid_turns=0)
+        event_data = {
+            "meta": {
+                "event_name": "order_created",
+                "test_mode": True,
+                "custom_data": {
+                    "user_id": str(user.id),
+                    "product_variant": "10_turns",
+                },
+            },
+            "data": {
+                "id": "order_idempotent_123",
+                "attributes": {
+                    "store_id": 457512,
+                    "customer_id": 9678404,
+                    "total": 399,
+                    "currency": "USD",
+                    "first_order_item": {
+                        "variant_id": 2045717,
+                        "product_name": "10 Reading Credits",
+                    },
+                    "created_at": "2026-08-22T09:31:46.000000Z",
+                },
+            },
+        }
+
+        service.process_webhook_event(db_session, event_data)
+        service.process_webhook_event(db_session, event_data)
+
+        db_session.refresh(user)
+        assert user.number_of_paid_turns == 10
+        assert db_session.query(PaymentTransaction).filter(
+            PaymentTransaction.external_transaction_id == "order_idempotent_123"
+        ).count() == 1
+
     def test_handle_subscription_created_updated_10_turns(self, db_session):
         """Test handling subscription created/updated event for 10 turns."""
         service = SubscriptionService()
@@ -446,6 +497,10 @@ class TestSubscriptionService:
         db_session.commit()
 
         assert turns_added == 10
+        transaction = db_session.query(PaymentTransaction).filter(
+            PaymentTransaction.external_transaction_id == "order_123"
+        ).one()
+        assert transaction.turns_remaining == 10
 
         db_session.refresh(user)
         assert user.number_of_paid_turns >= 10  # 5 initial + 10 added
@@ -480,6 +535,73 @@ class TestSubscriptionService:
         turns_added = service._handle_order_created(user, attributes, data, db_session, None)
 
         assert turns_added == 20
+
+    def test_refund_quote_is_prorated_from_remaining_credits(self, db_session):
+        service = SubscriptionService()
+        user = UserFactory.create(db=db_session)
+        transaction = PaymentTransaction(
+            user_id=user.id,
+            transaction_type="purchase",
+            payment_method="lemon_squeezy",
+            external_transaction_id="order_refund_quote",
+            amount="3.99",
+            currency="USD",
+            product_variant="10_turns",
+            turns_purchased=10,
+            turns_remaining=8,
+            status="completed",
+            processed_at=datetime(2026, 8, 15, tzinfo=UTC),
+        )
+        db_session.add(transaction)
+        db_session.commit()
+
+        quote = service.get_refund_quote(
+            transaction,
+            now=datetime(2026, 8, 20, tzinfo=UTC),
+        )
+
+        assert quote["eligible"] is True
+        assert quote["remaining_turns"] == 8
+        assert quote["refund_amount"] == Decimal("3.19")
+
+    def test_paid_credit_lot_consumption_is_fifo(self, db_session):
+        service = SubscriptionService()
+        user = UserFactory.create(db=db_session, number_of_free_turns=0, number_of_paid_turns=7)
+        first = PaymentTransaction(
+            user_id=user.id,
+            transaction_type="purchase",
+            payment_method="lemon_squeezy",
+            external_transaction_id="order_fifo_1",
+            amount="3.99",
+            currency="USD",
+            product_variant="10_turns",
+            turns_purchased=10,
+            turns_remaining=4,
+            status="completed",
+            processed_at=datetime(2026, 8, 1, tzinfo=UTC),
+        )
+        second = PaymentTransaction(
+            user_id=user.id,
+            transaction_type="purchase",
+            payment_method="lemon_squeezy",
+            external_transaction_id="order_fifo_2",
+            amount="5.99",
+            currency="USD",
+            product_variant="20_turns",
+            turns_purchased=20,
+            turns_remaining=3,
+            status="completed",
+            processed_at=datetime(2026, 8, 2, tzinfo=UTC),
+        )
+        db_session.add_all([first, second])
+        db_session.commit()
+
+        service.consume_paid_credit_lot(db_session, user.id)
+
+        db_session.refresh(first)
+        db_session.refresh(second)
+        assert first.turns_remaining == 3
+        assert second.turns_remaining == 3
 
         # Verify user was updated
         db_session.refresh(user)
@@ -716,11 +838,11 @@ class TestSubscriptionService:
         service = SubscriptionService()
 
         info_10 = service.get_product_info("10_turns")
-        assert info_10["name"] == "10 Drawing Turns"
+        assert info_10["name"] == "10 Reading Credits"
         assert info_10["price"] == "$3.99"
 
         info_20 = service.get_product_info("20_turns")
-        assert info_20["name"] == "20 Drawing Turns"
+        assert info_20["name"] == "20 Reading Credits"
         assert info_20["price"] == "$5.99"
 
     def test_get_product_info_invalid_variant(self):

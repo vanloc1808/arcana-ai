@@ -34,6 +34,9 @@ RUN echo '#!/bin/bash\n\
     # Wait for database to be ready\n\
     echo "Waiting for database..."\n\
     sleep 5\n\
+    # Alembic's default version table is VARCHAR(32), which is too short for\n\
+    # the application's timestamped revision identifiers.\n\
+    python scripts/ensure_alembic_version_capacity.py\n\
     # Run migrations\n\
     alembic upgrade head\n\
     # Start the application\n\

@@ -8,6 +8,7 @@ import {
     TurnsResponse,
     SubscriptionResponse,
     ProductInfo,
+    ProductsResponse,
     CheckoutResponse,
     TurnConsumptionResult,
     EthereumPaymentResponse,
@@ -513,7 +514,7 @@ export const subscription = {
         return response.data;
     },
 
-    getProducts: async (): Promise<{ products: ProductInfo[] }> => {
+    getProducts: async (): Promise<ProductsResponse> => {
         const response = await api.get("/api/subscription/products");
         return response.data;
     },

@@ -193,6 +193,7 @@ const NAV_ITEMS: { href: string; label: string; icon: IconName; countKey?: keyof
     { href: "/admin/chat-sessions", label: "Chat Sessions", icon: "chat", countKey: "total_chat_sessions" },
     { href: "/admin/spreads", label: "Spreads", icon: "spreads", countKey: "total_spreads" },
     { href: "/admin/shared-readings", label: "Shared Readings", icon: "shared", countKey: "total_shared_readings" },
+    { href: "/admin/migrations", label: "Migrations", icon: "activity" },
 ];
 
 /* ─── Layout ────────────────────────────────────────────────────────────── */

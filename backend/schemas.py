@@ -1179,6 +1179,19 @@ class AdminDashboardStats(BaseModel):
     recent_shared_readings: list[AdminSharedReadingResponse]
 
 
+class AdminMigrationRevision(BaseModel):
+    revision: str
+    down_revision: str | None = None
+    description: str
+
+
+class AdminMigrationStatus(BaseModel):
+    current_revisions: list[str]
+    application_heads: list[str]
+    is_current: bool
+    revisions: list[AdminMigrationRevision]
+
+
 class AdminSearchRequest(BaseModel):
     query: str
     model_type: str  # 'users', 'chat_sessions', 'messages', 'cards', 'decks', 'spreads', 'shared_readings'
@@ -1435,7 +1448,12 @@ class PaymentTransactionResponse(BaseModel):
     currency: str
     product_variant: str
     turns_purchased: int
+    turns_remaining: int | None = None
+    turns_refunded: int = 0
     status: str
+    refunded_amount: str = "0.00"
+    refund_requested_at: datetime | None = None
+    refund_request_ticket_id: str | None = None
     processor_fee: str | None = None
     net_amount: str | None = None
     transaction_metadata: dict | None = None
@@ -1445,6 +1463,18 @@ class PaymentTransactionResponse(BaseModel):
     class Config:
         from_attributes = True
         json_encoders = {datetime: lambda v: v.isoformat()}
+
+
+class RefundRequestResponse(BaseModel):
+    """Confirmation returned when a customer requests a purchase refund review."""
+
+    message: str
+    ticket_id: str
+    transaction_id: int
+    remaining_turns: int
+    refund_amount: str
+    deadline: datetime
+    status: str
 
 
 class TurnUsageHistoryResponse(BaseModel):

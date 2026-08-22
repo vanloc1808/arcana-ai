@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -15,6 +16,7 @@ from schemas import (
     EthereumPaymentRequest,
     EthereumPaymentResponse,
     PaymentTransactionResponse,
+    RefundRequestResponse,
     SubscriptionEventResponse,
     SubscriptionHistoryResponse,
     SubscriptionPlanResponse,
@@ -24,6 +26,7 @@ from schemas import (
 )
 from services.ethereum_service import EthereumService
 from services.subscription_service import SubscriptionService
+from routers.support import send_to_slack
 from utils.logging import logger
 from utils.metrics import record_payment_event
 
@@ -84,6 +87,8 @@ async def create_checkout_session(
     request: CheckoutRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Create a checkout session for purchasing turns."""
+    if "lemon_squeezy" not in subscription_service.enabled_payment_methods:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Lemon Squeezy payments are disabled")
     try:
         logger.info(f"Creating checkout session for user {current_user.id} with product variant: {request.product_variant}")
         checkout_url = await subscription_service.create_checkout_url(current_user, request.product_variant, db)
@@ -161,6 +166,7 @@ async def handle_lemon_squeezy_webhook(request: Request, db: Session = Depends(g
         raise
     except Exception:
         record_payment_event(settings.FASTAPI_ENV, "lemon_squeezy", event_name, "error")
+        logger.exception("Failed to process Lemon Squeezy webhook", extra={"event_name": event_name})
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to process webhook")
 
 
@@ -171,7 +177,8 @@ async def get_available_products():
         "products": [
             {"variant": "10_turns", **subscription_service.get_product_info("10_turns")},
             {"variant": "20_turns", **subscription_service.get_product_info("20_turns")},
-        ]
+        ],
+        "payment_methods": sorted(subscription_service.enabled_payment_methods),
     }
 
 
@@ -192,6 +199,8 @@ async def process_ethereum_payment(
 ):
     """Process an Ethereum payment for subscription turns with blockchain verification."""
     try:
+        if "ethereum" not in subscription_service.enabled_payment_methods:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Ethereum payments are disabled")
         # Check if Ethereum service is available
         if not ethereum_service.is_connected():
             record_payment_event(settings.FASTAPI_ENV, "ethereum", "ethereum_payment", "service_unavailable")
@@ -297,6 +306,53 @@ async def get_user_payment_transactions(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve payment transactions"
         )
+
+
+@router.post("/user/subscription/transactions/{transaction_id}/refund-request", response_model=RefundRequestResponse)
+async def request_payment_refund(
+    transaction_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a support-reviewed refund request for a recent Lemon Squeezy purchase."""
+    transaction = (
+        db.query(PaymentTransaction)
+        .filter(PaymentTransaction.id == transaction_id, PaymentTransaction.user_id == current_user.id)
+        .first()
+    )
+    if transaction is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment transaction not found")
+
+    quote = subscription_service.get_refund_quote(transaction)
+    if not quote["eligible"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This purchase is not eligible for a refund request")
+
+    ticket_id = str(uuid.uuid4())
+    transaction.refund_requested_at = datetime.utcnow()
+    transaction.refund_request_ticket_id = ticket_id
+    transaction.status = "refund_requested"
+    db.add(transaction)
+    db.commit()
+
+    await send_to_slack(
+        ticket_id=ticket_id,
+        user=current_user,
+        title=f"Refund request for transaction #{transaction.id}",
+        description=(
+            f"Customer requests a Lemon Squeezy refund review. Transaction: {transaction.external_transaction_id}. "
+            f"Remaining credits: {quote['remaining_turns']}. Requested amount: ${quote['refund_amount']:.2f}."
+        ),
+    )
+
+    return RefundRequestResponse(
+        message="Your refund request was sent to support for review.",
+        ticket_id=ticket_id,
+        transaction_id=transaction.id,
+        remaining_turns=quote["remaining_turns"],
+        refund_amount=f"{quote['refund_amount']:.2f}",
+        deadline=quote["deadline"],
+        status="refund_requested",
+    )
 
 
 @router.get("/user/subscription/turn-usage", response_model=list[TurnUsageHistoryResponse])

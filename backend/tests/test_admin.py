@@ -1,5 +1,6 @@
 import pytest
 from fastapi import status
+from sqlalchemy import text
 from models import ChatSession, User
 from routers.auth import create_access_token
 from database import get_db
@@ -35,10 +36,30 @@ def test_admin_access_required(client, user_auth_headers):
     assert resp.status_code == status.HTTP_403_FORBIDDEN
     assert "Admin access required" in resp.text
 
+    migration_resp = client.get("/admin/migrations", headers=user_auth_headers)
+    assert migration_resp.status_code == status.HTTP_403_FORBIDDEN
+    assert "Admin access required" in migration_resp.text
+
 def test_admin_access_allowed(client, admin_auth_headers):
     resp = client.get("/admin/dashboard", headers=admin_auth_headers)
     assert resp.status_code == status.HTTP_200_OK
     assert "total_users" in resp.text
+
+
+def test_admin_can_view_migration_status(client, admin_auth_headers, db_session):
+    db_session.execute(text("CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(32) NOT NULL)"))
+    db_session.execute(text("DELETE FROM alembic_version"))
+    db_session.execute(text("INSERT INTO alembic_version (version_num) VALUES ('20260821_credit_refunds')"))
+    db_session.commit()
+
+    resp = client.get("/admin/migrations", headers=admin_auth_headers)
+
+    assert resp.status_code == status.HTTP_200_OK
+    data = resp.json()
+    assert data["current_revisions"] == ["20260821_credit_refunds"]
+    assert data["application_heads"] == ["20260821_credit_refunds"]
+    assert data["is_current"] is True
+    assert any(revision["revision"] == "20260821_payment_idempotency" for revision in data["revisions"])
 
 # --- Dashboard ---
 def test_admin_dashboard_stats(client, admin_auth_headers):

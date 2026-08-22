@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.34] - 2026-08-21
+
+### Fixed
+- Added a startup repair that widens PostgreSQL's Alembic version column before migrations, preventing long revision identifiers from blocking deployment.
+
+### Changed
+- Began the Lemon Squeezy verification-readiness release by making checkout user metadata authoritative and preventing duplicate order webhooks from granting duplicate credits.
+- Updated public payment language to one-time reading credits, matched the free tier to 3 credits, and added canonical redirects for legacy domains.
+- Improved checkout-return authentication rehydration and added diagnostic logging for failed Lemon Squeezy webhook processing.
+- Added an admin-only migration status panel showing the live Alembic revision, application head, and full migration history.
+
 ## [0.0.33] - 2026-08-21
 
 ### Changed
