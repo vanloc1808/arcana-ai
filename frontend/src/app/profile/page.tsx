@@ -20,7 +20,7 @@ type TabId = 'profile' | 'decks' | 'subscription' | 'history' | 'notifications';
 
 export default function ProfilePage() {
     const { t } = useTranslation('profile');
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isAuthLoading } = useAuth();
     const { profile, decks, fetchProfile, fetchDecks, updateProfile } = useUserProfile();
     const { isPremium } = useSubscription();
 
@@ -31,6 +31,21 @@ export default function ProfilePage() {
         fetchProfile();
         fetchDecks();
     }, [fetchProfile, fetchDecks]);
+
+    if (isAuthLoading) {
+        return (
+            <>
+                <CosmicBackdrop />
+                <div style={{
+                    position: 'relative', zIndex: 1,
+                    minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#c4b5fd',
+                }}>
+                    Restoring your ArcanaAI session…
+                </div>
+            </>
+        );
+    }
 
     if (!isAuthenticated) {
         return (

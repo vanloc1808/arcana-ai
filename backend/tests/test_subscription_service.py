@@ -385,7 +385,7 @@ class TestSubscriptionService:
         event_data = {
             "meta": {
                 "event_name": "order_created",
-                "test_mode": False,
+                "test_mode": True,
                 "custom_data": {
                     "user_id": str(user.id),
                     "product_variant": "10_turns",
@@ -394,15 +394,15 @@ class TestSubscriptionService:
             "data": {
                 "id": "order_idempotent_123",
                 "attributes": {
-                    "store_id": "test_store_id",
-                    "customer_id": "cust_123",
+                    "store_id": 457512,
+                    "customer_id": 9678404,
                     "total": 399,
                     "currency": "USD",
                     "first_order_item": {
-                        "variant_id": "prod_10",
+                        "variant_id": 2045717,
                         "product_name": "10 Reading Credits",
                     },
-                    "created_at": datetime.now(UTC).isoformat(),
+                    "created_at": "2026-08-22T09:31:46.000000Z",
                 },
             },
         }

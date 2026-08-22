@@ -166,6 +166,7 @@ async def handle_lemon_squeezy_webhook(request: Request, db: Session = Depends(g
         raise
     except Exception:
         record_payment_event(settings.FASTAPI_ENV, "lemon_squeezy", event_name, "error")
+        logger.exception("Failed to process Lemon Squeezy webhook", extra={"event_name": event_name})
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to process webhook")
 
 
