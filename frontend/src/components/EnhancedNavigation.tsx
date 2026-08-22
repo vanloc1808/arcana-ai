@@ -22,6 +22,7 @@ import {
     HelpCircle,
     Bell,
     Plus,
+    Zap,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -44,18 +45,20 @@ import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 
 /* ── plan badge ───────────────────────────────────────────── */
-function PlanBadge({
+export function PlanBadge({
     isPremium,
     hasUnlimited,
+    remainingTurns,
     onUpgradeClick,
     unlimitedLabel,
-    upgradeLabel,
+    turnsRemainingLabel,
 }: {
     isPremium: boolean;
     hasUnlimited: boolean;
+    remainingTurns: number | null;
     onUpgradeClick: () => void;
     unlimitedLabel: string;
-    upgradeLabel: string;
+    turnsRemainingLabel: string;
 }) {
     if (hasUnlimited || isPremium) {
         return (
@@ -68,10 +71,11 @@ function PlanBadge({
     return (
         <button
             onClick={onUpgradeClick}
+            aria-label={`${remainingTurns ?? '—'} ${turnsRemainingLabel}`}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-violet-400/25 bg-violet-400/8 text-xs font-semibold text-violet-200 tracking-wide hover:bg-violet-400/15 transition-colors"
         >
-            <Crown className="h-3 w-3 text-violet-400" aria-hidden />
-            {upgradeLabel}
+            <Zap className="h-3 w-3 text-violet-400" aria-hidden />
+            <span>{remainingTurns ?? '—'} {turnsRemainingLabel}</span>
         </button>
     );
 }
@@ -81,7 +85,7 @@ export function EnhancedNavigation() {
     const router = useRouter();
     const pathname = usePathname();
     const { user, isAuthenticated, logout } = useAuth();
-    const { isPremium, hasUnlimitedTurns, getSubscriptionStatusText } = useSubscription();
+    const { turns, isPremium, hasUnlimitedTurns, getSubscriptionStatusText } = useSubscription();
     const { searchResults, isSearching, performSearch, clearSearch } = useSearch();
     const { t } = useTranslation(['nav', 'common']);
 
@@ -262,9 +266,10 @@ export function EnhancedNavigation() {
                             <PlanBadge
                                 isPremium={premium}
                                 hasUnlimited={isUnlimited}
+                                remainingTurns={turns?.total_turns ?? null}
                                 onUpgradeClick={() => setIsSubscriptionModalOpen(true)}
                                 unlimitedLabel={t('unlimited', { ns: 'nav' })}
-                                upgradeLabel={t('upgrade', { ns: 'nav' })}
+                                turnsRemainingLabel={t('turnsRemaining', { ns: 'nav' })}
                             />
                         </div>
 

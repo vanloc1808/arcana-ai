@@ -37,6 +37,7 @@ jest.mock('lucide-react', () => ({
     Gift: () => <div data-testid="gift-icon" />,
     Sparkles: () => <div data-testid="sparkles-icon" />,
     X: () => <div data-testid="x-icon" />,
+    Zap: () => <div data-testid="zap-icon" />,
 }));
 
 // Mock matchMedia
