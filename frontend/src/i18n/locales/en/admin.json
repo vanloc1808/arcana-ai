@@ -15,6 +15,21 @@
   "newUserJoined": "New user joined",
   "newChatSession": "New chat session",
   "readingShared": "Reading shared",
+  "migrations": {
+    "loading": "Loading migration status…",
+    "kicker": "Infrastructure",
+    "title": "Database migrations",
+    "subtitle": "Verify the live database revision against the application migration head.",
+    "currentRevision": "Current database revision",
+    "applicationHead": "Application head",
+    "history": "Migration history",
+    "revision": "Revision",
+    "previous": "Previous revision",
+    "description": "Description",
+    "upToDate": "Database is up to date",
+    "outOfDate": "Database migration is not at the application head",
+    "unavailable": "Migration status is unavailable"
+  },
   "users": {
     "loadingUsers": "Loading users…",
     "summoningRecords": "Summoning user records…",

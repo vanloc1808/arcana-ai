@@ -1179,6 +1179,19 @@ class AdminDashboardStats(BaseModel):
     recent_shared_readings: list[AdminSharedReadingResponse]
 
 
+class AdminMigrationRevision(BaseModel):
+    revision: str
+    down_revision: str | None = None
+    description: str
+
+
+class AdminMigrationStatus(BaseModel):
+    current_revisions: list[str]
+    application_heads: list[str]
+    is_current: bool
+    revisions: list[AdminMigrationRevision]
+
+
 class AdminSearchRequest(BaseModel):
     query: str
     model_type: str  # 'users', 'chat_sessions', 'messages', 'cards', 'decks', 'spreads', 'shared_readings'
