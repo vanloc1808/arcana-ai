@@ -93,11 +93,7 @@ export default function PrivacyPolicyPage() {
                         {/* Last Updated */}
                         <div className="text-center mb-12">
                             <p className="text-gray-400">
-                                <strong>Last Updated:</strong> {new Date().toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                })}
+                                <strong>Last Updated:</strong> August 21, 2026
                             </p>
                         </div>
 
@@ -300,7 +296,7 @@ export default function PrivacyPolicyPage() {
                                     </div>
 
                                     <p>
-                                        To exercise these rights, please contact us through your account settings or our support system.
+                                        To exercise these rights, please contact NGUYEN VAN LOC at <a className="text-purple-300 underline" href="mailto:vanloc1808@gmail.com">vanloc1808@gmail.com</a>.
                                     </p>
                                 </div>
                             </section>
@@ -407,7 +403,8 @@ export default function PrivacyPolicyPage() {
                                     </p>
                                     <ul className="list-disc ml-6 space-y-2">
                                         <li>Our support system within the application</li>
-                                        <li>The contact form on our website</li>
+                                        <li>Email: <a className="text-purple-300 underline" href="mailto:vanloc1808@gmail.com">vanloc1808@gmail.com</a></li>
+                                        <li>Operator: NGUYEN VAN LOC, Ho Chi Minh City, Vietnam</li>
                                         <li>Your account settings privacy section</li>
                                     </ul>
                                     <p>

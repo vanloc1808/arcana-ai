@@ -93,11 +93,7 @@ export default function TermsOfServicePage() {
                         {/* Last Updated */}
                         <div className="text-center mb-12">
                             <p className="text-gray-400">
-                                <strong>Last Updated:</strong> {new Date().toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                })}
+                                <strong>Last Updated:</strong> August 21, 2026
                             </p>
                         </div>
 
@@ -188,34 +184,20 @@ export default function TermsOfServicePage() {
                                         5. Refund Policy
                                     </h2>
                                     <div className="text-gray-300 space-y-4 text-lg leading-relaxed">
-                                        <p className="text-red-300 font-semibold text-xl">
-                                            <strong>NO REFUNDS POLICY</strong>
-                                        </p>
-                                        <p>
-                                            <strong>All payments made to ArcanaAI are final and non-refundable.</strong> This includes:
-                                        </p>
+                                        <p className="text-red-300 font-semibold text-xl">REFUNDS FOR UNUSED CREDITS</p>
+                                        <p>Reading-credit purchases are one-time payments processed by Lemon Squeezy. You may request a refund within 14 days of purchase for the unused portion of the purchased credits.</p>
                                         <ul className="list-disc ml-6 space-y-2">
-                                            <li>Monthly subscription fees</li>
-                                            <li>Annual subscription fees</li>
-                                            <li>One-time purchases for reading turns</li>
-                                            <li>Premium feature upgrades</li>
+                                            <li>Refunds are calculated from the remaining credits in that purchase lot.</li>
+                                            <li>Refund requests are reviewed by support and, if approved, issued through Lemon Squeezy.</li>
+                                            <li>Used credits are not refundable.</li>
                                         </ul>
-                                        <p>
-                                            We do not provide refunds, credits, or prorated billing for:
-                                        </p>
+                                        <p>Requests after the 14-day window and consumed credits are not eligible.</p>
                                         <ul className="list-disc ml-6 space-y-2">
-                                            <li>Partial months of service</li>
-                                            <li>Unused reading turns or features</li>
-                                            <li>Dissatisfaction with readings or service</li>
-                                            <li>Account cancellations</li>
-                                            <li>Service interruptions</li>
+                                            <li>Requests submitted after the 14-day window</li>
+                                            <li>Credits already consumed</li>
                                         </ul>
-                                        <p className="text-red-300 font-semibold">
-                                            By subscribing to our service or making any payment, you acknowledge and agree to this no-refund policy.
-                                        </p>
-                                        <p>
-                                            We encourage all users to try our free tier before purchasing a subscription to ensure the service meets your expectations.
-                                        </p>
+                                        <p>Please email <a className="text-purple-300 underline" href="mailto:vanloc1808@gmail.com">vanloc1808@gmail.com</a> with your account email and purchase details to request review.</p>
+                                        <p>ArcanaAI is operated by NGUYEN VAN LOC, based in Ho Chi Minh City, Vietnam.</p>
                                     </div>
                                 </div>
                             </section>

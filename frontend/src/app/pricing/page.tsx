@@ -16,7 +16,7 @@ export default function PricingPage() {
     const handlePlanSelection = (planType: 'free' | 'mystic' | 'oracle') => {
         if (isAuthenticated) {
             if (planType === 'mystic' || planType === 'oracle') {
-                // Redirect authenticated users to homepage with subscription modal open
+                // Redirect authenticated users to the one-time credit checkout modal
                 router.push('/?openModal=subscription');
             } else {
                 // For free plan, just go to homepage

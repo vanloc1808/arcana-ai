@@ -189,6 +189,7 @@ class Settings(BaseSettings):
     LEMON_SQUEEZY_PRODUCT_ID_10_TURNS: str = os.getenv("LEMON_SQUEEZY_PRODUCT_ID_10_TURNS", "")
     LEMON_SQUEEZY_PRODUCT_ID_20_TURNS: str = os.getenv("LEMON_SQUEEZY_PRODUCT_ID_20_TURNS", "")
     LEMON_SQUEEZY_ENABLE_TEST_MODE: bool = os.getenv("LEMON_SQUEEZY_ENABLE_TEST_MODE", "false").lower() == "true"
+    ENABLED_PAYMENT_METHODS: str = os.getenv("ENABLED_PAYMENT_METHODS", "lemon_squeezy")
 
     # Ethereum Settings
     ETHEREUM_RPC_URL: str = os.getenv("ETHEREUM_RPC_URL", "https://eth-mainnet.g.alchemy.com/v2/your-api-key")

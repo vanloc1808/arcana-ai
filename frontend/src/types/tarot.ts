@@ -167,6 +167,11 @@ export interface ProductInfo {
     description: string;
 }
 
+export interface ProductsResponse {
+    products: ProductInfo[];
+    payment_methods: string[];
+}
+
 export interface CheckoutResponse {
     checkout_url: string;
 }

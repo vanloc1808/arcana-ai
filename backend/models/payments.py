@@ -172,10 +172,16 @@ class PaymentTransaction(Base):
     currency = Column(String, nullable=False)  # USD, ETH, etc.
     product_variant = Column(String, nullable=False)  # 10_turns, 20_turns
     turns_purchased = Column(Integer, nullable=False, default=0)
+    turns_remaining = Column(Integer, nullable=True)
+    turns_refunded = Column(Integer, nullable=False, default=0)
     status = Column(String, nullable=False, index=True)  # pending, completed, failed, refunded
+    refunded_amount = Column(String, nullable=False, default="0.00")
+    refund_requested_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    refund_request_ticket_id = Column(String, nullable=True)
     processor_fee = Column(String, nullable=True)  # Fee charged by processor
     net_amount = Column(String, nullable=True)  # Net amount after fees
     transaction_metadata = Column(JSON, nullable=True)  # Additional transaction data
+    idempotency_key = Column(String, nullable=True, unique=True, index=True)
     processed_at = Column(DateTime(timezone=True), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 

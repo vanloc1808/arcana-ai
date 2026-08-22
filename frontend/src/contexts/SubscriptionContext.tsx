@@ -26,6 +26,7 @@ interface SubscriptionContextValue {
     turns: TurnsResponse | null;
     subscriptionInfo: SubscriptionResponse | null;
     products: ProductInfo[];
+    paymentMethods: string[];
     loading: boolean;
     error: string | null;
 
@@ -67,6 +68,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     const [turns, setTurns] = useState<TurnsResponse | null>(null);
     const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionResponse | null>(null);
     const [products, setProducts] = useState<ProductInfo[]>([]);
+    const [paymentMethods, setPaymentMethods] = useState<string[]>(['lemon_squeezy']);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -111,6 +113,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         try {
             const productsData = await subscription.getProducts();
             setProducts(productsData.products);
+            setPaymentMethods(productsData.payment_methods ?? ['lemon_squeezy']);
             setError(null);
         } catch (err) {
             console.error('Failed to fetch products:', err);
@@ -290,6 +293,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         turns,
         subscriptionInfo,
         products,
+        paymentMethods,
         loading,
         error,
 

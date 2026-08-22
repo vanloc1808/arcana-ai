@@ -33,6 +33,7 @@ interface UseSubscriptionReturn {
     subscriptionInfo: SubscriptionResponse | null;
     /** Available subscription products */
     products: ProductInfo[];
+    paymentMethods: string[];
     /** Loading state for data fetching */
     loading: boolean;
     /** Error message if any operation fails */
