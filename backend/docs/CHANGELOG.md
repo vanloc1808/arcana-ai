@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.34] - 2026-08-21
 
+### Fixed
+- Added a startup repair that widens PostgreSQL's Alembic version column before migrations, preventing long revision identifiers from blocking deployment.
+
 ### Changed
 - Began the Lemon Squeezy verification-readiness release by making checkout user metadata authoritative and preventing duplicate order webhooks from granting duplicate credits.
 - Updated public payment language to one-time reading credits, matched the free tier to 3 credits, and added canonical redirects for legacy domains.
