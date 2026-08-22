@@ -1,7 +1,7 @@
 """Add payment webhook idempotency keys.
 
 Revision ID: 20260821_payment_idempotency
-Revises: 20260820_advisor_position
+Revises: 20260820_advisor_relationship_position
 Create Date: 2026-08-21 00:00:00.000000
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "20260821_payment_idempotency"
-down_revision = "20260820_advisor_position"
+down_revision = "20260820_advisor_relationship_position"
 branch_labels = None
 depends_on = None
 
